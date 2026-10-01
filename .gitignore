@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.tools/
+dist/
+*.vsix
+
+# 类型检查的本地缓存与依赖（node_modules 仅用于本地装 typescript 时）
+.mypy_cache/
+node_modules/
+
+# 编辑器 / 操作系统
+.DS_Store
+*~
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Agent Manager 工作树与本地状态（由 Kilo 管理，不入库）
+.kilo/worktrees/
+.kilo/agent-manager.json

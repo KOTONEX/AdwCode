@@ -1,0 +1,14 @@
+.git/**
+.vscode/**
+src/**
+assets/screenshot*
+*.vsix
+.gitignore
+docs/**
+tests/**
+CONTRIBUTING.md
+CHANGELOG.md
+AGENTS.md
+Makefile
+.editorconfig
+.gitattributes

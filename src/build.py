@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+"""生成 AdwCode 主题并同步 package.json。
+
+用法：
+    python3 src/build.py                     # blue + 当前系统强调色
+    python3 src/build.py --accents all       # 全部九种 GNOME 强调色
+    python3 src/build.py --accents blue,teal # 指定强调色列表
+    python3 src/build.py --no-system         # 仅 blue
+    python3 src/build.py --check             # 校验已生成的主题
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Optional, TypedDict
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+import mapping
+import tokens
+from palette import ACCENT_LABELS, ACCENT_NAMES, MODE_LABELS, Palette, parse_color
+
+ROOT: Path = Path(__file__).parent.parent
+THEMES: Path = ROOT / "themes"
+DEFAULTS: Path = Path(__file__).parent / "vscode_defaults"
+
+
+class ThemeRequest(TypedDict):
+    """``build_plan()`` 生成的一项主题构建请求。"""
+
+    mode: str
+    accent: str
+    variant: str
+    hc: bool
+
+
+class ThemeEntry(TypedDict):
+    """``package.json`` 中 ``contributes.themes`` 的一个条目。"""
+
+    label: str
+    uiTheme: str
+    path: str
+
+
+class WatchThemeEntry(ThemeEntry, total=False):
+    """``--watch`` 模式下附加的调试标记。"""
+
+    _watch: bool
+
+
+#: 生成的主题 JSON；``$schema`` 无法作为类语法字段，因此使用函数式写法。
+#: 函数式写法的值是运行时求值的，故用 ``Optional`` 保持 Python 3.9 兼容。
+Theme = TypedDict(
+    "Theme",
+    {
+        "$schema": str,
+        "name": str,
+        "type": str,
+        "semanticHighlighting": bool,
+        "colors": dict[str, str],
+        "tokenColors": list[tokens.TokenRule],
+        "semanticTokenColors": dict[str, Optional[str]],
+    },
+)
+
+
+def theme_filename(mode: str, accent: str, variant: str, high_contrast: bool = False) -> str:
+    """主题文件名（保持 ASCII，与主题标签的中文解耦）。"""
+    parts = ["adwaita"]
+    if accent != "blue":
+        parts.append(accent)
+    parts.append(mode)
+    if high_contrast:
+        parts.append("high-contrast")
+    elif variant == "colorful":
+        parts.append("colorful-status-bar")
+    elif variant == "default":
+        parts.append("default-syntax-highlighting")
+    elif variant == "default-colorful":
+        parts.append("default-syntax-highlighting-colorful-status-bar")
+    return "-".join(parts) + ".json"
+
+
+def system_accent() -> str | None:
+    """读取 GNOME 强调色偏好。"""
+    try:
+        out = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "accent-color"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    value = out.stdout.strip().strip("'\"")
+    return value if value in ACCENT_NAMES else None
+
+
+def resolve_accents(spec: str | None, use_system: bool) -> list[str]:
+    if spec == "all":
+        return list(ACCENT_NAMES)
+    if spec:
+        wanted = [item.strip() for item in spec.split(",") if item.strip()]
+        unknown = [item for item in wanted if item not in ACCENT_NAMES]
+        if unknown:
+            raise SystemExit(f"unknown accent(s): {', '.join(unknown)}")
+        return wanted
+    accents = ["blue"]
+    if use_system:
+        accent = system_accent()
+        if accent and accent not in accents:
+            accents.append(accent)
+    return accents
+
+
+def relative_luminance(color: str) -> float:
+    r, g, b, _ = parse_color(color)
+
+    def channel(value: float) -> float:
+        value /= 255
+        return value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+
+
+def contrast(color_a: str, color_b: str) -> float:
+    lum_a, lum_b = relative_luminance(color_a), relative_luminance(color_b)
+    lighter, darker = max(lum_a, lum_b), min(lum_a, lum_b)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def theme_label(mode: str, accent: str) -> str:
+    kind = MODE_LABELS[mode]
+    if accent == "blue":
+        return f"Adwaita {kind}"
+    return f"Adwaita {ACCENT_LABELS[accent]} {kind}"
+
+
+def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = False) -> Theme:
+    """variant 取值：builder、colorful、default、default-colorful。"""
+    scheme = tokens.editor_colors(mode)
+    palette = Palette(mode, accent=accent, high_contrast=high_contrast, scheme=scheme)
+    colorful = variant in ("colorful", "default-colorful")
+    default_syntax = variant in ("default", "default-colorful")
+
+    if high_contrast:
+        label = f"Adwaita {MODE_LABELS[mode]} 高对比度"
+    else:
+        label = theme_label(mode, accent)
+        if default_syntax:
+            label += " · 默认语法高亮"
+        if colorful:
+            label += " · 彩色状态栏"
+
+    token_colors: list[tokens.TokenRule]
+    if default_syntax:
+        token_colors = json.loads((DEFAULTS / f"{mode}.json").read_text())["tokenColors"]
+    else:
+        token_colors = tokens.token_colors(mode)
+
+    return {
+        "$schema": "vscode://schemas/color-theme",
+        "name": label,
+        "type": mode,
+        "semanticHighlighting": True,
+        "colors": mapping.build_ui_colors(palette, colorful_status_bar=colorful),
+        "tokenColors": token_colors,
+        "semanticTokenColors": tokens.semantic_token_colors(mode),
+    }
+
+
+def build_plan(accents: list[str]) -> list[ThemeRequest]:
+    plan: list[ThemeRequest] = []
+    for mode in ("dark", "light"):
+        for accent in accents:
+            variants = ["builder", "colorful", "default", "default-colorful"] if accent == "blue" else ["builder"]
+            for variant in variants:
+                plan.append({"mode": mode, "accent": accent, "variant": variant, "hc": False})
+        plan.append({"mode": mode, "accent": "blue", "variant": "builder", "hc": True})
+    return plan
+
+
+def write_themes(plan: list[ThemeRequest], watch: bool = False) -> list[ThemeEntry]:
+    THEMES.mkdir(exist_ok=True)
+    for old in THEMES.glob("*.json"):
+        old.unlink()
+    entries: list[ThemeEntry] = []
+    for item in plan:
+        theme = build_theme(item["mode"], item["accent"], item["variant"], item["hc"])
+        path = THEMES / theme_filename(item["mode"], item["accent"], item["variant"], item["hc"])
+        path.write_text(json.dumps(theme, indent=2, ensure_ascii=False) + "\n")
+        if item["hc"]:
+            ui_theme = "hc-black" if item["mode"] == "dark" else "hc-light"
+        else:
+            ui_theme = "vs-dark" if item["mode"] == "dark" else "vs"
+        entry: WatchThemeEntry = {
+            "label": theme["name"],
+            "uiTheme": ui_theme,
+            "path": f"./themes/{path.name}",
+        }
+        if watch:
+            entry["_watch"] = True
+        entries.append(entry)
+    return entries
+
+
+def update_package_json(entries: list[ThemeEntry]) -> None:
+    path = ROOT / "package.json"
+    manifest = json.loads(path.read_text())
+    manifest["contributes"]["themes"] = entries
+    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+
+
+def load_known_keys() -> tuple[set[str] | None, set[str] | None]:
+    """返回（注册表键集合, 内置主题键集合）。"""
+    registry: set[str] | None = None
+    builtin: set[str] | None = None
+    registry_path = DEFAULTS / "registry_keys.json"
+    builtin_path = DEFAULTS / "builtin_keys.json"
+    if registry_path.exists():
+        registry = set(json.loads(registry_path.read_text()))
+    if builtin_path.exists():
+        builtin = set(json.loads(builtin_path.read_text()))
+    return registry, builtin
+
+
+#: 有效但未列入官方文档的键（由 VS Code 自身注册，或为已弃用别名）。
+LEGACY_KEYS: set[str] = {
+    "contrastActiveBorder",
+    "editorIndentGuide.background",
+    "editorIndentGuide.activeBackground",
+    "editorHoverWidget.highlightForeground",
+    "editorSuggestWidget.selectedBackground",
+    "editorWidget.shadow",
+    "editorWidget.errorBorder",
+    "editorWidget.warningBorder",
+    "editorWidget.infoBorder",
+    "editorWidget.prominentBackground",
+    "editorWidget.prominentForeground",
+    "editorWidget.prominentBorder",
+    "extensionButton.prominentBorder",
+    "editorPlaceholder.foreground",
+    "scm.providerBorder",
+}
+
+
+def check() -> int:
+    failures: int = 0
+    registry, builtin = load_known_keys()
+    our_keys: set[str] = set()
+    labels: list[str] = []
+    for path in sorted(THEMES.glob("*.json")):
+        theme = json.loads(path.read_text())
+        labels.append(theme["name"])
+        our_keys |= set(theme["colors"])
+
+        for key, value in theme["colors"].items():
+            try:
+                parse_color(value)
+            except ValueError as error:
+                print(f"FAIL {path.name}: bad color for {key}: {error}")
+                failures += 1
+        for rule in theme["tokenColors"]:
+            if not rule.get("scope") or not rule.get("settings"):
+                print(f"FAIL {path.name}: incomplete token rule {rule}")
+                failures += 1
+        for name, value in theme.get("semanticTokenColors", {}).items():
+            if value is None:
+                print(f"FAIL {path.name}: semantic token {name} has no color")
+                failures += 1
+    if len(labels) != len(set(labels)):
+        print("FAIL duplicate theme labels")
+        failures += 1
+
+    # 产品图标主题
+    icons_path = ROOT / "product-icons" / "adwaita.json"
+    if icons_path.exists():
+        icons = json.loads(icons_path.read_text())
+        fonts = icons.get("fonts", [])
+        definitions = icons.get("iconDefinitions", {})
+        if not fonts or not definitions:
+            print("FAIL product-icons/adwaita.json: needs fonts and iconDefinitions")
+            failures += 1
+        for font in fonts:
+            for source in font.get("src", []):
+                target = (icons_path.parent / source["path"]).resolve()
+                if not target.exists():
+                    print(f"FAIL product-icons: missing {source['path']}")
+                    failures += 1
+        if len({d.get("fontCharacter") for d in definitions.values()}) != len(definitions):
+            print("FAIL product-icons: duplicate glyphs")
+            failures += 1
+        print(f"product icons: {len(definitions)} glyphs, {len(fonts)} font(s)")
+
+    # 对每个生成的主题做对比度检查（含强调色、变体、高对比度）。
+    checks: list[tuple[str, str, float]] = [
+        ("editor.foreground", "editor.background", 4.5),
+        ("button.foreground", "button.background", 2.5),  # GNOME yellow is ~2.8
+        ("textLink.foreground", "editor.background", 3.0),
+        ("gitDecoration.deletedResourceForeground", "editor.background", 3.0),
+        ("descriptionForeground", "editor.background", 2.5),
+    ]
+    failed_themes: int = 0
+    for path in sorted(THEMES.glob("*.json")):
+        theme = json.loads(path.read_text())
+        colors = theme["colors"]
+        problems: list[str] = []
+        for fg_key, bg_key, minimum in checks:
+            ratio = contrast(colors[fg_key], colors[bg_key])
+            if ratio < minimum:
+                problems.append(f"{fg_key}/{bg_key} {ratio:.2f} < {minimum}")
+        status = "ok  " if not problems else "FAIL"
+        print(f"{status} {theme['name']}")
+        for problem in problems:
+            print(f"       {problem}")
+            failures += 1
+            failed_themes += 1
+    print(f"contrast: {len(list(THEMES.glob('*.json'))) - failed_themes} themes ok, {failed_themes} with problems")
+
+    if registry is None or builtin is None:
+        print("note: run update_defaults.py to refresh the VS Code key lists")
+    else:
+        allowed = registry | builtin | LEGACY_KEYS
+        unknown = sorted(our_keys - allowed)
+        missing = sorted(builtin - our_keys)
+        print(f"\nkeys: {len(our_keys)} defined | {len(missing)} built-in keys not overridden | {len(unknown)} unknown")
+        if unknown:
+            print("unknown keys (possible typos):")
+            for key in unknown:
+                print(f"  {key}")
+            failures += 1
+        if missing:
+            print("not overridden (VS Code falls back to the default theme):")
+            for key in missing[:60]:
+                print(f"  {key}")
+            if len(missing) > 60:
+                print(f"  ... and {len(missing) - 60} more")
+
+    print(f"\nthemes: {len(labels)}")
+    return 1 if failures else 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--accents", help="'all', 'system' or a comma separated list")
+    parser.add_argument("--no-system", action="store_true", help="do not read the system accent color")
+    parser.add_argument("--check", action="store_true", help="only validate the generated themes")
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="mark the themes with the undocumented _watch flag so VS Code reloads "
+        "theme JSON on save (development only)",
+    )
+    args = parser.parse_args()
+
+    if args.check:
+        return check()
+
+    accents = resolve_accents(args.accents if args.accents != "system" else None, not args.no_system)
+    print(f"accents: {', '.join(accents)}")
+    entries = write_themes(build_plan(accents), watch=args.watch)
+    if args.watch:
+        print("watch mode: _watch added to the theme entries")
+    update_package_json(entries)
+    for entry in entries:
+        print(f"  {entry['uiTheme']:9} {entry['label']}")
+    print(f"{len(entries)} themes written to {THEMES.relative_to(ROOT)}/")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

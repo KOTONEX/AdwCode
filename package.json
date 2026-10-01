@@ -1,0 +1,140 @@
+{
+  "name": "AdwCode",
+  "displayName": "AdwCode",
+  "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
+  "version": "1.0.0",
+  "publisher": "KOTONEX",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "gnome",
+    "libadwaita",
+    "adwaita",
+    "gtk",
+    "gtk4",
+    "theme"
+  ],
+  "homepage": "https://github.com/KOTONEX/AdwCode",
+  "bugs": {
+    "url": "https://github.com/KOTONEX/AdwCode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KOTONEX/AdwCode.git"
+  },
+  "main": "./extension/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "scripts": {
+    "build": "python3 src/build.py",
+    "build:all-accents": "python3 src/build.py --accents all",
+    "check": "python3 src/build.py --check",
+    "check:css": "python3 src/check_css.py",
+    "test": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "package": "python3 src/package.py"
+  },
+  "contributes": {
+    "themes": [
+      {
+        "label": "Adwaita 深色",
+        "uiTheme": "vs-dark",
+        "path": "./themes/adwaita-dark.json"
+      },
+      {
+        "label": "Adwaita 深色 · 彩色状态栏",
+        "uiTheme": "vs-dark",
+        "path": "./themes/adwaita-dark-colorful-status-bar.json"
+      },
+      {
+        "label": "Adwaita 深色 · 默认语法高亮",
+        "uiTheme": "vs-dark",
+        "path": "./themes/adwaita-dark-default-syntax-highlighting.json"
+      },
+      {
+        "label": "Adwaita 深色 · 默认语法高亮 · 彩色状态栏",
+        "uiTheme": "vs-dark",
+        "path": "./themes/adwaita-dark-default-syntax-highlighting-colorful-status-bar.json"
+      },
+      {
+        "label": "Adwaita 深色 高对比度",
+        "uiTheme": "hc-black",
+        "path": "./themes/adwaita-dark-high-contrast.json"
+      },
+      {
+        "label": "Adwaita 浅色",
+        "uiTheme": "vs",
+        "path": "./themes/adwaita-light.json"
+      },
+      {
+        "label": "Adwaita 浅色 · 彩色状态栏",
+        "uiTheme": "vs",
+        "path": "./themes/adwaita-light-colorful-status-bar.json"
+      },
+      {
+        "label": "Adwaita 浅色 · 默认语法高亮",
+        "uiTheme": "vs",
+        "path": "./themes/adwaita-light-default-syntax-highlighting.json"
+      },
+      {
+        "label": "Adwaita 浅色 · 默认语法高亮 · 彩色状态栏",
+        "uiTheme": "vs",
+        "path": "./themes/adwaita-light-default-syntax-highlighting-colorful-status-bar.json"
+      },
+      {
+        "label": "Adwaita 浅色 高对比度",
+        "uiTheme": "hc-light",
+        "path": "./themes/adwaita-light-high-contrast.json"
+      }
+    ],
+    "productIconThemes": [
+      {
+        "id": "adwaita",
+        "label": "Adwaita",
+        "path": "./product-icons/adwaita.json"
+      }
+    ],
+    "configuration": {
+      "title": "Adwaita",
+      "properties": {
+        "adwcode.autoAccent": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），在 Adwaita 主题的各强调色变体之间切换。仅在当前使用 Adwaita 主题时生效。"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "adwcode.syncAccent",
+        "title": "立即同步强调色",
+        "category": "Adwaita"
+      },
+      {
+        "command": "adwcode.closeOnlyControls",
+        "title": "生成仅关闭按钮的窗口控件 CSS",
+        "category": "Adwaita"
+      },
+      {
+        "command": "adwcode.installGnomeLook",
+        "title": "安装 GNOME 外观（CSS）",
+        "category": "Adwaita"
+      },
+      {
+        "command": "adwcode.applyRecommendedSettings",
+        "title": "应用推荐设置",
+        "category": "Adwaita"
+      },
+      {
+        "command": "adwcode.revertRecommendedSettings",
+        "title": "恢复推荐设置",
+        "category": "Adwaita"
+      }
+    ]
+  }
+}

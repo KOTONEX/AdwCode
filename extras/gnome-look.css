@@ -1,0 +1,203 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* SPDX-FileCopyrightText: 2026 AdwCode contributors */
+
+/*
+ * AdwCode：让 VS Code 拥有 GNOME 外观。
+ *
+ * 通过 “Custom CSS and JS Loader” 扩展加载
+ * （执行 “Adwaita: Install GNOME Look” 即可完成配置）。
+ *
+ * 本文件包含两类规则：
+ *
+ * 1. 设计令牌。VS Code 1.139 在约 250 处引用 --vscode-cornerRadius-*、
+ *    --vscode-spacing-* 与 --vscode-shadow-*，却从未定义它们，导致声明被丢弃、
+ *    界面全部呈现直角。在这里定义它们即可一次性为整个工作台带来 Adwaita 几何。
+ * 2. 定向覆盖：为未使用令牌的部分补充规则（标签页、活动栏、列表行、按钮、
+ *    滚动条等）。
+ *
+ * 几何取值遵循 libadwaita 1.10：按钮/输入框/列表行为 6px，弹出层与对话框为
+ * 12px，胶囊与圆形按钮为 9999px。
+ */
+
+/* ------------------------------------------------------------------ */
+/* 1. Adwaita 设计令牌                                            */
+/* ------------------------------------------------------------------ */
+
+:root,
+.monaco-workbench,
+.modern-ui.monaco-workbench {
+	/* libadwaita 圆角 */
+	--vscode-cornerRadius-xSmall: 3px;
+	--vscode-cornerRadius-small: 6px;
+	--vscode-cornerRadius-medium: 6px;
+	--vscode-cornerRadius-large: 12px;
+	--vscode-cornerRadius-xLarge: 12px;
+	--vscode-cornerRadius-circle: 9999px;
+
+	/* VS Code 的间距刻度以 0.1 像素为单位 */
+	--vscode-spacing-size20: 2px;
+	--vscode-spacing-size40: 4px;
+	--vscode-spacing-size60: 6px;
+	--vscode-spacing-size80: 8px;
+	--vscode-spacing-size100: 10px;
+	--vscode-spacing-size120: 12px;
+	--vscode-spacing-size160: 16px;
+	--vscode-spacing-size200: 20px;
+	--vscode-spacing-size240: 24px;
+	--vscode-spacing-size280: 28px;
+	--vscode-spacing-size320: 32px;
+	--vscode-spacing-size360: 36px;
+	--vscode-spacing-size400: 40px;
+
+	/* libadwaita 弹出层阴影（浅色） */
+	--vscode-shadow-sm: 0 1px 2px rgba(0, 0, 6, 0.07);
+	--vscode-shadow-md: 0 1px 3px 1px rgba(0, 0, 6, 0.07),
+		0 2px 6px 2px rgba(0, 0, 6, 0.03);
+	--vscode-shadow-lg: 0 1px 3px 1px rgba(0, 0, 6, 0.12),
+		0 2px 6px 2px rgba(0, 0, 6, 0.05);
+	--vscode-shadow-xl: 0 2px 6px 2px rgba(0, 0, 6, 0.12),
+		0 4px 12px 4px rgba(0, 0, 6, 0.05);
+}
+
+.vs-dark.monaco-workbench {
+	/* libadwaita 弹出层阴影（深色） */
+	--vscode-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
+	--vscode-shadow-md: 0 1px 3px 1px rgba(0, 0, 0, 0.36),
+		0 2px 6px 2px rgba(0, 0, 0, 0.2);
+	--vscode-shadow-lg: 0 1px 3px 1px rgba(0, 0, 0, 0.45),
+		0 2px 6px 2px rgba(0, 0, 0, 0.25);
+	--vscode-shadow-xl: 0 2px 6px 2px rgba(0, 0, 0, 0.45),
+		0 4px 12px 4px rgba(0, 0, 0, 0.25);
+}
+
+.hc-black.monaco-workbench,
+.hc-light.monaco-workbench {
+	/* 高对比度保留 VS Code 的扁平外观 */
+	--vscode-shadow-sm: none;
+	--vscode-shadow-md: none;
+	--vscode-shadow-lg: none;
+	--vscode-shadow-xl: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. AdwTabBar 风格的编辑器标签页                                      */
+/* ------------------------------------------------------------------ */
+
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab {
+	height: 26px;
+	line-height: 26px;
+	margin: 4px 3px;
+	padding: 0 12px;
+	border-radius: var(--vscode-cornerRadius-circle);
+	border-top: none !important;
+	border-right: none !important;
+}
+
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab .tab-label {
+	line-height: 26px;
+}
+
+/* 标签条滚动时保留末尾留白 */
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container {
+	padding-right: 6px;
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. 标题栏按钮：标题栏、活动栏、视图切换器      */
+/* ------------------------------------------------------------------ */
+
+.monaco-workbench .part.titlebar .monaco-action-bar .action-label,
+.monaco-workbench .part.titlebar .window-controls-container > .window-icon {
+	border-radius: var(--vscode-cornerRadius-circle);
+}
+
+/* 活动栏项的悬停/选中背景由 .action-item / .active-item-indicator 绘制，
+   而非标签本身，因此标签必须保持精确的 48px 盒子——内缩会把图标挪位。 */
+.monaco-workbench .part.activitybar .monaco-action-bar .action-item,
+.monaco-workbench .part.activitybar .monaco-action-bar .action-item .action-label,
+.monaco-workbench .part.activitybar .monaco-action-bar .action-item .active-item-indicator {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.monaco-workbench .pane-composite-part > .title .composite-bar .monaco-action-bar .action-label,
+.monaco-workbench .part.sidebar > .title .composite-bar .monaco-action-bar .action-label,
+.monaco-workbench .part.auxiliarybar > .title .composite-bar .monaco-action-bar .action-label,
+.monaco-workbench .part.panel > .title .composite-bar .monaco-action-bar .action-label {
+	border-radius: var(--vscode-cornerRadius-circle);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Adwaita 列表行：内缩 + 圆角选中                      */
+/* ------------------------------------------------------------------ */
+
+.monaco-list-row {
+	/* 6px 透明边框用于内缩背景；因此内层圆角为 6px（外层 12px 减去 6px 边框）。 */
+	border-left: 6px solid transparent;
+	border-right: 6px solid transparent;
+	border-radius: calc(var(--vscode-cornerRadius-small) + 6px);
+	background-clip: padding-box;
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. 按钮、输入框、菜单、浮层组件                                 */
+/* ------------------------------------------------------------------ */
+
+.monaco-button,
+.monaco-inputbox,
+.monaco-findInput,
+.monaco-findInput .monaco-inputbox,
+.monaco-select-box {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.monaco-select-box-dropdown-container {
+	border-radius: var(--vscode-cornerRadius-large);
+}
+
+.monaco-menu .monaco-action-bar .action-item,
+.monaco-menu .monaco-action-bar .action-item .action-label,
+.context-view .monaco-menu {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.monaco-workbench .part.titlebar .action-widget,
+.monaco-workbench .action-widget {
+	border-radius: var(--vscode-cornerRadius-large);
+}
+
+.monaco-editor .find-widget,
+.monaco-workbench .part.statusbar .statusbar-item > a {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.monaco-breadcrumbs .monaco-breadcrumb-item {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.monaco-pane-view .pane > .pane-header {
+	border-radius: var(--vscode-cornerRadius-small);
+}
+
+.notification-toast {
+	border-radius: var(--vscode-cornerRadius-large);
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. 滚动条：Adwaita 细滑块                                  */
+/* ------------------------------------------------------------------ */
+
+.monaco-scrollable-element > .scrollbar > .slider {
+	border-radius: var(--vscode-cornerRadius-circle);
+}
+
+.monaco-scrollable-element > .scrollbar {
+	border-radius: var(--vscode-cornerRadius-circle);
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. 终端标签与状态栏项                               */
+/* ------------------------------------------------------------------ */
+
+.monaco-workbench .terminal-tabs-entry {
+	border-radius: var(--vscode-cornerRadius-circle);
+}

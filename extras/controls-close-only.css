@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* SPDX-FileCopyrightText: 2026 AdwCode contributors */
+
+/*
+ * Adwaita：当 window.controlsStyle 为 "custom" 时只保留关闭按钮。
+ *
+ * GNOME 默认的窗口按钮布局是 ":close"（仅关闭，位于右侧）：
+ *     gsettings get org.gnome.desktop.wm.preferences button-layout
+ *
+ * VS Code 的自绘窗口控件始终绘制最小化、最大化/还原与关闭三个按钮
+ * （固定 46px 宽，容器 138px），颜色主题与产品图标主题都无法隐藏它们。
+ * 如果你想让自绘控件符合 GNOME 布局，请用 “Custom CSS and JS Loader”
+ * 扩展加载本文件。
+ *
+ * 若使用 window.controlsStyle = "native"（默认），GTK 会直接按 GNOME
+ * 配置的布局绘制，无需本文件。
+ */
+
+.monaco-workbench .part.titlebar .window-controls-container {
+	width: auto !important;
+}
+
+.monaco-workbench .part.titlebar .window-controls-container > .window-icon.window-minimize,
+.monaco-workbench .part.titlebar .window-controls-container > .window-icon.window-max-restore {
+	display: none !important;
+}
+
+/* 可选：用中性悬停色替代 Windows 风格的红色矩形。 */
+.monaco-workbench .part.titlebar .window-controls-container > .window-icon.window-close:hover {
+	background-color: rgba(128, 128, 128, 0.2) !important;
+	color: inherit !important;
+}

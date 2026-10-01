@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+"""AdwCode 生成器测试：颜色运算、调色板、语法与主题。
+
+运行：python3 -m unittest discover -s tests -p 'test_*.py'
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+import unittest
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).parent.parent
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
+
+import tokens
+from palette import ACCENT_NAMES, Palette, mix, over, parse_color, rgba, to_hex
+
+THEMES = ROOT / "themes"
+REGISTRY: list[str] = json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text())
+
+
+class ColorMathTest(unittest.TestCase):
+    def test_parse_hex_forms(self) -> None:
+        self.assertEqual(parse_color("#fff"), (255, 255, 255, 1.0))
+        self.assertEqual(parse_color("#000006"), (0, 0, 6, 1.0))
+        self.assertEqual(parse_color("#00000680"), (0, 0, 6, 128 / 255))
+
+    def test_parse_rgb_forms(self) -> None:
+        self.assertEqual(parse_color("rgb(0 0 6 / 80%)"), (0, 0, 6, 0.8))
+        self.assertEqual(parse_color("rgb(255 255 255 / 8%)"), (255, 255, 255, 0.08))
+        self.assertEqual(parse_color("rgb(10 20 30)"), (10, 20, 30, 1.0))
+
+    def test_round_trip(self) -> None:
+        self.assertEqual(to_hex(0, 0, 6, 1.0), "#000006")
+        self.assertEqual(to_hex(0, 0, 6, 0.8), "#000006cc")
+
+    def test_mix_and_over(self) -> None:
+        self.assertEqual(mix("#ffffff", "#000000", 0.5), "#808080")
+        self.assertEqual(over("#ffffff80", "#000000"), "#808080")
+        self.assertEqual(over("#ffffff", "#000000"), "#ffffff")
+        self.assertEqual(rgba("#3584e4", 0.5), "#3584e480")
+
+    def test_mix_rejects_translucent(self) -> None:
+        with self.assertRaises(ValueError):
+            mix("#ffffff80", "#000000", 0.5)
+
+
+class PaletteTest(unittest.TestCase):
+    def test_all_roles_parse(self) -> None:
+        for mode in ("dark", "light"):
+            for accent in ACCENT_NAMES:
+                for high_contrast in (False, True):
+                    palette = Palette(mode, accent=accent, high_contrast=high_contrast)
+                    for role, value in palette.roles().items():
+                        parse_color(value)
+
+    def test_light_foreground_is_composited(self) -> None:
+        palette = Palette("light")
+        # 半透明的 rgb(0 0 6 / 80%) 必须被合成为不透明色
+        self.assertEqual(len(palette["fg_view"]), 7)
+        self.assertNotEqual(palette["fg_view"], "#000006")
+
+    def test_high_contrast_borders(self) -> None:
+        normal = Palette("dark")
+        high = Palette("dark", high_contrast=True)
+        self.assertGreater(
+            parse_color(high["border"])[3], parse_color(normal["border"])[3]
+        )
+        self.assertEqual(parse_color(high["fg_view"])[3], 1.0)
+
+    def test_accents_differ(self) -> None:
+        self.assertNotEqual(Palette("dark", "blue")["accent_bg"], Palette("dark", "teal")["accent_bg"])
+        self.assertNotEqual(
+            Palette("light", "blue")["accent_standalone"],
+            Palette("dark", "blue")["accent_standalone"],
+        )
+
+    def test_unknown_inputs_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            Palette("dark", accent="chartreuse")
+        with self.assertRaises(ValueError):
+            Palette("sepia")
+
+
+class TokensTest(unittest.TestCase):
+    def test_editor_colors(self) -> None:
+        for mode, expected_bg in (("dark", "#1d1d20"), ("light", "#ffffff")):
+            colors = tokens.editor_colors(mode)
+            self.assertEqual(colors["text_bg"], expected_bg)
+            for value in colors.values():
+                if value is not None:
+                    parse_color(value)
+
+    def test_token_rules_are_complete(self) -> None:
+        for mode in ("dark", "light"):
+            rules = tokens.token_colors(mode)
+            self.assertGreater(len(rules), 30)
+            for rule in rules:
+                self.assertTrue(rule["scope"])
+                self.assertIn("settings", rule)
+                self.assertIn("fontStyle", rule["settings"])
+
+    def test_semantic_colors_have_no_nulls(self) -> None:
+        for mode in ("dark", "light"):
+            for name, value in tokens.semantic_token_colors(mode).items():
+                self.assertIsNotNone(value, name)
+                assert value is not None
+                parse_color(value)
+
+    def test_current_scheme_uses_def_statement(self) -> None:
+        # 当前 GtkSourceView 已将 def:keyword 更名；别名必须继续被容忍
+        for mode in ("dark", "light"):
+            self.assertIn("def:statement", tokens.load_scheme(mode)["styles"])
+            self.assertNotIn("def:keyword", tokens.load_scheme(mode)["styles"])
+
+
+class ThemeTest(unittest.TestCase):
+    def themes(self) -> list[dict[str, Any]]:
+        return [json.loads(path.read_text()) for path in sorted(THEMES.glob("*.json"))]
+
+    def test_themes_exist(self) -> None:
+        self.assertGreaterEqual(len(self.themes()), 10)
+
+    def test_labels_unique(self) -> None:
+        labels = [theme["name"] for theme in self.themes()]
+        self.assertEqual(len(labels), len(set(labels)))
+
+    def test_colors_are_registered(self) -> None:
+        from build import LEGACY_KEYS
+
+        builtin = set(json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text()))
+        known = set(REGISTRY) | builtin | LEGACY_KEYS
+        for theme in self.themes():
+            for key in theme["colors"]:
+                self.assertIn(key, known, f"{theme['name']}: {key}")
+
+    def test_semantic_and_tokens(self) -> None:
+        for theme in self.themes():
+            self.assertTrue(theme["semanticHighlighting"])
+            for value in theme["semanticTokenColors"].values():
+                parse_color(value)
+            for rule in theme["tokenColors"]:
+                self.assertTrue(rule["scope"])
+                self.assertTrue(rule["settings"])
+
+    def test_contrast_keys_only_in_high_contrast(self) -> None:
+        for theme in self.themes():
+            hc = "高对比度" in theme["name"]
+            for key in ("contrastBorder", "contrastActiveBorder"):
+                self.assertEqual(
+                    key in theme["colors"],
+                    hc,
+                    f"{theme['name']}: {key} must only be set in high contrast themes",
+                )
+
+    def test_labels_are_chinese(self) -> None:
+        """主题标签必须能被扩展的正则解析（Adwaita [强调色] 深色/浅色[后缀]）。"""
+        for theme in self.themes():
+            name = theme["name"]
+            self.assertTrue(name.startswith("Adwaita "), name)
+            self.assertIn("深色" if theme["type"] == "dark" else "浅色", name)
+            # 默认蓝色不带强调色前缀，其余强调色必须出现在标签里
+            self.assertNotIn("蓝色", name)
+            if theme["colors"]["button.background"] != Palette("dark", "blue")["accent_bg"]:
+                self.assertRegex(name, r"^Adwaita (青色|绿色|黄色|橙色|红色|粉色|紫色|石板灰) ")
+
+    def test_ui_theme_matches_type(self) -> None:
+        manifest = json.loads((ROOT / "package.json").read_text())
+        entries = {entry["label"]: entry for entry in manifest["contributes"]["themes"]}
+        for theme in self.themes():
+            entry = entries[theme["name"]]
+            if theme["type"] == "dark":
+                self.assertIn(entry["uiTheme"], ("vs-dark", "hc-black"))
+            else:
+                self.assertIn(entry["uiTheme"], ("vs", "hc-light"))
+            self.assertTrue((ROOT / entry["path"].removeprefix("./")).exists())
+
+    def test_slugs_are_safe(self) -> None:
+        for path in THEMES.glob("*.json"):
+            self.assertRegex(path.name, r"^[a-z0-9-]+\.json$")
+
+
+class CssTest(unittest.TestCase):
+    def test_css_files_parse(self) -> None:
+        import check_css
+
+        sheets = sorted((ROOT / "extras").glob("*.css"))
+        self.assertTrue(sheets)
+        for sheet in sheets:
+            selectors, declarations = check_css.selectors_and_declarations(sheet.read_text())
+            self.assertTrue(selectors.strip(), sheet.name)
+            self.assertTrue(declarations.strip(), sheet.name)
+
+    def test_referenced_variables_are_defined(self) -> None:
+        import check_css
+
+        vscode_css, _ = check_css.find_vscode_assets(None)
+        vscode_defined: set[str] = set()
+        if vscode_css is not None:
+            vscode_defined = set(
+                check_css.VAR_DEF_RE.findall(
+                    vscode_css.read_text(encoding="utf-8", errors="ignore")
+                )
+            )
+        for sheet in sorted((ROOT / "extras").glob("*.css")):
+            text = sheet.read_text()
+            _, declarations = check_css.selectors_and_declarations(text)
+            referenced = set(check_css.VAR_REF_RE.findall(declarations))
+            defined = set(check_css.VAR_DEF_RE.findall(text))
+            missing = sorted(referenced - defined - vscode_defined)
+            self.assertFalse(missing, f"{sheet.name}: undefined variables {missing}")
+
+    def test_vscode_selectors_still_exist(self) -> None:
+        import check_css
+
+        vscode_css, _ = check_css.find_vscode_assets(None)
+        if vscode_css is None:
+            self.skipTest("no VS Code installation found")
+        self.assertEqual(check_css.check(None), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

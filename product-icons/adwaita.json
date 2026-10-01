@@ -1,0 +1,33 @@
+{
+  "fonts": [
+    {
+      "id": "adwaita-icons",
+      "src": [
+        {
+          "path": "./adwaita-icons.ttf",
+          "format": "truetype"
+        }
+      ],
+      "weight": "normal",
+      "style": "normal"
+    }
+  ],
+  "iconDefinitions": {
+    "chrome-close": {
+      "fontCharacter": "\\ea01",
+      "fontId": "adwaita-icons"
+    },
+    "chrome-maximize": {
+      "fontCharacter": "\\ea02",
+      "fontId": "adwaita-icons"
+    },
+    "chrome-minimize": {
+      "fontCharacter": "\\ea03",
+      "fontId": "adwaita-icons"
+    },
+    "chrome-restore": {
+      "fontCharacter": "\\ea04",
+      "fontId": "adwaita-icons"
+    }
+  }
+}

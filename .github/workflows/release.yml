@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+name: 发布
+
+# 推送形如 v1.0.0 的标签时：校验 → 测试 → 打包 → 上传到对应 Release。
+# 仓库中不保存 VSIX，构建产物只作为 Release 附件发布。
+# 发布说明由上一个标签以来的提交自动生成；配置 VSCE_PAT / OVSX_PAT 后
+# 同一 VSIX 会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: 校验标签与版本一致
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+          if [ "$tag" != "$version" ]; then
+            echo "标签 $GITHUB_REF_NAME 与 package.json 的版本 $version 不一致" >&2
+            exit 1
+          fi
+          echo "版本：$version"
+
+      - name: 静态检查
+        run: make lint
+
+      - name: 生成/构建校验
+        run: |
+          python3 src/build.py
+          git diff --exit-code -- themes package.json
+
+      - name: 离线单元测试
+        run: make test
+
+      - name: 打包
+        run: python3 src/package.py
+
+      - name: 上传到 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          vsix="$(ls -1 *.vsix | head -1)"
+          # 发布说明：上一个标签到当前标签之间的提交（含提交信息全文）。
+          prev="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -n "$prev" ]; then
+            range="${prev}..${GITHUB_REF_NAME}"
+          else
+            range="${GITHUB_REF_NAME}"
+          fi
+          {
+            git log --no-merges --reverse --pretty=format:'### %s%n%n%b' "$range"
+            if [ -n "$prev" ]; then
+              printf '\n\n**完整变更**：https://github.com/%s/compare/%s...%s\n' \
+                "$GITHUB_REPOSITORY" "$prev" "$GITHUB_REF_NAME"
+            fi
+          } > release-notes.md
+          # 重复运行先删除旧 Release，保证说明与附件始终对应当前标签。
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release delete "$GITHUB_REF_NAME" --yes
+          fi
+          gh release create "$GITHUB_REF_NAME" "$vsix" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md
+
+      - name: 发布到扩展市场
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          vsix="$(ls -1 *.vsix | head -1)"
+          version="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+
+          if [ -z "$VSCE_PAT" ]; then
+            printf '%s\n' '（未配置 VSCE_PAT，跳过 VS Code 扩展市场）'
+          else
+            # --skip-duplicate：标签重复运行时，已发布的同一版本不算失败。
+            npx --yes @vscode/vsce publish --packagePath "$vsix" -p "$VSCE_PAT" --skip-duplicate
+          fi
+
+          if [ -z "$OVSX_PAT" ]; then
+            printf '%s\n' '（未配置 OVSX_PAT，跳过 Open VSX）'
+          elif curl -fsS "https://open-vsx.org/api/KOTONEX/AdwCode/$version" >/dev/null 2>&1; then
+            printf '%s\n' "Open VSX 已存在 $version，跳过"
+          else
+            npx --yes ovsx publish "$vsix" -p "$OVSX_PAT"
+          fi
