@@ -98,7 +98,7 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
 
     failures = 0
     for sheet in sorted(EXTRAS.glob("*.css")):
-        selectors, declarations = selectors_and_declarations(sheet.read_text())
+        selectors, declarations = selectors_and_declarations(sheet.read_text(encoding="utf-8"))
         classes = set(CLASS_RE.findall(selectors))
         missing = sorted(classes - vscode_classes)
         if missing:
@@ -109,7 +109,7 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
         else:
             print(f"通过 {sheet.name}：{len(classes)} 个类名仍存在于 VS Code 中")
 
-        our_vars = set(VAR_DEF_RE.findall(sheet.read_text()))
+        our_vars = set(VAR_DEF_RE.findall(sheet.read_text(encoding="utf-8")))
         referenced = set(VAR_REF_RE.findall(declarations))
         undefined = sorted(referenced - vscode_vars - our_vars)
         if undefined:

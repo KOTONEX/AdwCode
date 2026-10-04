@@ -115,13 +115,13 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     for mode, name in VARIANTS.items():
         tokens = resolve_token_colors(name)
-        (OUT / f"{mode}.json").write_text(json.dumps({"tokenColors": tokens}, indent=2) + "\n")
+        (OUT / f"{mode}.json").write_text(json.dumps({"tokenColors": tokens}, indent=2) + "\n", encoding="utf-8")
         print(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
 
     keys: set[str] = set()
     for name in ALL_THEMES:
         keys |= set(fetch(name).get("colors", {}))
-    (OUT / "builtin_keys.json").write_text(json.dumps(sorted(keys), indent=2) + "\n")
+    (OUT / "builtin_keys.json").write_text(json.dumps(sorted(keys), indent=2) + "\n", encoding="utf-8")
     print(f"内置颜色键： {len(keys)}")
 
     markdown = urllib.request.urlopen(DOCS, timeout=60).read().decode()
@@ -132,7 +132,7 @@ def main() -> None:
         for item in registry
         if not item.startswith(("workbench.", "editor.token", "configuration.", "vscode."))
     }
-    (OUT / "registry_keys.json").write_text(json.dumps(sorted(registry), indent=2) + "\n")
+    (OUT / "registry_keys.json").write_text(json.dumps(sorted(registry), indent=2) + "\n", encoding="utf-8")
     print(f"注册表颜色键： {len(registry)}")
 
 

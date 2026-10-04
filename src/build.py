@@ -164,7 +164,7 @@ def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = Fals
 
     token_colors: list[tokens.TokenRule]
     if default_syntax:
-        token_colors = cast(list[tokens.TokenRule], json.loads((DEFAULTS / f"{mode}.json").read_text())["tokenColors"])
+        token_colors = cast(list[tokens.TokenRule], json.loads((DEFAULTS / f"{mode}.json").read_text(encoding="utf-8"))["tokenColors"])
     else:
         token_colors = tokens.token_colors(mode)
 
@@ -220,9 +220,9 @@ def write_themes(plan: list[ThemeRequest], watch: bool = False) -> list[ThemeEnt
 
 def update_package_json(entries: list[ThemeEntry]) -> None:
     path = ROOT / "package.json"
-    manifest = json.loads(path.read_text())
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     manifest["contributes"]["themes"] = entries
-    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def load_known_keys() -> tuple[set[str] | None, set[str] | None]:
@@ -232,9 +232,9 @@ def load_known_keys() -> tuple[set[str] | None, set[str] | None]:
     registry_path = DEFAULTS / "registry_keys.json"
     builtin_path = DEFAULTS / "builtin_keys.json"
     if registry_path.exists():
-        registry = set(json.loads(registry_path.read_text()))
+        registry = set(json.loads(registry_path.read_text(encoding="utf-8")))
     if builtin_path.exists():
-        builtin = set(json.loads(builtin_path.read_text()))
+        builtin = set(json.loads(builtin_path.read_text(encoding="utf-8")))
     return registry, builtin
 
 
@@ -264,7 +264,7 @@ def check() -> int:
     our_keys: set[str] = set()
     labels: list[str] = []
     for path in sorted(THEMES.glob("*.json")):
-        theme = json.loads(path.read_text())
+        theme = json.loads(path.read_text(encoding="utf-8"))
         labels.append(theme["name"])
         our_keys |= set(theme["colors"])
 
@@ -289,7 +289,7 @@ def check() -> int:
     # 产品图标主题
     icons_path = ROOT / "product-icons" / "adwaita.json"
     if icons_path.exists():
-        icons = json.loads(icons_path.read_text())
+        icons = json.loads(icons_path.read_text(encoding="utf-8"))
         fonts = icons.get("fonts", [])
         definitions = icons.get("iconDefinitions", {})
         if not fonts or not definitions:
@@ -316,7 +316,7 @@ def check() -> int:
     ]
     failed_themes: int = 0
     for path in sorted(THEMES.glob("*.json")):
-        theme = json.loads(path.read_text())
+        theme = json.loads(path.read_text(encoding="utf-8"))
         colors = theme["colors"]
         problems: list[str] = []
         for fg_key, bg_key, minimum in checks:
@@ -328,6 +328,7 @@ def check() -> int:
         for problem in problems:
             print(f"       {problem}")
             failures += 1
+        if problems:
             failed_themes += 1
     print(f"对比度：{len(list(THEMES.glob('*.json'))) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
 

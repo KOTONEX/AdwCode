@@ -483,21 +483,32 @@
 }
 
 /* 13. 非活动窗口：只弱化导航与工具栏，编辑器、终端和正文保持原色。 */
-.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .tabs-container > .tab.active {
+.monaco-workbench:not(.hc-black):not(.hc-light):has(.part.titlebar.inactive) .part.editor .tabs-container > .tab.active {
 	background-color: var(--vscode-tab-unfocusedActiveBackground) !important;
 	color: var(--vscode-tab-unfocusedActiveForeground) !important;
 }
 
-.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .tabs-container > .tab:not(.active) {
+.monaco-workbench:not(.hc-black):not(.hc-light):has(.part.titlebar.inactive) .part.editor .tabs-container > .tab:not(.active) {
 	background-color: var(--vscode-tab-unfocusedInactiveBackground) !important;
 	color: var(--vscode-tab-unfocusedInactiveForeground) !important;
 }
 
-.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) :is(.part.sidebar, .part.auxiliarybar, .part.panel) > .title .action-item:not(.disabled) .action-label,
-.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .editor-actions .action-item:not(.disabled) .action-label {
+.monaco-workbench:not(.hc-black):not(.hc-light):has(.part.titlebar.inactive) :is(.part.sidebar, .part.auxiliarybar, .part.panel) > .title .action-item:not(.disabled) .action-label,
+.monaco-workbench:not(.hc-black):not(.hc-light):has(.part.titlebar.inactive) .part.editor .editor-actions .action-item:not(.disabled) .action-label {
 	opacity: 0.65;
 }
 
-.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.activitybar .action-item:not(.disabled) .action-label {
+.monaco-workbench:not(.hc-black):not(.hc-light):has(.part.titlebar.inactive) .part.activitybar .action-item:not(.disabled) .action-label {
 	opacity: 0.75;
+}
+
+/* 工作台的通用悬停规则会命中禁用的工具栏图标，显式保留其默认状态。 */
+.monaco-workbench .monaco-toolbar .action-item:is(.disabled, [aria-disabled="true"]) .action-label,
+.monaco-workbench .monaco-toolbar .action-label[aria-disabled="true"] {
+	background-color: transparent !important;
+	cursor: default;
+}
+
+.monaco-workbench .monaco-toolbar .action-item:is(.disabled, [aria-disabled="true"]) .action-label:is(.checked, [aria-pressed="true"]) {
+	background-color: var(--vscode-inputOption-activeBackground) !important;
 }

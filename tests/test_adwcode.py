@@ -29,7 +29,7 @@ import tokens
 from palette import ACCENT_NAMES, Palette, mix, over, parse_color, rgba, to_hex
 
 THEMES = ROOT / "themes"
-REGISTRY = cast(list[str], json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text()))
+REGISTRY = cast(list[str], json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text(encoding="utf-8")))
 
 
 class ColorMathTest(unittest.TestCase):
@@ -134,7 +134,7 @@ class TokensTest(unittest.TestCase):
 
 class ThemeTest(unittest.TestCase):
     def themes(self) -> list[dict[str, Any]]:
-        return [json.loads(path.read_text()) for path in sorted(THEMES.glob("*.json"))]
+        return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(THEMES.glob("*.json"))]
 
     def test_themes_exist(self) -> None:
         self.assertGreaterEqual(len(self.themes()), 10)
@@ -146,7 +146,7 @@ class ThemeTest(unittest.TestCase):
     def test_colors_are_registered(self) -> None:
         from build import LEGACY_KEYS
 
-        builtin = set(json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text()))
+        builtin = set(json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text(encoding="utf-8")))
         known = set(REGISTRY) | builtin | LEGACY_KEYS
         for theme in self.themes():
             for key in theme["colors"]:
@@ -183,7 +183,7 @@ class ThemeTest(unittest.TestCase):
                 self.assertRegex(name, r"^Adwaita (青色|绿色|黄色|橙色|红色|粉色|紫色|石板灰) ")
 
     def test_ui_theme_matches_type(self) -> None:
-        manifest = json.loads((ROOT / "package.json").read_text())
+        manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         entries = {entry["label"]: entry for entry in manifest["contributes"]["themes"]}
         for theme in self.themes():
             entry = entries[theme["name"]]
@@ -248,7 +248,7 @@ class ExtensionStatusTest(unittest.TestCase):
 
     def test_vsix_xml_escapes_metadata(self) -> None:
         import package
-        manifest = json.loads((ROOT / "package.json").read_text())
+        manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         manifest["description"] = '说明 <示例> & "引号"'
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
@@ -286,7 +286,7 @@ class CssTest(unittest.TestCase):
         sheets = sorted((ROOT / "extras").glob("*.css"))
         self.assertTrue(sheets)
         for sheet in sheets:
-            selectors, declarations = check_css.selectors_and_declarations(sheet.read_text())
+            selectors, declarations = check_css.selectors_and_declarations(sheet.read_text(encoding="utf-8"))
             self.assertTrue(selectors.strip(), sheet.name)
             self.assertTrue(declarations.strip(), sheet.name)
 
@@ -302,7 +302,7 @@ class CssTest(unittest.TestCase):
                 )
             )
         for sheet in sorted((ROOT / "extras").glob("*.css")):
-            text = sheet.read_text()
+            text = sheet.read_text(encoding="utf-8")
             _, declarations = check_css.selectors_and_declarations(text)
             referenced = set(check_css.VAR_REF_RE.findall(declarations))
             defined = set(check_css.VAR_DEF_RE.findall(text))

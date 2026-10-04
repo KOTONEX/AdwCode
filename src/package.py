@@ -48,7 +48,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
       <Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
       <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
     </Properties>
-    <License>LICENSE</License>
+    <License>extension/LICENSE</License>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
@@ -62,7 +62,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 """
 
-INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras"]
+INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md"]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
 
 
@@ -78,7 +78,7 @@ def collect() -> list[Path]:
 
 
 def main() -> None:
-    manifest = json.loads((ROOT / "package.json").read_text())
+    manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     name = manifest["name"]
     version = manifest["version"]
     output = ROOT / f"{name}-{version}.vsix"
