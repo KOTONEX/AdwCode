@@ -47,7 +47,6 @@ const ACCENT_LABELS = {
 /** @type {Record<ThemeKind, string>} */
 const MODE_LABELS = { dark: "深色", light: "浅色" };
 const PREFIX = "Adwaita ";
-const HIGH_CONTRAST = "高对比度";
 // 主题标签使用中文，同时兼容旧版英文标签。
 /** @type {RegExp[]} */
 const THEME_PATTERNS = [
@@ -430,14 +429,14 @@ function showAppearanceStatus(context) {
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
       <style>
         * { box-sizing: border-box; }
-        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: ${uiFontStack()}; line-height: 1.6; }
+        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-panel-background); font-family: ${uiFontStack()}; line-height: 1.6; }
         header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
         h1 { font-size: 24px; line-height: 1.3; margin: 0; } h2 { font-size: 16px; margin: 24px 0 8px; }
         h3 { font-size: 15px; margin: 0 0 4px; } p { margin: 8px 0; }
         .muted, dt { color: var(--vscode-descriptionForeground); }
-        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); border-radius: 15px; padding: 16px; margin: 8px 0; }
+        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-editorGroup-border, transparent); border-radius: 15px; padding: 16px; margin: 8px 0; }
         .summary { border-inline-start: 3px solid var(--vscode-focusBorder); }
-        .files { border-radius: 15px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); }
+        .files { border-radius: 15px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-editorGroup-border, transparent); }
         article { padding: 16px; } article + article { border-top: 1px solid var(--vscode-editorGroup-border); }
         code { overflow-wrap: anywhere; } dl { margin: 8px 0 0; } .row { display: grid; grid-template-columns: minmax(96px, 1fr) minmax(0, 2fr); gap: 8px; padding: 4px 0; }
         dd { margin: 0; overflow-wrap: anywhere; } ol { padding-inline-start: 24px; } li + li { margin-top: 8px; }

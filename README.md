@@ -260,20 +260,10 @@ meson test -C builddir --print-errorlogs
 `--check` 会把生成的主题与官方颜色注册表、内置主题比对：未知键（拼写错误）会
 导致检查失败，缺失键会被列出，并校验明暗两种模式的对比度。
 
-图标字体由 `product-icons/scalable/` 中的 SVG 经
-[nanoemoji](https://github.com/googlefonts/nanoemoji) 生成：
+产品图标包含上游窗口与布局字形，以及本项目的常用单色字形。
+来源、许可证和再生成命令见 [产品图标说明](product-icons/README.md)。
+外观实施、两轮审查与试用步骤见 [外观实现与验收](docs/05-外观实现与验收.md)。
 
-```sh
-nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
-  --output_file product-icons/adwaita-icons.ttf product-icons/scalable/*.svg
-```
-
-## 许可证
-
-本项目以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME 基金会
-无隶属关系。随附的第三方组件与数据（GtkSourceView 样式方案、VS Code 默认主题
-数据、piousdeer/vscode-adwaita 的 TextMate 作用域映射与产品图标字形等）登记在
-[docs/01-第三方许可证.md](docs/01-第三方许可证.md)。
 
 ### 界面与代码字体
 
@@ -285,3 +275,10 @@ nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
 界面字体不改动编辑器或终端的字体。“应用推荐设置”单独读取 GNOME 的
 `monospace-font-name` 设置代码字体；无法读取时回退到 Adwaita Mono、monospace。
 更改系统字体或 `adwcode.uiFontFamily` 后重新安装外观，待保存工作后手动加载。
+
+## 许可证
+
+本项目以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME 基金会
+无隶属关系。随附的第三方组件与数据（GtkSourceView 样式方案、VS Code 默认主题
+数据、piousdeer/vscode-adwaita 的 TextMate 作用域映射与产品图标字形等）登记在
+[docs/01-第三方许可证.md](docs/01-第三方许可证.md)。

@@ -9,6 +9,7 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何按
 | 依赖 | 用途 |
 | --- | --- |
 | Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
+| [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成自有产品图标字体时需要，见产品图标说明 |
 | [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
 | VS Code | 供 `python3.14t src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
 

@@ -62,7 +62,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 """
 
-INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md"]
+INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md", "src/vscode_defaults/README.md"]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
 
 
