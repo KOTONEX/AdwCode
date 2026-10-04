@@ -10,6 +10,17 @@
       ],
       "weight": "normal",
       "style": "normal"
+    },
+    {
+      "id": "adwcode-symbols",
+      "src": [
+        {
+          "path": "./adwcode-symbols.ttf",
+          "format": "truetype"
+        }
+      ],
+      "weight": "normal",
+      "style": "normal"
     }
   ],
   "iconDefinitions": {
@@ -27,6 +38,66 @@
     },
     "chrome-restore": {
       "fontCharacter": "\\ea04",
+      "fontId": "adwaita-icons"
+    },
+    "files": {
+      "fontCharacter": "\\f001",
+      "fontId": "adwcode-symbols"
+    },
+    "search": {
+      "fontCharacter": "\\f002",
+      "fontId": "adwcode-symbols"
+    },
+    "source-control": {
+      "fontCharacter": "\\f003",
+      "fontId": "adwcode-symbols"
+    },
+    "debug-alt": {
+      "fontCharacter": "\\f004",
+      "fontId": "adwcode-symbols"
+    },
+    "extensions": {
+      "fontCharacter": "\\f005",
+      "fontId": "adwcode-symbols"
+    },
+    "terminal": {
+      "fontCharacter": "\\f006",
+      "fontId": "adwcode-symbols"
+    },
+    "settings-gear": {
+      "fontCharacter": "\\f007",
+      "fontId": "adwcode-symbols"
+    },
+    "refresh": {
+      "fontCharacter": "\\f008",
+      "fontId": "adwcode-symbols"
+    },
+    "add": {
+      "fontCharacter": "\\f009",
+      "fontId": "adwcode-symbols"
+    },
+    "layout-sidebar-left": {
+      "fontCharacter": "\\ea05",
+      "fontId": "adwaita-icons"
+    },
+    "layout-sidebar-left-off": {
+      "fontCharacter": "\\ea06",
+      "fontId": "adwaita-icons"
+    },
+    "layout-panel": {
+      "fontCharacter": "\\ea07",
+      "fontId": "adwaita-icons"
+    },
+    "layout-panel-off": {
+      "fontCharacter": "\\ea08",
+      "fontId": "adwaita-icons"
+    },
+    "layout-sidebar-right": {
+      "fontCharacter": "\\ea09",
+      "fontId": "adwaita-icons"
+    },
+    "layout-sidebar-right-off": {
+      "fontCharacter": "\\ea0a",
       "fontId": "adwaita-icons"
     }
   }
