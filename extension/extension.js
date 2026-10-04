@@ -410,38 +410,60 @@ function escapeHtml(value) {
 /** @param {import("vscode").ExtensionContext} context @returns {void} */
 function showAppearanceStatus(context) {
   const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "Adwaita 外观状态", vscode.ViewColumn.One, { enableScripts: true });
-  const render = () => {
+  const render = (refreshed = false) => {
     const rows = appearanceStatus(context);
     const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
     const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新");
     const nonce = Math.random().toString(36).slice(2);
+    const labels = /** @type {Record<string, string>} */ ({
+      "gnome-look.css": "工作台外观", "controls-close-only.css": "窗口按钮", "gnome-fonts.css": "界面字体",
+    });
     panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
       <style>
-        body { max-width: 920px; margin: 0 auto; padding: 32px 24px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); line-height: 1.6; }
-        h1 { font-size: 26px; margin-bottom: 4px; } h2 { font-size: 17px; }
-        .muted { color: var(--vscode-descriptionForeground); }
-        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); border-radius: 15px; padding: 20px; margin: 20px 0; }
-        .table { overflow-x: auto; } table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px 10px; border-bottom: 1px solid var(--vscode-widget-border, transparent); white-space: nowrap; }
-        button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 0; border-radius: 9px; padding: 8px 16px; cursor: pointer; }
-        button:hover { background: var(--vscode-button-hoverBackground); } button:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
+        * { box-sizing: border-box; }
+        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); line-height: 1.6; }
+        header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+        h1 { font-size: 24px; line-height: 1.3; margin: 0; } h2 { font-size: 16px; margin: 24px 0 8px; }
+        h3 { font-size: 15px; margin: 0 0 4px; } p { margin: 8px 0; }
+        .muted, dt { color: var(--vscode-descriptionForeground); }
+        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); border-radius: 15px; padding: 16px; margin: 8px 0; }
+        .summary { border-inline-start: 3px solid var(--vscode-focusBorder); }
+        .files { border-radius: 15px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); }
+        article { padding: 16px; } article + article { border-top: 1px solid var(--vscode-editorGroup-border); }
+        code { overflow-wrap: anywhere; } dl { margin: 8px 0 0; } .row { display: grid; grid-template-columns: minmax(96px, 1fr) minmax(0, 2fr); gap: 8px; padding: 4px 0; }
+        dd { margin: 0; overflow-wrap: anywhere; } ol { padding-inline-start: 24px; } li + li { margin-top: 8px; }
+        button { font: inherit; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-button-secondaryBorder, transparent); border-radius: 9px; padding: 6px 14px; cursor: pointer; }
+        button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+        button:active { background: var(--vscode-toolbar-activeBackground); }
+        button:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
+        .vscode-high-contrast .card, .vscode-high-contrast .files, .vscode-high-contrast-light .card, .vscode-high-contrast-light .files { border-color: var(--vscode-contrastBorder); }
+        @media (max-width: 360px) { .row { grid-template-columns: 1fr; gap: 0; } }
       </style></head><body>
-      <h1>外观状态</h1><p class="muted">检查文件同步与磁盘补丁，不会修改配置或重载窗口。</p>
-      <div class="card"><h2>${ready ? "文件与补丁均已就绪" : "外观文件需要检查"}</h2>
-      <p>Custom CSS and JS Loader：${loader ? "已安装" : "未安装"}</p>
-      <p>当前窗口是否已加载这些文件：无法直接确认。补丁更新后，待工作结束再手动重载。</p></div>
-      <div class="table"><table><thead><tr><th>文件</th><th>安装副本</th><th>加载器配置</th><th>磁盘补丁</th></tr></thead><tbody>
-      ${rows.map((row) => `<tr><td>${escapeHtml(row.name)}</td><td>${row.copied}</td><td>${row.imported ? "已加入" : "未加入"}</td><td>${row.patched}</td></tr>`).join("")}
-      </tbody></table></div>
-      <div class="card"><h2>下一步</h2><p>副本或加载配置需要更新：执行“Adwaita: 安装 GNOME 外观（CSS）”。磁盘补丁需要更新：执行加载器的“Reload Custom CSS and JS”。</p>
-      <p class="muted">重载窗口可能中断扩展会话或调试任务，请先保存工作。此面板不会自动执行上述操作。</p></div>
-      <button id="refresh">刷新状态</button>
-      <script nonce="${nonce}">const api = acquireVsCodeApi(); document.getElementById('refresh').addEventListener('click', () => api.postMessage('refresh'));</script>
+      <header><h1>外观状态</h1><button id="refresh">刷新状态</button></header>
+      <p class="muted">只检查安装文件与磁盘补丁，不修改配置或重载窗口。</p>
+      <p role="status" aria-live="polite">${refreshed ? "状态已刷新。" : ""}</p>
+      <section aria-labelledby="summary"><h2 id="summary">安装准备</h2><div class="card summary">
+      <h3>${ready ? "文件与补丁均已就绪" : "外观文件需要检查"}</h3>
+      <dl><div class="row"><dt>加载器</dt><dd>Custom CSS and JS Loader：${loader ? "已安装" : "未安装"}</dd></div>
+      <div class="row"><dt>当前窗口</dt><dd>无法直接确认是否已加载。磁盘补丁状态与窗口显示分别检查。</dd></div></dl></div></section>
+      <section aria-labelledby="files"><h2 id="files">外观组件</h2><div class="files">
+      ${rows.map((row) => `<article><h3>${labels[row.name] || escapeHtml(row.name)}</h3><code class="muted">${escapeHtml(row.name)}</code><dl>
+      <div class="row"><dt>安装副本</dt><dd>${row.copied}</dd></div>
+      <div class="row"><dt>加载器配置</dt><dd>${row.imported ? "已加入" : "未加入"}</dd></div>
+      <div class="row"><dt>磁盘补丁</dt><dd>${row.patched}</dd></div></dl></article>`).join("")}
+      </div></section>
+      <section aria-labelledby="next"><h2 id="next">下一步</h2><div class="card"><ol>
+      ${!loader ? '<li>安装 Custom CSS and JS Loader。</li>' : ""}
+      <li>副本或加载配置需要更新时，执行“Adwaita: 安装 GNOME 外观（CSS）”。</li>
+      <li>磁盘补丁需要更新时，首次执行加载器的“Enable Custom CSS and JS”；已启用时执行“Reload Custom CSS and JS”。</li>
+      <li>保存工作后手动重载窗口，再检查实际外观。重载可能中断扩展会话或调试任务。</li>
+      </ol><p class="muted">此面板不会自动执行这些操作。</p></div></section>
+      <script nonce="${nonce}">const api = acquireVsCodeApi(); const button = document.getElementById('refresh'); button.addEventListener('click', () => api.postMessage('refresh')); ${refreshed ? "button.focus();" : ""}</script>
       </body></html>`;
   };
-  const listener = panel.webview.onDidReceiveMessage((message) => { if (message === "refresh") render(); });
+  const listener = panel.webview.onDidReceiveMessage((message) => { if (message === "refresh") render(true); });
   panel.onDidDispose(() => listener.dispose());
   render();
 }
