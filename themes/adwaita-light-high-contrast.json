@@ -976,7 +976,7 @@
     "sideBarStickyScroll.background": "#ffffff",
     "sideBarStickyScroll.border": "#00000680",
     "sideBarTitle.background": "#ebebed",
-    "sideBarTitle.border": "#0000064c",
+    "sideBarTitle.border": "#00000680",
     "sideBySideEditor.horizontalBorder": "#0000064c",
     "sideBySideEditor.verticalBorder": "#0000064c",
     "simpleFindWidget.sashBorder": "#0000064c",

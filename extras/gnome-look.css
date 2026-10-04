@@ -315,3 +315,21 @@
 .monaco-workbench .part.statusbar .statusbar-item > a {
 	border-radius: var(--vscode-cornerRadius-small);
 }
+
+/* ------------------------------------------------------------------ */
+/* 8. 工作区表面：顶栏与工具栏同层，侧栏和内容之间只保留一条分隔线。 */
+/* ------------------------------------------------------------------ */
+
+.monaco-workbench .part.panel > .title {
+	background-color: var(--vscode-editorGroupHeader-tabsBackground);
+}
+
+.monaco-workbench .part.editor > .content .editor-group-container > .title {
+	box-shadow: inset 0 -1px var(--vscode-editorGroup-border);
+}
+
+.monaco-workbench .part.sidebar .pane-header,
+.monaco-workbench .part.auxiliarybar .pane-header {
+	/* 标题以文字权重区分，不再套用内容行的圆角卡片。 */
+	border-radius: 0;
+}
