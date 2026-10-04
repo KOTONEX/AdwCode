@@ -106,10 +106,15 @@ assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('</style>'));
 assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
 // 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
 await (async () => {
+  assert.equal(sandbox.parseTheme("Adwaita Dark High Contrast"), undefined);
+  assert.equal(sandbox.parseTheme("Adwaita 深色 高对比度"), undefined);
+  assert.equal(sandbox.parseTheme("Adwaita Dark").kind, "dark");
   await sandbox.readSystemFonts();
   const generated = sandbox.cssSource(context, "gnome-fonts.css");
   assert.ok(generated.includes('"更纱黑体 UI SC"'));
   assert.ok(generated.includes('system-ui, sans-serif'));
+  sandbox.testContext = context;
+  vm.runInContext("extensionContext = testContext", sandbox);
   let reloads = 0;
   let errors = 0;
   let enabled = true;

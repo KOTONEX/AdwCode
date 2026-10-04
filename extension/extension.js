@@ -159,7 +159,7 @@ let accentMonitor;
  * @returns {name is string}
  */
 function isOurTheme(name) {
-  return typeof name === "string" && name.startsWith(PREFIX) && !name.includes(HIGH_CONTRAST);
+  return typeof name === "string" && name.startsWith(PREFIX) && !/(?:高对比度|High Contrast)/i.test(name);
 }
 
 /**
@@ -359,10 +359,11 @@ function cssPatchState(markers) {
   } catch (error) {
     return "unknown";
   }
-  if (!content.includes("VSCODE-CUSTOM-CSS-START")) {
+  const patch = content.match(/<!-- !! VSCODE-CUSTOM-CSS-START !! -->([\s\S]*?)<!-- !! VSCODE-CUSTOM-CSS-END !! -->/)?.[1];
+  if (patch === undefined) {
     return "not-enabled";
   }
-  return markers.every((marker) => content.includes(marker)) ? "enabled" : "stale";
+  return markers.every((marker) => patch.includes(marker)) ? "enabled" : "stale";
 }
 
 /**
@@ -511,8 +512,9 @@ async function installCss(context, names) {
     /** @type {string[]} */
     const imports = config.get("imports", []);
     // 移除旧版菜单位置脚本，保留其他扩展和用户的加载项。
-    const retiredMenu = vscode.Uri.file(path.join(CSS_DIR, "gnome-menu.js")).toString();
-    const merged = imports.filter((uri) => uri !== retiredMenu);
+    const retiredMenus = [CSS_DIR, path.join(context.extensionPath, "extras")].map((folder) =>
+      vscode.Uri.file(path.join(folder, "gnome-menu.js")).toString());
+    const merged = imports.filter((uri) => !retiredMenus.includes(uri));
     for (const uri of uris) {
       if (!merged.includes(uri)) {
         merged.push(uri);
@@ -532,8 +534,8 @@ async function installCss(context, names) {
         : [
             "Reload Custom CSS and JS",
             "extension.updateCustomCSS",
-            `Adwaita：CSS 补丁已过期（例如 VS Code 升级后）。` +
-              `请重新加载以应用 ${names.join("、")}。`,
+            `Adwaita：外观文件与加载配置已更新。磁盘补丁${state === "enabled" ? "包含这些组件" : state === "unknown" ? "状态无法确认" : "需要更新"}。` +
+              `保存工作后，可重新加载以应用 ${names.join("、")}。`,
           ];
     const choice = await vscode.window.showInformationMessage(message, action);
     if (choice === action) {
@@ -556,46 +558,59 @@ async function installCss(context, names) {
   }
 }
 
+let settingsRunning = false;
+
 /**
  * @param {import("vscode").ExtensionContext} context
  * @returns {Promise<void>}
  */
 async function applyRecommendedSettings(context) {
-  await readSystemFonts();
-  const entries = Object.entries({ ...RECOMMENDED_SETTINGS,
-    "editor.fontFamily": systemFonts.mono ? `${quotedFont(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
-  });
-  const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
-  const apply = "应用";
-  const choice = await vscode.window.showInformationMessage(
-    `Adwaita 将把 ${entries.length} 项设置改为 GNOME Builder 风格：\n\n${preview}`,
-    { modal: true },
-    apply
-  );
-  if (choice !== apply) {
-    return;
-  }
+  if (settingsRunning) return;
+  settingsRunning = true;
+  try {
+    await readSystemFonts();
+    const entries = Object.entries({ ...RECOMMENDED_SETTINGS,
+      "editor.fontFamily": systemFonts.mono ? `${quotedFont(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
+    });
+    const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
+    const apply = "应用";
+    const choice = await vscode.window.showInformationMessage(
+      `Adwaita 将把 ${entries.length} 项设置改为 GNOME Builder 风格：\n\n${preview}`,
+      { modal: true },
+      apply
+    );
+    if (choice !== apply) {
+      return;
+    }
 
-  // globalState 以 JSON 序列化，undefined 会被丢弃，因此显式记录"原先是否设置过"
-  /** @type {Record<string, SettingRecord>} */
-  const previous = {};
-  for (const [key, value] of entries) {
-    const [section, name] = splitSetting(key);
-    const config = vscode.workspace.getConfiguration(section);
-    const inspected = config.inspect(name);
-    const oldValue = inspected ? inspected.globalValue : undefined;
-    previous[key] = { wasSet: oldValue !== undefined, value: oldValue === undefined ? null : oldValue };
-    await config.update(name, value, vscode.ConfigurationTarget.Global);
-  }
-  await context.globalState.update("adwcode.previousSettings", previous);
+    // globalState 以 JSON 序列化，undefined 会被丢弃，因此显式记录"原先是否设置过"
+    /** @type {Record<string, SettingRecord>} */
+    const previous = /** @type {Record<string, SettingRecord>} */ (context.globalState.get("adwcode.previousSettings") || {});
+    for (const [key, value] of entries) {
+      const [section, name] = splitSetting(key);
+      const config = vscode.workspace.getConfiguration(section);
+      const inspected = config.inspect(name);
+      const oldValue = inspected ? inspected.globalValue : undefined;
+      if (!Object.prototype.hasOwnProperty.call(previous, key)) {
+        previous[key] = { wasSet: oldValue !== undefined, value: oldValue === undefined ? null : oldValue };
+      }
+      // 每次写配置前持久化原值，部分失败或重复应用不能丢失首次备份。
+      await context.globalState.update("adwcode.previousSettings", { ...previous });
+      await config.update(name, value, vscode.ConfigurationTarget.Global);
+    }
 
-  const reload = "重载窗口";
-  const after = await vscode.window.showInformationMessage(
-    "Adwaita：推荐设置已应用，重载窗口后全部生效。",
-    reload
-  );
-  if (after === reload) {
-    await vscode.commands.executeCommand("workbench.action.reloadWindow");
+    const reload = "重载窗口";
+    const after = await vscode.window.showInformationMessage(
+      "Adwaita：推荐设置已应用，重载窗口后全部生效。",
+      reload
+    );
+    if (after === reload) {
+      await vscode.commands.executeCommand("workbench.action.reloadWindow");
+    }
+  } catch (error) {
+    vscode.window.showErrorMessage(`Adwaita：推荐设置未全部应用，已保留原值供恢复：${/** @type {Error} */ (error).message}`);
+  } finally {
+    settingsRunning = false;
   }
 }
 
@@ -604,23 +619,33 @@ async function applyRecommendedSettings(context) {
  * @returns {Promise<void>}
  */
 async function revertRecommendedSettings(context) {
-  /** @type {Record<string, SettingRecord> | undefined} */
-  const previous = context.globalState.get("adwcode.previousSettings");
-  if (!previous) {
-    vscode.window.showInformationMessage("Adwaita：没有可恢复的设置。");
-    return;
+  if (settingsRunning) return;
+  settingsRunning = true;
+  try {
+    /** @type {Record<string, SettingRecord> | undefined} */
+    const previous = context.globalState.get("adwcode.previousSettings");
+    if (!previous) {
+      vscode.window.showInformationMessage("Adwaita：没有可恢复的设置。");
+      return;
+    }
+    for (const [key, record] of Object.entries(previous)) {
+      const [section, name] = splitSetting(key);
+      const target = record && record.wasSet ? record.value : undefined;
+      await vscode.workspace.getConfiguration(section).update(
+        name,
+        target,
+        vscode.ConfigurationTarget.Global
+      );
+      delete previous[key];
+      await context.globalState.update("adwcode.previousSettings", { ...previous });
+    }
+    await context.globalState.update("adwcode.previousSettings", undefined);
+    vscode.window.showInformationMessage("Adwaita：已恢复原有设置。");
+  } catch (error) {
+    vscode.window.showErrorMessage(`Adwaita：设置未全部恢复，剩余记录已保留，可再次执行恢复：${/** @type {Error} */ (error).message}`);
+  } finally {
+    settingsRunning = false;
   }
-  for (const [key, record] of Object.entries(previous)) {
-    const [section, name] = splitSetting(key);
-    const target = record && record.wasSet ? record.value : undefined;
-    await vscode.workspace.getConfiguration(section).update(
-      name,
-      target,
-      vscode.ConfigurationTarget.Global
-    );
-  }
-  await context.globalState.update("adwcode.previousSettings", undefined);
-  vscode.window.showInformationMessage("Adwaita：已恢复原有设置。");
 }
 
 /**
@@ -644,7 +669,10 @@ let reloadRunning = false;
  * @returns {Promise<void>}
  */
 async function reloadWithStyles(context) {
+  const allowed = () => extensionContext === context && vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
+  if (!allowed()) return;
   await readSystemFonts();
+  if (!allowed()) return;
   try {
     // 加载器读取安装目录中的副本，只同步用户已安装的样式。
     for (const name of Object.keys(CSS_FILES)) {
@@ -668,7 +696,7 @@ async function reloadWithStyles(context) {
       return;
     }
   }
-  if (!vscode.workspace.getConfiguration("adwcode").get("autoReload", false)) {
+  if (!allowed()) {
     return;
   }
   await vscode.commands.executeCommand("workbench.action.reloadWindow");

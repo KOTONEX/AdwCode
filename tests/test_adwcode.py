@@ -245,6 +245,13 @@ class ExtensionStatusTest(unittest.TestCase):
         self.assertEqual(entries["css"], "text/css")
         self.assertEqual(entries["json"], "application/json")
 
+    def test_recommended_settings_recovery(self) -> None:
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("未安装 Node.js")
+        result = subprocess.run([node, str(ROOT / "tests/test_extension_settings.cjs")], capture_output=True, text=True, timeout=10, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_offline_status_panel(self) -> None:
         node = shutil.which("node")
         if node is None:
