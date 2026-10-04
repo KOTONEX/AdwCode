@@ -127,6 +127,24 @@ console.log("外观状态：缺失、同步、过期、未配置和刷新测试�
   sandbox.clearTimeout = (timer) => { cleared = timer === 123; };
   sandbox.scheduleReload(context);
   assert.equal(typeof callback, "function");
+  // 未完成的加载器更新期间，下一次触发应继续防抖，不并发修改补丁。
+  let finishUpdate;
+  let updates = 0;
+  vscode.commands.executeCommand = async (command) => {
+    if (command === "extension.updateCustomCSS") {
+      updates++;
+      await new Promise((resolve) => { finishUpdate = resolve; });
+    }
+  };
+  callback();
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  assert.equal(updates, 1);
+  sandbox.scheduleReload(context);
+  callback();
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  assert.equal(updates, 1);
+  finishUpdate();
+  for (let i = 0; i < 8; i++) await Promise.resolve();
   sandbox.deactivate();
   assert.ok(cleared);
   console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅使用模拟对象）");

@@ -39,8 +39,13 @@ jobs:
           fi
           echo "版本：$version"
 
-      - name: 静态检查
-        run: make lint
+      - name: 安装类型检查工具
+        run: |
+          python3 -m pip install mypy
+          npm install -g typescript
+
+      - name: 静态检查（严格类型检查）
+        run: ADWCODE_TYPECHECK_STRICT=1 make lint
 
       - name: 生成/构建校验
         run: |

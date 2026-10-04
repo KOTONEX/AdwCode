@@ -559,6 +559,7 @@ function splitSetting(key) {
 let reloadWatchers = [];
 /** @type {ReturnType<typeof setTimeout> | undefined} */
 let reloadTimer;
+let reloadRunning = false;
 
 /**
  * 重新应用 Custom CSS 并重载窗口（开发时让样式/主题/代码改动立即生效）。
@@ -605,7 +606,15 @@ function scheduleReload(context) {
   }
   reloadTimer = setTimeout(() => {
     reloadTimer = undefined;
-    reloadWithStyles(context).catch(() => undefined);
+    // 加载器会恢复备份并重新写入 HTML，不允许两次更新同时执行。
+    if (reloadRunning) {
+      scheduleReload(context);
+      return;
+    }
+    reloadRunning = true;
+    reloadWithStyles(context).catch(() => undefined).finally(() => {
+      reloadRunning = false;
+    });
   }, 1500);
 }
 
