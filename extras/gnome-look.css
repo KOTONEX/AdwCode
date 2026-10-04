@@ -402,3 +402,48 @@
 	/* 文字和图标使用原行高，只在原有区域中垂直对齐。 */
 	align-items: center;
 }
+
+/* 11. 浮层按用途分级；定位和 z-index 留给工作台，子菜单不裁切。 */
+.context-view .monaco-menu .monaco-action-bar.vertical {
+	border-radius: var(--vscode-cornerRadius-large);
+	box-shadow: var(--vscode-shadow-lg);
+	padding: 4px;
+}
+
+.monaco-hover {
+	/* 短提示比命令面板和对话框更轻。 */
+	border-radius: var(--vscode-cornerRadius-small);
+	box-shadow: var(--vscode-shadow-md);
+}
+
+.monaco-workbench .notification-toast {
+	box-shadow: var(--vscode-shadow-md);
+}
+
+.monaco-workbench .monaco-dialog-box {
+	/* 原来的 480px 最小宽度会超过窄窗口的最大宽度。 */
+	min-width: min(480px, calc(100vw - 32px));
+}
+
+.monaco-workbench .monaco-dialog-box.align-vertical {
+	min-width: min(350px, calc(100vw - 32px));
+}
+
+.monaco-workbench :is(.quick-input-widget, .monaco-dialog-box) .monaco-button:focus-visible {
+	outline-offset: -2px;
+}
+
+/* 高对比度不靠阴影区分浮层，保留原生轮廓和菜单焦点。 */
+.monaco-workbench:is(.hc-black, .hc-light) :is(.quick-input-widget, .notifications-center, .notification-toast, .monaco-dialog-box),
+.monaco-workbench:is(.hc-black, .hc-light) .context-view .monaco-menu .monaco-action-bar.vertical {
+	box-shadow: none;
+	outline: 1px solid var(--vscode-contrastBorder);
+	outline-offset: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.monaco-workbench .monaco-button,
+	.monaco-workbench .monaco-custom-toggle {
+		transition: none;
+	}
+}
