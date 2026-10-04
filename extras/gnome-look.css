@@ -79,22 +79,8 @@
 
 /* AdwTabBar 的标签是 9px 圆角矩形（选中项为 10% 灰底），并非胶囊。 */
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab {
-	height: 28px;
-	line-height: 28px;
-	margin: 3px 2px;
-	padding: 0 12px;
+	/* 标签高度和宽度由工作台计算，紧凑、固定宽度与多行标签均沿用原布局。 */
 	border-radius: var(--vscode-cornerRadius-small);
-	border-top: none !important;
-	border-right: none !important;
-}
-
-.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab .tab-label {
-	line-height: 28px;
-}
-
-/* 标签条滚动时保留末尾留白 */
-.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container {
-	padding-right: 6px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -394,4 +380,25 @@
 .monaco-workbench .monaco-inputbox.synthetic-focus {
 	outline: 2px solid var(--vscode-focusBorder);
 	outline-offset: -2px;
+}
+
+/* 10. 控件对齐：在既有盒子内居中，不改行高、图标盒子或命中区域。 */
+.monaco-workbench .monaco-button {
+	box-sizing: border-box;
+	gap: 6px;
+}
+
+.monaco-workbench :is(.monaco-toolbar, .editor-actions) .action-label {
+	align-items: center;
+	justify-content: center;
+}
+
+.monaco-workbench .monaco-inputbox,
+.monaco-workbench .monaco-select-box {
+	box-sizing: border-box;
+}
+
+.monaco-workbench .monaco-breadcrumbs .monaco-breadcrumb-item {
+	/* 文字和图标使用原行高，只在原有区域中垂直对齐。 */
+	align-items: center;
 }
