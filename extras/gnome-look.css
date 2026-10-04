@@ -478,3 +478,23 @@
 .monaco-workbench:is(.hc-black, .hc-light) .settings-editor .settings-tree-container .setting-item-contents {
 	box-shadow: inset 0 -1px var(--vscode-contrastBorder);
 }
+
+/* 13. 非活动窗口：只弱化导航与工具栏，编辑器、终端和正文保持原色。 */
+.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .tabs-container > .tab.active {
+	background-color: var(--vscode-tab-unfocusedActiveBackground) !important;
+	color: var(--vscode-tab-unfocusedActiveForeground) !important;
+}
+
+.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .tabs-container > .tab:not(.active) {
+	background-color: var(--vscode-tab-unfocusedInactiveBackground) !important;
+	color: var(--vscode-tab-unfocusedInactiveForeground) !important;
+}
+
+.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) :is(.part.sidebar, .part.auxiliarybar, .part.panel) > .title .action-item:not(.disabled) .action-label,
+.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.editor .editor-actions .action-item:not(.disabled) .action-label {
+	opacity: 0.65;
+}
+
+.monaco-workbench:not(.hc-black):not(.hc-light):has(> .part.titlebar.inactive) .part.activitybar .action-item:not(.disabled) .action-label {
+	opacity: 0.75;
+}
