@@ -160,7 +160,7 @@ class ThemeTest(unittest.TestCase):
                 self.assertEqual(
                     key in theme["colors"],
                     hc,
-                    f"{theme['name']}: {key} must only be set in high contrast themes",
+                    f"{theme['name']}: {key} 只能在高对比度主题中定义",
                 )
 
     def test_labels_are_chinese(self) -> None:
@@ -239,14 +239,14 @@ class CssTest(unittest.TestCase):
             referenced = set(check_css.VAR_REF_RE.findall(declarations))
             defined = set(check_css.VAR_DEF_RE.findall(text))
             missing = sorted(referenced - defined - vscode_defined)
-            self.assertFalse(missing, f"{sheet.name}: undefined variables {missing}")
+            self.assertFalse(missing, f"{sheet.name}: 未定义的变量 {missing}")
 
     def test_vscode_selectors_still_exist(self) -> None:
         import check_css
 
         vscode_css, _ = check_css.find_vscode_assets(None)
         if vscode_css is None:
-            self.skipTest("no VS Code installation found")
+            self.skipTest("未找到已安装的 VS Code")
         self.assertEqual(check_css.check(None), 0)
 
 

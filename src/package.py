@@ -96,7 +96,7 @@ def main() -> None:
         archive.writestr("extension.vsixmanifest", vsix_manifest)
         for path in collect():
             archive.write(path, f"extension/{path.relative_to(ROOT)}")
-    print(f"wrote {output.relative_to(ROOT)} ({output.stat().st_size / 1024:.0f} KiB)")
+    print(f"已生成 {output.relative_to(ROOT)} ({output.stat().st_size / 1024:.0f} KiB)")
 
 
 if __name__ == "__main__":

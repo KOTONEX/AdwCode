@@ -342,7 +342,7 @@ def load_scheme(mode: str) -> Scheme:
             return value.lower()
         if value in named:
             return resolve(named[value])
-        raise KeyError(f"unknown named color {value!r} in {path.name}")
+        raise KeyError(f"{path.name} 中存在未知颜色名称 {value!r}")
 
     styles: dict[str, StyleInfo] = {}
     for style in root.findall("style"):
@@ -393,7 +393,7 @@ def token_colors(mode: str) -> list[TokenRule]:
         style = styles.get(style_name)
         if style is None:
             if style_name not in TOLERATED_MISSING:
-                print(f"warning: style {style_name!r} not in scheme ({mode})")
+                print(f"警告：样式 {style_name!r} 不在方案中（{mode}）")
             continue
         settings: dict[str, str] = {"fontStyle": style["fontStyle"]}
         if style["foreground"]:

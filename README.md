@@ -117,7 +117,7 @@ GNOME 扩展
 
 **Adwaita: 应用推荐设置** 会写入 GNOME Builder 风格的布局默认值
 （Adwaita Mono、关闭缩略图、关闭面包屑、紧凑标签高度、12px 树缩进、平滑滚动、
-关闭 gutter 差异装饰等）。被覆盖的旧值会被记住，
+关闭行号边栏差异装饰等）。被覆盖的旧值会被记住，
 **Adwaita: 恢复推荐设置** 可逐项恢复。
 
 推荐设置还会开启 `adwcode.autoReload`。它会重载整个窗口，中断正在运行的
@@ -143,7 +143,7 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 - `"window.controlsStyle": "native"`（推荐）由 GTK 按该布局绘制，无需额外配置。
 - VS Code 的自绘控件始终绘制最小化、最大化/还原与关闭三个按钮（固定 46px 宽、
   容器 138px），颜色主题与产品图标主题都无法隐藏。若要在自绘控件上保持 GNOME
-  布局，执行 **Adwaita: Prepare Close-Only Window Controls CSS**：它会写入
+  布局，执行 **Adwaita: 生成仅关闭按钮的窗口控件 CSS**：它会写入
   `~/.config/adwcode/controls-close-only.css`，并在检测到
   [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css)
   时自动加入 `vscode_custom_css.imports`；否则把设置片段复制到剪贴板。先执行一次
@@ -221,6 +221,13 @@ AdwCode/
 由 GNOME 绘制窗口按钮（推荐配置），此时不会使用 Adwaita 字形。
 
 ## 开发
+
+项目说明按用途拆分：
+
+- [智能体入口与协作约束](AGENTS.md)：新会话首先阅读。
+- [架构与实现状态](docs/03-架构与实现状态.md)：源数据、外观安装链路与功能边界。
+- [开发、验证与发布](docs/04-开发验证与发布.md)：检查、手动预览和发布步骤。
+- [贡献规范](CONTRIBUTING.md)：提交格式与贡献要求。
 
 需要 Python 3.9+（CI 与本地开发使用 3.14）：
 

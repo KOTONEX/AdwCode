@@ -91,10 +91,10 @@ rows = sandbox.appearanceStatus(context);
 assert.ok(rows.every((row) => !row.imported));
 disposed();
 assert.ok(listenerDisposed);
-// mock 未提供写文件、配置更新或执行命令 API；调用它们会直接失败。
+// 模拟对象未提供写文件、配置更新或执行命令 API；调用它们会直接失败。
 console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
 
-// 使用 mock 命令验证失败和取消路径，不向真实窗口发送重载命令。
+// 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
 (async () => {
   let reloads = 0;
   let errors = 0;
@@ -129,5 +129,5 @@ console.log("外观状态：缺失、同步、过期、未配置和刷新测试�
   assert.equal(typeof callback, "function");
   sandbox.deactivate();
   assert.ok(cleared);
-  console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅 mock）");
+  console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅使用模拟对象）");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

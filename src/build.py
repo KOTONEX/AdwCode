@@ -266,18 +266,18 @@ def check() -> int:
             try:
                 parse_color(value)
             except ValueError as error:
-                print(f"FAIL {path.name}: bad color for {key}: {error}")
+                print(f"失败 {path.name}: {key} 的颜色无效: {error}")
                 failures += 1
         for rule in theme["tokenColors"]:
             if not rule.get("scope") or not rule.get("settings"):
-                print(f"FAIL {path.name}: incomplete token rule {rule}")
+                print(f"失败 {path.name}: 语法规则不完整 {rule}")
                 failures += 1
         for name, value in theme.get("semanticTokenColors", {}).items():
             if value is None:
-                print(f"FAIL {path.name}: semantic token {name} has no color")
+                print(f"失败 {path.name}: 语义标记 {name} 未定义颜色")
                 failures += 1
     if len(labels) != len(set(labels)):
-        print("FAIL duplicate theme labels")
+        print("失败 主题名称重复")
         failures += 1
 
     # 产品图标主题
@@ -287,23 +287,23 @@ def check() -> int:
         fonts = icons.get("fonts", [])
         definitions = icons.get("iconDefinitions", {})
         if not fonts or not definitions:
-            print("FAIL product-icons/adwaita.json: needs fonts and iconDefinitions")
+            print("失败 product-icons/adwaita.json: 缺少 fonts 或 iconDefinitions")
             failures += 1
         for font in fonts:
             for source in font.get("src", []):
                 target = (icons_path.parent / source["path"]).resolve()
                 if not target.exists():
-                    print(f"FAIL product-icons: missing {source['path']}")
+                    print(f"失败 product-icons：缺少 {source['path']}")
                     failures += 1
         if len({d.get("fontCharacter") for d in definitions.values()}) != len(definitions):
-            print("FAIL product-icons: duplicate glyphs")
+            print("失败 product-icons: 图标字形重复")
             failures += 1
-        print(f"product icons: {len(definitions)} glyphs, {len(fonts)} font(s)")
+        print(f"产品图标：{len(definitions)} 个字形，{len(fonts)} 个字体")
 
     # 对每个生成的主题做对比度检查（含强调色、变体、高对比度）。
     checks: list[tuple[str, str, float]] = [
         ("editor.foreground", "editor.background", 4.5),
-        ("button.foreground", "button.background", 2.5),  # GNOME yellow is ~2.8
+        ("button.foreground", "button.background", 2.5),  # GNOME 黄色的对比度约为 2.8
         ("textLink.foreground", "editor.background", 3.0),
         ("gitDecoration.deletedResourceForeground", "editor.background", 3.0),
         ("descriptionForeground", "editor.background", 2.5),
@@ -317,47 +317,46 @@ def check() -> int:
             ratio = contrast(colors[fg_key], colors[bg_key])
             if ratio < minimum:
                 problems.append(f"{fg_key}/{bg_key} {ratio:.2f} < {minimum}")
-        status = "ok  " if not problems else "FAIL"
+        status = "通过" if not problems else "失败"
         print(f"{status} {theme['name']}")
         for problem in problems:
             print(f"       {problem}")
             failures += 1
             failed_themes += 1
-    print(f"contrast: {len(list(THEMES.glob('*.json'))) - failed_themes} themes ok, {failed_themes} with problems")
+    print(f"对比度：{len(list(THEMES.glob('*.json'))) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
 
     if registry is None or builtin is None:
-        print("note: run update_defaults.py to refresh the VS Code key lists")
+        print("提示：运行 update_defaults.py 刷新 VS Code 颜色键表")
     else:
         allowed = registry | builtin | LEGACY_KEYS
         unknown = sorted(our_keys - allowed)
         missing = sorted(builtin - our_keys)
-        print(f"\nkeys: {len(our_keys)} defined | {len(missing)} built-in keys not overridden | {len(unknown)} unknown")
+        print(f"\n颜色键：已定义 {len(our_keys)} 个 | 未覆盖内置键 {len(missing)} 个 | 未知键 {len(unknown)} 个")
         if unknown:
-            print("unknown keys (possible typos):")
+            print("未知颜色键（可能存在拼写错误）：")
             for key in unknown:
                 print(f"  {key}")
             failures += 1
         if missing:
-            print("not overridden (VS Code falls back to the default theme):")
+            print("未覆盖的颜色键（VS Code 将使用默认主题）：")
             for key in missing[:60]:
                 print(f"  {key}")
             if len(missing) > 60:
-                print(f"  ... and {len(missing) - 60} more")
+                print(f"  ……另有 {len(missing) - 60} 个")
 
-    print(f"\nthemes: {len(labels)}")
+    print(f"\n主题数量：{len(labels)}")
     return 1 if failures else 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--accents", help="'all', 'system' or a comma separated list")
-    parser.add_argument("--no-system", action="store_true", help="do not read the system accent color")
-    parser.add_argument("--check", action="store_true", help="only validate the generated themes")
+    parser.add_argument("--accents", help="使用 'all'、'system' 或以逗号分隔的强调色列表")
+    parser.add_argument("--no-system", action="store_true", help="不读取系统强调色")
+    parser.add_argument("--check", action="store_true", help="仅校验已生成的主题")
     parser.add_argument(
         "--watch",
         action="store_true",
-        help="mark the themes with the undocumented _watch flag so VS Code reloads "
-        "theme JSON on save (development only)",
+        help="添加未公开的 _watch 标记，让 VS Code 在保存主题 JSON 时重新加载（仅用于开发）",
     )
     args = parser.parse_args()
 
@@ -365,14 +364,14 @@ def main() -> int:
         return check()
 
     accents = resolve_accents(args.accents if args.accents != "system" else None, not args.no_system)
-    print(f"accents: {', '.join(accents)}")
+    print(f"强调色： {', '.join(accents)}")
     entries = write_themes(build_plan(accents), watch=args.watch)
     if args.watch:
-        print("watch mode: _watch added to the theme entries")
+        print("监视模式：已为主题条目添加 _watch 标记")
     update_package_json(entries)
     for entry in entries:
         print(f"  {entry['uiTheme']:9} {entry['label']}")
-    print(f"{len(entries)} themes written to {THEMES.relative_to(ROOT)}/")
+    print(f"已将 {len(entries)} 个主题写入 {THEMES.relative_to(ROOT)}/")
     return 0
 
 

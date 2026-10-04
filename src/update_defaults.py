@@ -94,13 +94,13 @@ def main() -> None:
     for mode, name in VARIANTS.items():
         tokens = resolve_token_colors(name)
         (OUT / f"{mode}.json").write_text(json.dumps({"tokenColors": tokens}, indent=2) + "\n")
-        print(f"{mode}: {len(tokens)} token rules from {name}")
+        print(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
 
     keys: set[str] = set()
     for name in ALL_THEMES:
         keys |= set(fetch(name).get("colors", {}))
     (OUT / "builtin_keys.json").write_text(json.dumps(sorted(keys), indent=2) + "\n")
-    print(f"builtin keys: {len(keys)}")
+    print(f"内置颜色键： {len(keys)}")
 
     markdown = urllib.request.urlopen(DOCS, timeout=60).read().decode()
     registry = set(re.findall(r"`([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)`", markdown))
@@ -111,7 +111,7 @@ def main() -> None:
         if not item.startswith(("workbench.", "editor.token", "configuration.", "vscode."))
     }
     (OUT / "registry_keys.json").write_text(json.dumps(sorted(registry), indent=2) + "\n")
-    print(f"registry keys: {len(registry)}")
+    print(f"注册表颜色键： {len(registry)}")
 
 
 if __name__ == "__main__":

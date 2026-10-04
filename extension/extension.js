@@ -81,7 +81,7 @@ const CSS_FILES = {
 };
 
 /**
- * “Adwaita: Apply Recommended Settings” 写入的 GNOME/Builder 风格默认值。
+ * “Adwaita: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
  * @type {Record<string, string | boolean | number | null>}
  */
 const RECOMMENDED_SETTINGS = {

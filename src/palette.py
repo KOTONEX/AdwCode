@@ -246,7 +246,7 @@ def parse_color(color: str) -> tuple[int, int, int, float]:
         return r, g, b, alpha
     match = _RGB_RE.fullmatch(color)
     if not match:
-        raise ValueError(f"cannot parse color: {color!r}")
+        raise ValueError(f"无法解析颜色： {color!r}")
     r, g, b = (int(match.group(i)) for i in (1, 2, 3))
     alpha_text = match.group(4)
     if alpha_text is None:
@@ -286,7 +286,7 @@ def mix(color_a: str, color_b: str, weight: float) -> str:
     ra, ga, ba, aa = parse_color(color_a)
     rb, gb, bb, ab = parse_color(color_b)
     if aa < 1 or ab < 1:
-        raise ValueError("mix() expects opaque colors")
+        raise ValueError("mix() 要求颜色不透明")
     return to_hex(
         ra * weight + rb * (1 - weight),
         ga * weight + gb * (1 - weight),
@@ -318,9 +318,9 @@ class Palette:
         scheme: dict[str, str | None] | None = None,
     ) -> None:
         if mode not in ("dark", "light"):
-            raise ValueError(f"unknown mode: {mode!r}")
+            raise ValueError(f"未知主题模式： {mode!r}")
         if accent not in ACCENT_COLORS:
-            raise ValueError(f"unknown accent: {accent!r}")
+            raise ValueError(f"未知强调色： {accent!r}")
         self.mode: str = mode
         self.accent: str = accent
         self.high_contrast: bool = high_contrast
@@ -500,7 +500,7 @@ class Palette:
         try:
             return self._c[role]
         except KeyError:
-            raise KeyError(f"unknown color role: {role!r}") from None
+            raise KeyError(f"未知颜色角色： {role!r}") from None
 
     def get(self, role: str, default: str | None = None) -> str | None:
         return self._c.get(role, default)

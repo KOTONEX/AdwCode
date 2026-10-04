@@ -82,7 +82,7 @@ def selectors_and_declarations(text: str) -> tuple[str, str]:
 def check(css_path: Path | None, verbose: bool = False) -> int:
     vscode_css, vscode_js = find_vscode_assets(css_path)
     if vscode_css is None:
-        print("check_css: no VS Code CSS found, pass --css PATH")
+        print("check_css：未找到 VS Code 样式表，请使用 --css PATH 指定路径")
         return 0
     vscode_text = vscode_css.read_text(encoding="utf-8", errors="ignore")
     vscode_classes = set(CLASS_RE.findall(selectors_and_declarations(vscode_text)[0]))
@@ -102,29 +102,29 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
         missing = sorted(classes - vscode_classes)
         if missing:
             failures += 1
-            print(f"FAIL {sheet.name}: {len(missing)} class(es) not in {vscode_css.name}")
+            print(f"失败 {sheet.name}：{len(missing)} 个类名未出现在 {vscode_css.name} 中")
             for name in missing:
                 print(f"       .{name}")
         else:
-            print(f"ok   {sheet.name}: {len(classes)} classes still present in VS Code")
+            print(f"通过 {sheet.name}：{len(classes)} 个类名仍存在于 VS Code 中")
 
         our_vars = set(VAR_DEF_RE.findall(sheet.read_text()))
         referenced = set(VAR_REF_RE.findall(declarations))
         undefined = sorted(referenced - vscode_vars - our_vars)
         if undefined:
             failures += 1
-            print(f"FAIL {sheet.name}: {len(undefined)} undefined variable(s)")
+            print(f"失败 {sheet.name}：{len(undefined)} 个变量未定义")
             for name in undefined:
                 print(f"       {name}")
         elif verbose:
-            print(f"     {sheet.name}: {len(referenced)} variables all defined")
+            print(f"     {sheet.name}: {len(referenced)} 个变量均已定义")
 
     return 1 if failures else 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--css", type=Path, help="path to workbench.desktop.main.css")
+    parser.add_argument("--css", type=Path, help="workbench.desktop.main.css 的路径")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
     return check(args.css, args.verbose)
