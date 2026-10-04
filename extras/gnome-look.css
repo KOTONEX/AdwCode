@@ -154,12 +154,21 @@
 /* 4. Adwaita 列表行：内缩 + 圆角选中                      */
 /* ------------------------------------------------------------------ */
 
-.monaco-list-row {
-	/* 6px 透明边框用于内缩背景；因此内层圆角为 9px（外层 15px 减去 6px 边框）。 */
-	border-left: 6px solid transparent;
-	border-right: 6px solid transparent;
-	border-radius: calc(var(--vscode-cornerRadius-small) + 6px);
-	background-clip: padding-box;
+/* 虚拟列表的边框会改变内容宽度和树的缩进，按容器绘制圆角而不挪动行。 */
+.monaco-workbench :is(.explorer-folders-view, .search-view, .scm-view) .monaco-list-row {
+	border-radius: var(--vscode-cornerRadius-xSmall);
+}
+
+.monaco-workbench .quick-input-list .monaco-list-row,
+.monaco-editor .suggest-widget .monaco-list-row,
+.monaco-select-box-dropdown-container .monaco-list-row {
+	border-radius: var(--vscode-cornerRadius-xSmall);
+}
+
+/* 通知与终端列表保留原本的宽度，设置页另在内部内容层绘制卡片。 */
+.monaco-workbench .notifications-list-container .monaco-list-row,
+.monaco-workbench .terminal-tabs-list .monaco-list-row {
+	border-radius: var(--vscode-cornerRadius-small);
 }
 
 /* ------------------------------------------------------------------ */
