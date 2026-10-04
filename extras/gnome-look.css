@@ -333,3 +333,56 @@
 	/* 标题以文字权重区分，不再套用内容行的圆角卡片。 */
 	border-radius: 0;
 }
+
+/* 9. 控件状态：按下、选中和键盘焦点分别绘制，禁用控件不响应悬停。 */
+.monaco-workbench {
+	--adwcode-button-pressed: color-mix(in srgb, var(--vscode-button-background) 80%, black);
+	--adwcode-secondary-pressed: color-mix(in srgb, var(--vscode-button-secondaryBackground) 88%, var(--vscode-foreground));
+}
+
+.monaco-workbench.vs-dark,
+.monaco-workbench.hc-black {
+	--adwcode-button-pressed: color-mix(in srgb, var(--vscode-button-background) 75%, white);
+}
+
+.monaco-workbench .monaco-button:not(.disabled):not([aria-disabled="true"]):not([disabled]):active {
+	background-color: var(--adwcode-button-pressed) !important;
+}
+
+.monaco-workbench .monaco-button.secondary:not(.disabled):not([aria-disabled="true"]):not([disabled]):active {
+	background-color: var(--adwcode-secondary-pressed) !important;
+}
+
+/* 仅覆盖工具栏图标，菜单行和视图切换器继续使用各自的整行状态。 */
+.monaco-workbench :is(.monaco-toolbar, .editor-actions) .action-item:not(.disabled):not([aria-disabled="true"]) .action-label:not(.disabled):not([aria-disabled="true"]):hover {
+	background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.monaco-workbench :is(.monaco-toolbar, .editor-actions) .action-item:not(.disabled):not([aria-disabled="true"]) .action-label:not(.disabled):not([aria-disabled="true"]):active {
+	background-color: var(--vscode-toolbar-activeBackground);
+}
+
+.monaco-workbench :is(.monaco-toolbar, .editor-actions) .action-item:not(.disabled) .action-label:is(.checked, [aria-pressed="true"]) {
+	background-color: var(--vscode-inputOption-activeBackground);
+	color: var(--vscode-inputOption-activeForeground);
+}
+
+.monaco-workbench .monaco-action-bar .action-item:not(.disabled):focus-visible .action-label,
+.monaco-workbench .monaco-action-bar .action-item:not(.disabled) .action-label:not([aria-disabled="true"]):focus-visible {
+	outline: 2px solid var(--vscode-focusBorder);
+	outline-offset: -2px;
+}
+
+.monaco-workbench .monaco-button:is(.disabled, [aria-disabled="true"], [disabled]) {
+	cursor: default;
+}
+
+.monaco-workbench .monaco-custom-toggle[aria-checked="true"] {
+	background-color: var(--vscode-inputOption-activeBackground);
+	color: var(--vscode-inputOption-activeForeground);
+}
+
+.monaco-workbench .monaco-inputbox.synthetic-focus {
+	outline: 2px solid var(--vscode-focusBorder);
+	outline-offset: -2px;
+}
