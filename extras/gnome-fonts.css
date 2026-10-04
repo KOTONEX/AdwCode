@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* SPDX-FileCopyrightText: 2026 AdwCode contributors */
+/* 安装时扩展会追加实际 GNOME 字体；直接加载本文件时使用系统回退。
+   不改变字号、代码字体、终端字体或产品图标字体。 */
+:root, .monaco-workbench {
+	--adwcode-ui-font: "Adwaita Sans", "Cantarell", system-ui, sans-serif;
+}
+.monaco-workbench {
+	font-family: var(--adwcode-ui-font);
+}

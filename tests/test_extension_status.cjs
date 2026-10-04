@@ -29,7 +29,7 @@ const vscode = {
       return { scheme: uri.protocol.slice(0, -1), fsPath: decodeURIComponent(uri.pathname) };
     },
   },
-  workspace: { getConfiguration: () => ({ get: () => imports }) },
+  workspace: { getConfiguration: () => ({ get: (key, fallback) => key === "imports" ? imports : fallback }) },
   extensions: { getExtension: () => ({}) },
   ViewColumn: { One: 1 },
   window: { createWebviewPanel: () => panel },
@@ -37,6 +37,7 @@ const vscode = {
 const sandbox = {
   require(name) {
     if (name === "vscode") return vscode;
+    if (name === "child_process") return { execFile(_file, args, _options, callback) { if (callback) callback(null, args.includes("monospace-font-name") ? "'等距更纱黑体 SC 11'" : "'更纱黑体 UI SC 11'"); } };
     if (name === "os") return { homedir: () => "/user" };
     if (name === "fs") return sandbox.mockFs = {
       existsSync: (file) => files.has(file),
@@ -61,8 +62,8 @@ assert.equal(rows[0].patched, "无法读取");
 const html = "/app/out/vs/code/electron-browser/workbench/workbench.esm.html";
 let patch = "<!-- !! VSCODE-CUSTOM-CSS-START !! -->";
 for (const row of rows) {
-  const content = `内容：${row.name}`;
-  files.set(`/repo/extras/${row.name}`, content);
+  files.set(`/repo/extras/${row.name}`, `内容：${row.name}`);
+  const content = sandbox.cssSource(context, row.name);
   files.set(`/user/.config/adwcode/${row.name}`, content);
   imports.push(`file:///user/.config/adwcode/${row.name}`);
   patch += row.name.endsWith(".js") ? `<script>${content}</script>` : `<style>${content}</style>`;
@@ -94,14 +95,24 @@ assert.ok(listenerDisposed);
 // 模拟对象未提供写文件、配置更新或执行命令 API；调用它们会直接失败。
 console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
 
+assert.equal(sandbox.pangoFamily("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");
+assert.equal(sandbox.pangoFamily("'Adwaita Sans Bold Italic 10.5'"), "Adwaita Sans");
+assert.equal(sandbox.pangoFamily("无效描述"), undefined);
+assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('</style>'));
+assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
 // 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
 (async () => {
+  await sandbox.readSystemFonts();
+  const generated = sandbox.cssSource(context, "gnome-fonts.css");
+  assert.ok(generated.includes('"更纱黑体 UI SC"'));
+  assert.ok(generated.includes('system-ui, sans-serif'));
   let reloads = 0;
   let errors = 0;
   let enabled = true;
   let failUpdate = true;
   sandbox.mockFs.promises = {
     async copyFile(source, target) { files.set(target, files.get(source)); },
+    async writeFile(target, data) { files.set(target, data); },
   };
   vscode.window.showErrorMessage = () => { errors++; };
   vscode.workspace.getConfiguration = () => ({ get: () => enabled });
@@ -137,14 +148,14 @@ console.log("外观状态：缺失、同步、过期、未配置和刷新测试�
     }
   };
   callback();
-  for (let i = 0; i < 8; i++) await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(updates, 1);
   sandbox.scheduleReload(context);
   callback();
-  for (let i = 0; i < 8; i++) await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(updates, 1);
   finishUpdate();
-  for (let i = 0; i < 8; i++) await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   sandbox.deactivate();
   assert.ok(cleared);
   console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅使用模拟对象）");

@@ -117,6 +117,11 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "开发用：当本扩展的样式（`extras/*.css`、`extras/*.js`）、主题（`themes/*.json`）、清单或代码变化时，自动重新应用 Custom CSS 并重载窗口。"
+        },
+        "adwcode.uiFontFamily": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "界面字体族；留空时在安装 GNOME 外观时读取 GNOME 界面字体。仅指定一个字体族，代码和终端字体保持独立。修改后需重新安装外观并由你手动加载。"
         }
       }
     },

@@ -274,3 +274,14 @@ nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
 无隶属关系。随附的第三方组件与数据（GtkSourceView 样式方案、VS Code 默认主题
 数据、piousdeer/vscode-adwaita 的 TextMate 作用域映射与产品图标字形等）登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)。
+
+### 界面与代码字体
+
+安装 GNOME 外观时，扩展读取 GNOME 的 `font-name`，生成 `gnome-fonts.css`；
+`adwcode.uiFontFamily` 留空时使用系统字体，填写时只指定一个界面字体族。
+找不到字体时依次回退到 Adwaita Sans、Cantarell 和系统无衬线字体。
+直接加载源 CSS 时也使用这条回退链，字体大小仍由 VS Code 的界面缩放管理。
+
+界面字体不改动编辑器或终端的字体。“应用推荐设置”单独读取 GNOME 的
+`monospace-font-name` 设置代码字体；无法读取时回退到 Adwaita Mono、monospace。
+更改系统字体或 `adwcode.uiFontFamily` 后重新安装外观，待保存工作后手动加载。

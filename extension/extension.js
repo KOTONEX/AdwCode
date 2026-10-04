@@ -78,6 +78,7 @@ const CSS_DIR = path.join(os.homedir(), ".config", "adwcode");
 const CSS_FILES = {
   "gnome-look.css": "--vscode-cornerRadius-small",
   "controls-close-only.css": "window-max-restore",
+  "gnome-fonts.css": "--adwcode-ui-font",
 };
 
 /**
@@ -102,6 +103,46 @@ const RECOMMENDED_SETTINGS = {
   "workbench.list.smoothScrolling": true,
   "workbench.iconTheme": null,
 };
+
+/** @type {{ ui?: string, mono?: string }} */
+let systemFonts = {};
+
+/** 从 Pango 字体描述中取出字体族，不把字号或样式写进 CSS。
+ * @param {string} description @returns {string | undefined}
+ */
+function pangoFamily(description) {
+  const value = description.trim().replace(/^'|'$/g, "");
+  if (!/\s+\d+(?:\.\d+)?$/.test(value)) return undefined;
+  return value.replace(/\s+\d+(?:\.\d+)?$/, "")
+    .replace(/(?:\s+(?:Bold|Semi-Bold|Semibold|Italic|Oblique|Regular|Medium|Light))+$/i, "").trim() || undefined;
+}
+
+/** @param {string} value @returns {string} */
+function quotedFont(value) {
+  return '"' + value.replace(/[\\"\x00-\x1f<>]/g, (char) => `\\${char.charCodeAt(0).toString(16)} `) + '"';
+}
+
+/** @returns {Promise<void>} */
+async function readSystemFonts() {
+  const read = (/** @type {string} */ key) => new Promise((resolve) => {
+    execFile("gsettings", ["get", "org.gnome.desktop.interface", key], { timeout: 5000 },
+      (error, stdout) => resolve(error ? undefined : pangoFamily(String(stdout))));
+  });
+  const [ui, mono] = await Promise.all([read("font-name"), read("monospace-font-name")]);
+  systemFonts = { ui: /** @type {string | undefined} */ (ui), mono: /** @type {string | undefined} */ (mono) };
+}
+
+/** 生成字体适配文件；其他样式原样读取，状态检查也使用同一份预期内容。
+ * @param {import("vscode").ExtensionContext} context
+ * @param {string} name @returns {string}
+ */
+function cssSource(context, name) {
+  const source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8");
+  if (name !== "gnome-fonts.css") return source;
+  const configured = vscode.workspace.getConfiguration("adwcode").get("uiFontFamily", "");
+  const family = typeof configured === "string" && configured.trim() ? configured.trim() : systemFonts.ui;
+  return source + (family ? `\n:root, .monaco-workbench { --adwcode-ui-font: ${quotedFont(family)}, "Adwaita Sans", "Cantarell", system-ui, sans-serif; }\n` : "");
+}
 
 /** @type {import("vscode").ExtensionContext | undefined} */
 let extensionContext;
@@ -338,7 +379,7 @@ function appearanceStatus(context) {
     const target = path.join(CSS_DIR, name);
     let source;
     let installed;
-    try { source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8"); } catch { /* 单独报告 */ }
+    try { source = cssSource(context, name); } catch { /* 单独报告 */ }
     try { installed = fs.readFileSync(target, "utf8"); } catch { /* 单独报告 */ }
     const injected = source === undefined ? undefined :
       (name.endsWith(".js") ? `<script>${source}</script>` : `<style>${source}</style>`);
@@ -413,12 +454,12 @@ function showAppearanceStatus(context) {
 async function installCss(context, names) {
   /** @type {string[]} */
   const installed = [];
+  await readSystemFonts();
   try {
     await fs.promises.mkdir(CSS_DIR, { recursive: true });
     for (const name of names) {
-      const source = path.join(context.extensionPath, "extras", name);
       const target = path.join(CSS_DIR, name);
-      await fs.promises.copyFile(source, target);
+      await fs.promises.writeFile(target, cssSource(context, name), "utf8");
       installed.push(target);
     }
   } catch (error) {
@@ -487,7 +528,10 @@ async function installCss(context, names) {
  * @returns {Promise<void>}
  */
 async function applyRecommendedSettings(context) {
-  const entries = Object.entries(RECOMMENDED_SETTINGS);
+  await readSystemFonts();
+  const entries = Object.entries({ ...RECOMMENDED_SETTINGS,
+    "editor.fontFamily": systemFonts.mono ? `${quotedFont(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
+  });
   const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
   const apply = "应用";
   const choice = await vscode.window.showInformationMessage(
@@ -567,12 +611,13 @@ let reloadRunning = false;
  * @returns {Promise<void>}
  */
 async function reloadWithStyles(context) {
+  await readSystemFonts();
   try {
     // 加载器读取安装目录中的副本，只同步用户已安装的样式。
     for (const name of Object.keys(CSS_FILES)) {
       const target = path.join(CSS_DIR, name);
       if (fs.existsSync(target)) {
-        await fs.promises.copyFile(path.join(context.extensionPath, "extras", name), target);
+        await fs.promises.writeFile(target, cssSource(context, name), "utf8");
       }
     }
   } catch (error) {
@@ -676,10 +721,10 @@ function activate(context) {
   extensionContext = context;
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("adwcode.appearanceStatus", () => showAppearanceStatus(context)),
+    vscode.commands.registerCommand("adwcode.appearanceStatus", async () => { await readSystemFonts(); showAppearanceStatus(context); }),
     vscode.commands.registerCommand("adwcode.syncAccent", () => syncAccent(true)),
     vscode.commands.registerCommand("adwcode.installGnomeLook", () =>
-      installCss(context, ["gnome-look.css", "controls-close-only.css"])
+      installCss(context, ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css"])
     ),
     vscode.commands.registerCommand("adwcode.closeOnlyControls", () =>
       installCss(context, ["controls-close-only.css"])

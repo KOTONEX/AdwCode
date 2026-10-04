@@ -48,6 +48,7 @@ declare module "fs" {
     export const promises: {
         mkdir(path: string, options?: { recursive?: boolean }): Promise<string | undefined>;
         copyFile(source: string, target: string): Promise<void>;
+        writeFile(path: string, data: string, encoding: "utf8"): Promise<void>;
     };
 }
 
