@@ -59,14 +59,27 @@ declare module "vscode" {
         writeText(value: string): Thenable<void>;
     }
 
+    export class RelativePattern {
+        constructor(base: string, pattern: string);
+    }
+
+    export interface FileSystemWatcher {
+        onDidChange(listener: (uri: Uri) => unknown): Disposable;
+        onDidCreate(listener: (uri: Uri) => unknown): Disposable;
+        onDidDelete(listener: (uri: Uri) => unknown): Disposable;
+        dispose(): unknown;
+    }
+
     export namespace workspace {
         function getConfiguration(section?: string): WorkspaceConfiguration;
         function onDidChangeConfiguration(
             listener: (event: ConfigurationChangeEvent) => unknown
         ): Disposable;
+        function createFileSystemWatcher(pattern: RelativePattern): FileSystemWatcher;
     }
 
     export namespace window {
+        function createWebviewPanel(viewType: string, title: string, column: ViewColumn, options: { enableScripts?: boolean }): WebviewPanel;
         function showInformationMessage(
             message: string,
             ...items: string[]
@@ -84,6 +97,15 @@ declare module "vscode" {
             message: string,
             ...items: string[]
         ): Thenable<string | undefined>;
+    }
+
+    export enum ViewColumn { One = 1 }
+    export interface WebviewPanel {
+        readonly webview: {
+            html: string;
+            onDidReceiveMessage(listener: (message: unknown) => unknown): Disposable;
+        };
+        onDidDispose(listener: () => unknown): Disposable;
     }
 
     export namespace commands {

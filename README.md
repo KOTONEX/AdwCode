@@ -26,8 +26,9 @@
   `colorful status bar` 变体，以及高对比度主题。
 - **产品图标主题** —— Adwaita 风格的窗口控制按钮字形（在
   `window.controlsStyle` 为 `custom` 时生效）。
-- **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：6px 的按钮/输入框/
-  列表行、12px 的弹出层、胶囊形标签页与标题栏按钮、GNOME 阴影、圆角滚动条滑块。
+- **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：9px 的按钮/输入框/
+  列表行/编辑标签页、15px 的弹出层与快速输入、6px 小控件、Adwaita 阴影、
+  内缩细滚动条滑块。
 - **推荐设置** —— 一条命令对齐 GNOME Builder 的布局（Adwaita Mono、关闭缩略图、
   关闭面包屑、紧凑标签高度等）。
 - **终端配色** —— 由 GNOME 调色板推导的 16 色 ANSI。
@@ -92,14 +93,20 @@ GNOME 扩展
 颜色无法改变几何，因此 `extras/gnome-look.css`（通过同一个 Custom CSS 加载器
 生效）为工作台提供 Adwaita 形状：
 
-- 定义 VS Code 1.139 引用却从未声明的设计令牌（`--vscode-cornerRadius-*`、
+- 定义 VS Code 1.140 引用却从未声明的设计令牌（`--vscode-cornerRadius-*`、
   `--vscode-spacing-*`、`--vscode-shadow-*`），一次性修正约 250 条规则
   （快速输入、建议列表、对话框、下拉框、通知、面板标题……）；
-- 补充 AdwTabBar 风格的胶囊标签页、圆角标题栏与活动栏按钮、内缩圆角列表行、
-  6px 按钮/输入框以及圆角滚动条滑块。
+- 补充 AdwTabBar 风格的圆角标签页（9px）、内缩菜单项、圆角标题栏按钮、
+  内缩圆角列表行、9px 按钮/输入框、标题栏胶囊搜索框以及内缩细滚动条滑块；
+- 统一侧栏、面板、通知与编辑器工具栏按钮，以及设置行、查找选项、复选框和
+  对话框外观；键盘焦点环在容易裁切的区域使用内侧描边；
+- 默认使用 `window.menuBarVisibility: compact` 折叠菜单，汉堡按钮保持
+  VS Code 原生的活动栏位置；把设置改回 `classic` 或 `visible` 即可恢复完整菜单栏。
 
 执行 **Adwaita: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
-**Adwaita: 生成仅关闭按钮的窗口控件 CSS**）。VS Code 升级后补丁会被
+**Adwaita: 生成仅关闭按钮的窗口控件 CSS**）。开发时可在设置中开启
+`adwcode.autoReload`：改动 `extras/*.css`、`extras/*.js`、`themes/*.json` 或扩展代码后，
+会自动重新应用 Custom CSS 并重载窗口。VS Code 升级后补丁会被
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
 
 `python3 src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
@@ -112,6 +119,18 @@ GNOME 扩展
 （Adwaita Mono、关闭缩略图、关闭面包屑、紧凑标签高度、12px 树缩进、平滑滚动、
 关闭 gutter 差异装饰等）。被覆盖的旧值会被记住，
 **Adwaita: 恢复推荐设置** 可逐项恢复。
+
+推荐设置还会开启 `adwcode.autoReload`。它会重载整个窗口，中断正在运行的
+Codex 会话；与 Codex 协作时请关闭这一项，等修改完成后手动加载外观。
+
+### 外观安装状态
+
+执行 **Adwaita: 查看外观安装状态**，可检查加载器是否安装、每个外观文件的
+副本是否与源码一致、是否加入加载器配置，以及磁盘上的工作台 HTML 是否注入
+当前版本。面板支持手动刷新，不会修改配置或重载窗口。
+
+磁盘补丁已更新不代表当前窗口已加载新样式。工作结束后再手动重载窗口，
+避免中断 Codex 会话。
 
 ### 仅保留关闭按钮
 

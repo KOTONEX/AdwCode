@@ -8,6 +8,7 @@ declare function require(id: string): any;
 declare var module: { exports: any };
 declare var process: { readonly platform: string };
 declare function setTimeout(callback: (...args: unknown[]) => void, ms?: number): unknown;
+declare function clearTimeout(timeout: unknown): void;
 
 declare module "stream" {
     export interface Readable {

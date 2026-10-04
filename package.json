@@ -2,7 +2,7 @@
   "name": "AdwCode",
   "displayName": "AdwCode",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "KOTONEX",
   "license": "AGPL-3.0-or-later",
   "engines": {
@@ -40,6 +40,9 @@
     "package": "python3 src/package.py"
   },
   "contributes": {
+    "configurationDefaults": {
+      "window.menuBarVisibility": "compact"
+    },
     "themes": [
       {
         "label": "Adwaita 深色",
@@ -106,10 +109,20 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），在 Adwaita 主题的各强调色变体之间切换。仅在当前使用 Adwaita 主题时生效。"
+        },
+        "adwcode.autoReload": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "开发用：当本扩展的样式（`extras/*.css`）、主题（`themes/*.json`）、清单或代码变化时，自动重新应用 Custom CSS 并重载窗口。"
         }
       }
     },
     "commands": [
+      {
+        "command": "adwcode.appearanceStatus",
+        "title": "查看外观安装状态",
+        "category": "Adwaita"
+      },
       {
         "command": "adwcode.syncAccent",
         "title": "立即同步强调色",

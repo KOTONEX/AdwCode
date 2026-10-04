@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -187,6 +189,18 @@ class ThemeTest(unittest.TestCase):
             self.assertRegex(path.name, r"^[a-z0-9-]+\.json$")
 
 
+class ExtensionStatusTest(unittest.TestCase):
+    def test_offline_status_panel(self) -> None:
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("未安装 Node.js，跳过扩展状态面板测试")
+        result = subprocess.run(
+            [node, str(ROOT / "tests" / "test_extension_status.cjs")],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
 class CssTest(unittest.TestCase):
     def test_css_files_parse(self) -> None:
         import check_css
@@ -202,9 +216,9 @@ class CssTest(unittest.TestCase):
         import check_css
 
         vscode_css, _ = check_css.find_vscode_assets(None)
-        vscode_defined: set[str] = set()
+        vscode_defined: set[str] = check_css.theme_variables()
         if vscode_css is not None:
-            vscode_defined = set(
+            vscode_defined |= set(
                 check_css.VAR_DEF_RE.findall(
                     vscode_css.read_text(encoding="utf-8", errors="ignore")
                 )

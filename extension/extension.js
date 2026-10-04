@@ -85,6 +85,7 @@ const CSS_FILES = {
  * @type {Record<string, string | boolean | number | null>}
  */
 const RECOMMENDED_SETTINGS = {
+  "adwcode.autoReload": true,
   "editor.fontFamily": "Adwaita Mono, monospace",
   "editor.renderLineHighlight": "none",
   "editor.minimap.enabled": false,
@@ -94,6 +95,7 @@ const RECOMMENDED_SETTINGS = {
   "breadcrumbs.enabled": false,
   "scm.diffDecorations": "none",
   "window.commandCenter": false,
+  "window.menuBarVisibility": "compact",
   "window.density.editorTabHeight": "compact",
   "workbench.tree.indent": 12,
   "workbench.editor.tabSizing": "shrink",
@@ -318,6 +320,83 @@ function cssPatchState(markers) {
 }
 
 /**
+ * 只读取安装状态；磁盘补丁与当前窗口的加载状态分别报告。
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {{name: string, copied: string, imported: boolean, patched: string}[]}
+ */
+function appearanceStatus(context) {
+  const imports = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
+  const htmlPath = workbenchHtmlPath();
+  let html;
+  try {
+    html = htmlPath ? fs.readFileSync(htmlPath, "utf8") : undefined;
+  } catch {
+    html = undefined;
+  }
+  return Object.keys(CSS_FILES).map((name) => {
+    const target = path.join(CSS_DIR, name);
+    let source;
+    let installed;
+    try { source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8"); } catch { /* 单独报告 */ }
+    try { installed = fs.readFileSync(target, "utf8"); } catch { /* 单独报告 */ }
+    const injected = source === undefined ? undefined :
+      (name.endsWith(".js") ? `<script>${source}</script>` : `<style>${source}</style>`);
+    return {
+      name,
+      copied: source === undefined ? "源文件不可读" : installed === undefined ? "未安装或不可读" :
+        installed === source ? "已同步" : "副本待更新",
+      imported: imports.includes(vscode.Uri.file(target).toString()),
+      patched: html === undefined ? "无法读取" : injected !== undefined && html.includes(injected) ?
+        "磁盘补丁已更新" : "未注入当前版本",
+    };
+  });
+}
+
+/** @param {string} value @returns {string} */
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+}
+
+/** @param {import("vscode").ExtensionContext} context @returns {void} */
+function showAppearanceStatus(context) {
+  const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "Adwaita 外观状态", vscode.ViewColumn.One, { enableScripts: true });
+  const render = () => {
+    const rows = appearanceStatus(context);
+    const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
+    const ready = rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新");
+    const nonce = Math.random().toString(36).slice(2);
+    panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
+      <style>
+        body { max-width: 920px; margin: 0 auto; padding: 32px 24px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); line-height: 1.6; }
+        h1 { font-size: 26px; margin-bottom: 4px; } h2 { font-size: 17px; }
+        .muted { color: var(--vscode-descriptionForeground); }
+        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, transparent); border-radius: 15px; padding: 20px; margin: 20px 0; }
+        .table { overflow-x: auto; } table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--vscode-widget-border, transparent); white-space: nowrap; }
+        button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 0; border-radius: 9px; padding: 8px 16px; cursor: pointer; }
+        button:hover { background: var(--vscode-button-hoverBackground); } button:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
+      </style></head><body>
+      <h1>外观状态</h1><p class="muted">检查文件同步与磁盘补丁，不会修改配置或重载窗口。</p>
+      <div class="card"><h2>${ready ? "文件与补丁均已就绪" : "外观文件需要检查"}</h2>
+      <p>Custom CSS and JS Loader：${loader ? "已安装" : "未安装"}</p>
+      <p>当前窗口是否已加载这些文件：无法直接确认。补丁更新后，待工作结束再手动重载。</p></div>
+      <div class="table"><table><thead><tr><th>文件</th><th>安装副本</th><th>加载器配置</th><th>磁盘补丁</th></tr></thead><tbody>
+      ${rows.map((row) => `<tr><td>${escapeHtml(row.name)}</td><td>${row.copied}</td><td>${row.imported ? "已加入" : "未加入"}</td><td>${row.patched}</td></tr>`).join("")}
+      </tbody></table></div>
+      <div class="card"><h2>下一步</h2><p>副本或加载配置需要更新：执行“Adwaita: 安装 GNOME 外观（CSS）”。磁盘补丁需要更新：执行加载器的“Reload Custom CSS and JS”。</p>
+      <p class="muted">重载窗口会中断 Codex。此面板不会自动执行上述操作。</p></div>
+      <button id="refresh">刷新状态</button>
+      <script nonce="${nonce}">const api = acquireVsCodeApi(); document.getElementById('refresh').addEventListener('click', () => api.postMessage('refresh'));</script>
+      </body></html>`;
+  };
+  const listener = panel.webview.onDidReceiveMessage((message) => { if (message === "refresh") render(); });
+  panel.onDidDispose(() => listener.dispose());
+  render();
+}
+
+/**
  * @param {import("vscode").ExtensionContext} context
  * @param {string[]} names
  * @returns {Promise<void>}
@@ -344,30 +423,19 @@ async function installCss(context, names) {
   const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
   const state = cssPatchState(markers);
 
-  if (state === "enabled") {
-    const reload = "Reload Custom CSS and JS";
-    const choice = await vscode.window.showInformationMessage(
-      `Adwaita：${names.join("、")} 已生效。${CSS_DIR} 中的文件刚刚更新——` +
-        `执行加载器的 Reload Custom CSS and JS 以应用当前版本。`,
-      reload
-    );
-    if (choice === reload) {
-      await vscode.commands.executeCommand("extension.updateCustomCSS");
-    }
-    return;
-  }
-
   if (loader) {
     const config = vscode.workspace.getConfiguration("vscode_custom_css");
     /** @type {string[]} */
     const imports = config.get("imports", []);
-    const merged = [...imports];
+    // 移除旧版菜单位置脚本，保留其他扩展和用户的加载项。
+    const retiredMenu = vscode.Uri.file(path.join(CSS_DIR, "gnome-menu.js")).toString();
+    const merged = imports.filter((uri) => uri !== retiredMenu);
     for (const uri of uris) {
       if (!merged.includes(uri)) {
         merged.push(uri);
       }
     }
-    if (merged.length !== imports.length) {
+    if (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index])) {
       await config.update("imports", merged, vscode.ConfigurationTarget.Global);
     }
     const [action, command, message] =
@@ -478,6 +546,100 @@ function splitSetting(key) {
   return [key.slice(0, index), key.slice(index + 1)];
 }
 
+/** @type {import("vscode").FileSystemWatcher[]} */
+let reloadWatchers = [];
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let reloadTimer;
+
+/**
+ * 重新应用 Custom CSS 并重载窗口（开发时让样式/主题/代码改动立即生效）。
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {Promise<void>}
+ */
+async function reloadWithStyles(context) {
+  try {
+    // 加载器读取安装目录中的副本，只同步用户已安装的样式。
+    for (const name of Object.keys(CSS_FILES)) {
+      const target = path.join(CSS_DIR, name);
+      if (fs.existsSync(target)) {
+        await fs.promises.copyFile(path.join(context.extensionPath, "extras", name), target);
+      }
+    }
+  } catch (error) {
+    const message = /** @type {Error} */ (error).message;
+    vscode.window.showErrorMessage(`Adwaita：无法同步 CSS 文件：${message}`);
+    return;
+  }
+  try {
+    // Custom CSS and JS Loader 会把 imports 中的样式重新内联进 workbench.html
+    await vscode.commands.executeCommand("extension.updateCustomCSS");
+  } catch {
+    // 未安装加载器时忽略，仅重载窗口
+  }
+  await vscode.commands.executeCommand("workbench.action.reloadWindow");
+}
+
+/**
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {void}
+ */
+function scheduleReload(context) {
+  if (reloadTimer !== undefined) {
+    clearTimeout(reloadTimer);
+  }
+  reloadTimer = setTimeout(() => {
+    reloadTimer = undefined;
+    reloadWithStyles(context).catch(() => undefined);
+  }, 1500);
+}
+
+/**
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {void}
+ */
+function startReloadWatchers(context) {
+  if (reloadWatchers.length > 0) {
+    return;
+  }
+  for (const pattern of ["extension/extension.js", "extras/*.css", "extras/*.js", "themes/*.json", "package.json"]) {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(context.extensionPath, pattern)
+    );
+    watcher.onDidChange(() => scheduleReload(context));
+    watcher.onDidCreate(() => scheduleReload(context));
+    watcher.onDidDelete(() => scheduleReload(context));
+    reloadWatchers.push(watcher);
+  }
+}
+
+/** @returns {void} */
+function stopReloadWatchers() {
+  for (const watcher of reloadWatchers) {
+    watcher.dispose();
+  }
+  reloadWatchers = [];
+  if (reloadTimer !== undefined) {
+    clearTimeout(reloadTimer);
+    reloadTimer = undefined;
+  }
+}
+
+/**
+ * 按 `adwcode.autoReload` 设置启停文件监视。
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {void}
+ */
+function syncReloadWatchers(context) {
+  const enabled = /** @type {boolean} */ (
+    vscode.workspace.getConfiguration("adwcode").get("autoReload", false)
+  );
+  if (enabled) {
+    startReloadWatchers(context);
+  } else {
+    stopReloadWatchers();
+  }
+}
+
 /**
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
@@ -489,6 +651,7 @@ function activate(context) {
   extensionContext = context;
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("adwcode.appearanceStatus", () => showAppearanceStatus(context)),
     vscode.commands.registerCommand("adwcode.syncAccent", () => syncAccent(true)),
     vscode.commands.registerCommand("adwcode.installGnomeLook", () =>
       installCss(context, ["gnome-look.css", "controls-close-only.css"])
@@ -503,6 +666,9 @@ function activate(context) {
       revertRecommendedSettings(context)
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("adwcode.autoReload")) {
+        syncReloadWatchers(context);
+      }
       if (
         event.affectsConfiguration("workbench.colorTheme") ||
         event.affectsConfiguration("workbench.preferredDarkColorTheme") ||
@@ -512,10 +678,12 @@ function activate(context) {
         syncAccent().catch(() => undefined);
       }
     }),
-    { dispose: stopAccentMonitor }
+    { dispose: stopAccentMonitor },
+    { dispose: stopReloadWatchers }
   );
 
   syncAccent().catch(() => undefined);
+  syncReloadWatchers(context);
 }
 
 /** @returns {void} */

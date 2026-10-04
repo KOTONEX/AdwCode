@@ -35,7 +35,7 @@ CI 与本地开发使用最新稳定版 3.14。
 - 扩展为无构建步骤、无依赖的纯 JavaScript；JS 类型检查由 `// @ts-check` +
   `types/` 手写最小类型面提供，不引入 `@types` 依赖。
 - `themes/` 是生成产物，不要手工编辑。
-- `extras/*.css` 通过「Custom CSS and JS Loader」扩展生效。VS Code 1.139 在约
+- `extras/*.css` 通过「Custom CSS and JS Loader」扩展生效。VS Code 1.140 在约
   250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*` 却从未定义它们，
   因此 `gnome-look.css` 自行定义这些令牌以提供 Adwaita 几何。VS Code 升级后请
   运行 `check_css.py`：它会校验每个类选择器仍存在于已安装的构建中（由

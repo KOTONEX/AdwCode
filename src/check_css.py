@@ -6,7 +6,8 @@
 VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚本解析我们的样式表并校验：
 
 - 每个类选择器仍存在于 VS Code 编译后的 CSS 中；
-- 我们引用的每个 ``var(--vscode-*)`` 要么由 VS Code 定义，要么由我们自己的令牌块定义。
+- 我们引用的每个 ``var(--vscode-*)`` 要么由 VS Code 定义、属于主题色注册表，
+  要么由我们自己的令牌块定义。
 
 用法：
     python3 src/check_css.py [--css PATH] [--verbose]
@@ -15,11 +16,13 @@ VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚�
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 
 ROOT: Path = Path(__file__).parent.parent
 EXTRAS: Path = ROOT / "extras"
+REGISTRY_KEYS: Path = ROOT / "src" / "vscode_defaults" / "registry_keys.json"
 
 CSS_CANDIDATES: list[Path] = [
     # Homebrew cask 安装
@@ -60,6 +63,14 @@ def find_vscode_assets(explicit: Path | None = None) -> tuple[Path | None, Path 
     return None, None
 
 
+def theme_variables() -> set[str]:
+    """主题色注册表的键会被 VS Code 以 ``--vscode-<键，点换横线>`` 注入。"""
+    if not REGISTRY_KEYS.is_file():
+        return set()
+    keys: list[str] = json.loads(REGISTRY_KEYS.read_text(encoding="utf-8"))
+    return {"--vscode-" + key.replace(".", "-") for key in keys}
+
+
 def selectors_and_declarations(text: str) -> tuple[str, str]:
     """把样式表拆分为选择器文本与声明文本。"""
     text = COMMENT_RE.sub("", text)
@@ -75,7 +86,7 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
         return 0
     vscode_text = vscode_css.read_text(encoding="utf-8", errors="ignore")
     vscode_classes = set(CLASS_RE.findall(selectors_and_declarations(vscode_text)[0]))
-    vscode_vars = set(VAR_DEF_RE.findall(vscode_text))
+    vscode_vars = set(VAR_DEF_RE.findall(vscode_text)) | theme_variables()
     # 由 JavaScript 创建的类名（例如窗口控制按钮）不会出现在编译后的 CSS 里，
     # 因此同时搜索 JS bundle。
     if vscode_js is not None:
