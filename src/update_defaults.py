@@ -8,7 +8,7 @@
 - builtin_keys.json：内置主题定义的全部颜色键并集，作为 `build.py --check`
   的覆盖度基准。
 - registry_keys.json：VS Code “Theme Color” 参考文档中记录的全部颜色 id，
-  用于发现我们映射表中的拼写错误。
+  用于发现映射表中的拼写错误。
 """
 
 from __future__ import annotations

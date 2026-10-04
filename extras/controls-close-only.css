@@ -9,7 +9,7 @@
  *
  * VS Code 的自绘窗口控件始终绘制最小化、最大化/还原与关闭三个按钮
  * （固定 46px 宽，容器 138px），颜色主题与产品图标主题都无法隐藏它们。
- * 如果你想让自绘控件符合 GNOME 布局，请用 “Custom CSS and JS Loader”
+ * 如需让自绘控件符合 GNOME 布局，可通过 “Custom CSS and JS Loader”
  * 扩展加载本文件。
  *
  * 若使用 window.controlsStyle = "native"（默认），GTK 会直接按 GNOME

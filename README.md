@@ -4,7 +4,7 @@
 （GNOME 51），语法高亮对齐 **GNOME Builder** 的 GtkSourceView 方案，强调色可以
 跟随 GNOME 系统设置。
 
-本项目为全新实现，以 AGPL-3.0-or-later 发布；复用的第三方数据登记在
+本项目以 AGPL-3.0-or-later 发布；使用的第三方组件与数据登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)，许可证声明见文末
 [「许可证」](#许可证)。
 
@@ -14,16 +14,16 @@
   `#2e2e32` / 弹出层 `#36363a`；浅色模式的半透明前景
   （`rgb(0 0 6 / 80%)`）按各自表面合成；15% `currentColor` 边框；
   7% / 12% 的悬停与激活填充。
-- **VS Code 1.13x 全覆盖** —— 官方「Theme Color」参考中的 971 个颜色全部定义，
-  包括旧主题留给默认值的聊天、智能体、Notebook、行内编辑、测试、合并编辑器与
-  内联提示等界面。
-- **GNOME Builder 语法高亮** —— 由当前 GtkSourceView `Adwaita` /
+- **界面颜色覆盖** —— 对照随附的 VS Code 颜色注册表与内置主题校验颜色键，
+  覆盖聊天、智能体、笔记本、行内编辑、测试、合并编辑器与内联提示等界面。
+  具体覆盖情况可运行 `make check` 查看。
+- **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 支持 GNOME 全部九种强调色（blue、teal、green、yellow、orange、
   red、pink、purple、slate）。默认构建 blue，可用 `--accents all` 生成其余颜色，
   或让扩展跟随 `org.gnome.desktop.interface accent-color`。
-- **变体** —— `default syntax highlighting`（使用 VS Code 自带 token 颜色）与
-  `colorful status bar` 变体，以及高对比度主题。
+- **变体** —— 默认语法高亮（使用 VS Code 自带的语法颜色）与
+  彩色状态栏变体，以及高对比度主题。
 - **产品图标主题** —— Adwaita 风格的窗口控制按钮字形（在
   `window.controlsStyle` 为 `custom` 时生效）。
 - **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：9px 的按钮/输入框/
@@ -110,7 +110,7 @@ GNOME 扩展
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
 
 `python3 src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
-是否仍然存在（由 JavaScript 创建的类名会在 bundle 中搜索），以及我们引用的每个
+是否仍然存在（由 JavaScript 创建的类名会在 bundle 中搜索），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
 
 ### 一键应用设置
@@ -120,8 +120,8 @@ GNOME 扩展
 关闭行号边栏差异装饰等）。被覆盖的旧值会被记住，
 **Adwaita: 恢复推荐设置** 可逐项恢复。
 
-推荐设置还会开启 `adwcode.autoReload`。它会重载整个窗口，中断正在运行的
-Codex 会话；与 Codex 协作时请关闭这一项，等修改完成后手动加载外观。
+推荐设置还会开启 `adwcode.autoReload`。文件变化会触发整个窗口重载，可能中断
+扩展会话或调试任务。需要连续工作时，可关闭此项并手动应用外观更新。
 
 ### 外观安装状态
 
@@ -130,7 +130,7 @@ Codex 会话；与 Codex 协作时请关闭这一项，等修改完成后手动�
 当前版本。面板支持手动刷新，不会修改配置或重载窗口。
 
 磁盘补丁已更新不代表当前窗口已加载新样式。工作结束后再手动重载窗口，
-避免中断 Codex 会话。
+避免中断当前工作。
 
 ### 仅保留关闭按钮
 
@@ -224,7 +224,7 @@ AdwCode/
 
 项目说明按用途拆分：
 
-- [智能体入口与协作约束](AGENTS.md)：新会话首先阅读。
+- [自动化开发说明](AGENTS.md)：项目约定与智能体工作入口。
 - [架构与实现状态](docs/03-架构与实现状态.md)：源数据、外观安装链路与功能边界。
 - [开发、验证与发布](docs/04-开发验证与发布.md)：检查、手动预览和发布步骤。
 - [贡献规范](CONTRIBUTING.md)：提交格式与贡献要求。

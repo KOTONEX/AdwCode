@@ -3,11 +3,11 @@
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """对照已安装的 VS Code 检查 extras/ 中的自定义 CSS。
 
-VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚本解析我们的样式表并校验：
+VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚本解析项目样式表并校验：
 
 - 每个类选择器仍存在于 VS Code 编译后的 CSS 中；
-- 我们引用的每个 ``var(--vscode-*)`` 要么由 VS Code 定义、属于主题色注册表，
-  要么由我们自己的令牌块定义。
+- 样式引用的每个 ``var(--vscode-*)`` 要么由 VS Code 定义、属于主题色注册表，
+  要么由项目的令牌块定义。
 
 用法：
     python3 src/check_css.py [--css PATH] [--verbose]

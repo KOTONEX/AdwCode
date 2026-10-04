@@ -395,7 +395,7 @@ function showAppearanceStatus(context) {
       ${rows.map((row) => `<tr><td>${escapeHtml(row.name)}</td><td>${row.copied}</td><td>${row.imported ? "已加入" : "未加入"}</td><td>${row.patched}</td></tr>`).join("")}
       </tbody></table></div>
       <div class="card"><h2>下一步</h2><p>副本或加载配置需要更新：执行“Adwaita: 安装 GNOME 外观（CSS）”。磁盘补丁需要更新：执行加载器的“Reload Custom CSS and JS”。</p>
-      <p class="muted">重载窗口会中断 Codex。此面板不会自动执行上述操作。</p></div>
+      <p class="muted">重载窗口可能中断扩展会话或调试任务，请先保存工作。此面板不会自动执行上述操作。</p></div>
       <button id="refresh">刷新状态</button>
       <script nonce="${nonce}">const api = acquireVsCodeApi(); document.getElementById('refresh').addEventListener('click', () => api.postMessage('refresh'));</script>
       </body></html>`;
