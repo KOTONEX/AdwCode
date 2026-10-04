@@ -15,6 +15,7 @@ import subprocess
 import sys
 import unittest
 import tempfile
+import zipfile
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -244,6 +245,21 @@ class ExtensionStatusTest(unittest.TestCase):
         self.assertTrue(all(not extension.startswith(".") for extension in entries))
         self.assertEqual(entries["css"], "text/css")
         self.assertEqual(entries["json"], "application/json")
+
+    def test_vsix_xml_escapes_metadata(self) -> None:
+        import package
+        manifest = json.loads((ROOT / "package.json").read_text())
+        manifest["description"] = '说明 <示例> & "引号"'
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
+            with patch.object(package, "ROOT", folder):
+                package.main()
+            with zipfile.ZipFile(folder / f"{manifest['name']}-{manifest['version']}.vsix") as archive:
+                xml = ET.fromstring(archive.read("extension.vsixmanifest"))
+                description = xml.find("{*}Metadata/{*}Description")
+                assert description is not None
+                self.assertEqual(description.text, manifest["description"])
 
     def test_recommended_settings_recovery(self) -> None:
         node = shutil.which("node")

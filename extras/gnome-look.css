@@ -404,9 +404,12 @@
 }
 
 /* 11. 浮层按用途分级；定位和 z-index 留给工作台，子菜单不裁切。 */
+.context-view .monaco-menu {
+	box-shadow: var(--vscode-shadow-lg);
+}
+
 .context-view .monaco-menu .monaco-action-bar.vertical {
 	border-radius: var(--vscode-cornerRadius-large);
-	box-shadow: var(--vscode-shadow-lg);
 	padding: 4px;
 }
 
@@ -435,7 +438,7 @@
 
 /* 高对比度不靠阴影区分浮层，保留原生轮廓和菜单焦点。 */
 .monaco-workbench:is(.hc-black, .hc-light) :is(.quick-input-widget, .notifications-center, .notification-toast, .monaco-dialog-box),
-.monaco-workbench:is(.hc-black, .hc-light) .context-view .monaco-menu .monaco-action-bar.vertical {
+.monaco-workbench:is(.hc-black, .hc-light) .context-view .monaco-menu {
 	box-shadow: none;
 	outline: 1px solid var(--vscode-contrastBorder);
 	outline-offset: -1px;
