@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import zipfile
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 ROOT: Path = Path(__file__).parent.parent
 
@@ -62,7 +63,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
 """
 
 INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras"]
-SKIP_SUFFIXES: set[str] = {".pyc"}
+SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
 
 
 def collect() -> list[Path]:
@@ -81,15 +82,18 @@ def main() -> None:
     name = manifest["name"]
     version = manifest["version"]
     output = ROOT / f"{name}-{version}.vsix"
+    def xml(value: str) -> str:
+        return escape(value, {'"': "&quot;", "'": "&apos;"})
+
     vsix_manifest = MANIFEST.format(
-        name=name,
-        version=version,
-        publisher=manifest["publisher"],
-        display_name=manifest["displayName"],
-        description=manifest["description"],
-        keywords=",".join(manifest.get("keywords", [])),
-        categories=",".join(manifest.get("categories", [])),
-        engine=manifest["engines"]["vscode"],
+        name=xml(name),
+        version=xml(version),
+        publisher=xml(manifest["publisher"]),
+        display_name=xml(manifest["displayName"]),
+        description=xml(manifest["description"]),
+        keywords=xml(",".join(manifest.get("keywords", []))),
+        categories=xml(",".join(manifest.get("categories", []))),
+        engine=xml(manifest["engines"]["vscode"]),
     )
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("[Content_Types].xml", CONTENT_TYPES)

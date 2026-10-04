@@ -14,6 +14,8 @@ import shutil
 import subprocess
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, cast
@@ -39,6 +41,11 @@ class ColorMathTest(unittest.TestCase):
         self.assertEqual(parse_color("rgb(0 0 6 / 80%)"), (0, 0, 6, 0.8))
         self.assertEqual(parse_color("rgb(255 255 255 / 8%)"), (255, 255, 255, 0.08))
         self.assertEqual(parse_color("rgb(10 20 30)"), (10, 20, 30, 1.0))
+
+    def test_invalid_colors_rejected(self) -> None:
+        for color in ("#12345", "#123456789", "#ggg", "rgb(256 0 0)", "rgb(0 0 0 / 101%)", "rgb(0 0 0 / 1.1)"):
+            with self.subTest(color=color), self.assertRaises(ValueError):
+                parse_color(color)
 
     def test_round_trip(self) -> None:
         self.assertEqual(to_hex(0, 0, 6, 1.0), "#000006")
@@ -188,6 +195,36 @@ class ThemeTest(unittest.TestCase):
     def test_slugs_are_safe(self) -> None:
         for path in THEMES.glob("*.json"):
             self.assertRegex(path.name, r"^[a-z0-9-]+\.json$")
+
+
+class GeneratorSafetyTest(unittest.TestCase):
+    def test_jsonc_preserves_string_contents(self) -> None:
+        from update_defaults import strip_jsonc
+        data = json.loads(strip_jsonc('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
+        self.assertEqual(data, {"text": ",} // /* ", "list": [1, 2]})
+
+    def test_include_cycle_rejected(self) -> None:
+        import update_defaults
+        with patch.dict(update_defaults._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}):
+            with self.assertRaisesRegex(ValueError, "include 循环"):
+                update_defaults.resolve_token_colors("a")
+
+    def test_accents_deduplicated(self) -> None:
+        from build import resolve_accents
+        self.assertEqual(resolve_accents("blue,teal,blue", False), ["blue", "teal"])
+        with self.assertRaises(SystemExit):
+            resolve_accents(" , ", False)
+
+    def test_generation_failure_preserves_existing_themes(self) -> None:
+        import build
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            existing = folder / "old.json"
+            existing.write_text("原有主题", encoding="utf-8")
+            with patch.object(build, "THEMES", folder), patch.object(build, "build_theme", side_effect=ValueError("生成失败")):
+                with self.assertRaises(ValueError):
+                    build.write_themes(build.build_plan(["blue"]))
+            self.assertEqual(existing.read_text(encoding="utf-8"), "原有主题")
 
 
 class ExtensionStatusTest(unittest.TestCase):

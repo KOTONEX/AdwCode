@@ -69,7 +69,26 @@ def strip_jsonc(text: str) -> str:
             continue
         out.append(char)
         i += 1
-    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+    # 仅在字符串之外移除尾逗号，不能改写诸如 ",}" 的字符串值。
+    clean = "".join(out)
+    result: list[str] = []
+    in_string = escaped = False
+    for index, char in enumerate(clean):
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        else:
+            if char == '"':
+                in_string = True
+            if char == "," and clean[index + 1:].lstrip().startswith(("}", "]")):
+                continue
+            result.append(char)
+    return "".join(result)
 
 
 def fetch(name: str) -> dict[str, Any]:
@@ -79,12 +98,15 @@ def fetch(name: str) -> dict[str, Any]:
     return _cache[name]
 
 
-def resolve_token_colors(name: str) -> list[dict[str, Any]]:
+def resolve_token_colors(name: str, seen: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+    if name in seen:
+        raise ValueError(f"主题 include 循环：{name}")
+    seen = seen | {name}
     theme = fetch(name)
     tokens: list[dict[str, Any]] = []
     include = theme.get("include")
     if include:
-        tokens += resolve_token_colors(Path(include).stem)
+        tokens += resolve_token_colors(Path(include).stem, seen)
     tokens += theme.get("tokenColors", [])
     return tokens
 

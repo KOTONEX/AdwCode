@@ -239,6 +239,8 @@ def parse_color(color: str) -> tuple[int, int, int, float]:
     color = color.strip()
     if color.startswith("#"):
         value = color[1:]
+        if len(value) not in (3, 4, 6, 8) or not re.fullmatch(r"[0-9a-fA-F]+", value):
+            raise ValueError(f"无法解析颜色： {color!r}")
         if len(value) in (3, 4):
             value = "".join(ch * 2 for ch in value)
         r, g, b = (int(value[i : i + 2], 16) for i in (0, 2, 4))
@@ -255,6 +257,8 @@ def parse_color(color: str) -> tuple[int, int, int, float]:
         alpha = float(alpha_text) / 100
     else:
         alpha = float(alpha_text)
+    if max(r, g, b) > 255 or not 0 <= alpha <= 1:
+        raise ValueError(f"颜色分量越界： {color!r}")
     return r, g, b, alpha
 
 

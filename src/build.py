@@ -111,8 +111,10 @@ def resolve_accents(spec: str | None, use_system: bool) -> list[str]:
         wanted = [item.strip() for item in spec.split(",") if item.strip()]
         unknown = [item for item in wanted if item not in ACCENT_NAMES]
         if unknown:
-            raise SystemExit(f"unknown accent(s): {', '.join(unknown)}")
-        return wanted
+            raise SystemExit(f"未知强调色：{', '.join(unknown)}")
+        if not wanted:
+            raise SystemExit("请至少指定一种强调色")
+        return list(dict.fromkeys(wanted))
     accents = ["blue"]
     if use_system:
         accent = system_accent()
@@ -190,13 +192,14 @@ def build_plan(accents: list[str]) -> list[ThemeRequest]:
 
 def write_themes(plan: list[ThemeRequest], watch: bool = False) -> list[ThemeEntry]:
     THEMES.mkdir(exist_ok=True)
-    for old in THEMES.glob("*.json"):
-        old.unlink()
+    # 先生成所有内容，生成器失败时保留原有主题文件。
+    prepared = [(item, build_theme(item["mode"], item["accent"], item["variant"], item["hc"])) for item in plan]
+    written: set[Path] = set()
     entries: list[ThemeEntry] = []
-    for item in plan:
-        theme = build_theme(item["mode"], item["accent"], item["variant"], item["hc"])
+    for item, theme in prepared:
         path = THEMES / theme_filename(item["mode"], item["accent"], item["variant"], item["hc"])
-        path.write_text(json.dumps(theme, indent=2, ensure_ascii=False) + "\n")
+        path.write_text(json.dumps(theme, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        written.add(path)
         if item["hc"]:
             ui_theme = "hc-black" if item["mode"] == "dark" else "hc-light"
         else:
@@ -209,6 +212,9 @@ def write_themes(plan: list[ThemeRequest], watch: bool = False) -> list[ThemeEnt
         if watch:
             entry["_watch"] = True
         entries.append(entry)
+    for old in THEMES.glob("*.json"):
+        if old not in written:
+            old.unlink()
     return entries
 
 
