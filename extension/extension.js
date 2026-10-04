@@ -111,7 +111,7 @@ let systemFonts = {};
  * @param {string} description @returns {string | undefined}
  */
 function pangoFamily(description) {
-  const value = description.trim().replace(/^'|'$/g, "");
+  const value = description.trim().replace(/^'|'$/g, "").replace(/\\(['\\])/g, "$1");
   if (!/\s+\d+(?:\.\d+)?$/.test(value)) return undefined;
   return value.replace(/\s+\d+(?:\.\d+)?$/, "")
     .replace(/(?:\s+(?:Bold|Semi-Bold|Semibold|Italic|Oblique|Regular|Medium|Light))+$/i, "").trim() || undefined;
@@ -132,6 +132,13 @@ async function readSystemFonts() {
   systemFonts = { ui: /** @type {string | undefined} */ (ui), mono: /** @type {string | undefined} */ (mono) };
 }
 
+/** @returns {string} */
+function uiFontStack() {
+  const configured = vscode.workspace.getConfiguration("adwcode").get("uiFontFamily", "");
+  const family = typeof configured === "string" && configured.trim() ? configured.trim() : systemFonts.ui;
+  return (family ? `${quotedFont(family)}, ` : "") + '"Adwaita Sans", "Cantarell", system-ui, sans-serif';
+}
+
 /** 生成字体适配文件；其他样式原样读取，状态检查也使用同一份预期内容。
  * @param {import("vscode").ExtensionContext} context
  * @param {string} name @returns {string}
@@ -139,9 +146,7 @@ async function readSystemFonts() {
 function cssSource(context, name) {
   const source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8");
   if (name !== "gnome-fonts.css") return source;
-  const configured = vscode.workspace.getConfiguration("adwcode").get("uiFontFamily", "");
-  const family = typeof configured === "string" && configured.trim() ? configured.trim() : systemFonts.ui;
-  return source + (family ? `\n:root, .monaco-workbench { --adwcode-ui-font: ${quotedFont(family)}, "Adwaita Sans", "Cantarell", system-ui, sans-serif; }\n` : "");
+  return source + `\n:root, .monaco-workbench { --adwcode-ui-font: ${uiFontStack()}; }\n`;
 }
 
 /** @type {import("vscode").ExtensionContext | undefined} */
@@ -410,6 +415,7 @@ function escapeHtml(value) {
 /** @param {import("vscode").ExtensionContext} context @returns {void} */
 function showAppearanceStatus(context) {
   const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "Adwaita 外观状态", vscode.ViewColumn.One, { enableScripts: true });
+  let disposed = false;
   const render = (refreshed = false) => {
     const rows = appearanceStatus(context);
     const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
@@ -423,7 +429,7 @@ function showAppearanceStatus(context) {
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
       <style>
         * { box-sizing: border-box; }
-        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); line-height: 1.6; }
+        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: ${uiFontStack()}; line-height: 1.6; }
         header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
         h1 { font-size: 24px; line-height: 1.3; margin: 0; } h2 { font-size: 16px; margin: 24px 0 8px; }
         h3 { font-size: 15px; margin: 0 0 4px; } p { margin: 8px 0; }
@@ -463,8 +469,13 @@ function showAppearanceStatus(context) {
       <script nonce="${nonce}">const api = acquireVsCodeApi(); const button = document.getElementById('refresh'); button.addEventListener('click', () => api.postMessage('refresh')); ${refreshed ? "button.focus();" : ""}</script>
       </body></html>`;
   };
-  const listener = panel.webview.onDidReceiveMessage((message) => { if (message === "refresh") render(true); });
-  panel.onDidDispose(() => listener.dispose());
+  const listener = panel.webview.onDidReceiveMessage(async (message) => {
+    if (message === "refresh") {
+      await readSystemFonts();
+      if (!disposed) render(true);
+    }
+  });
+  panel.onDidDispose(() => { disposed = true; listener.dispose(); });
   render();
 }
 

@@ -5,6 +5,7 @@
 :root, .monaco-workbench {
 	--adwcode-ui-font: "Adwaita Sans", "Cantarell", system-ui, sans-serif;
 }
-.monaco-workbench {
+:root .monaco-workbench.linux,
+.context-view.fixed {
 	font-family: var(--adwcode-ui-font);
 }

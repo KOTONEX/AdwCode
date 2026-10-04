@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
+async function main() {
 const files = new Map();
 let imports = [];
 let receive;
@@ -84,7 +85,7 @@ assert.ok(sandbox.appearanceStatus(context).every((row) => row.imported));
 sandbox.showAppearanceStatus(context);
 assert.ok(panel.webview.html.includes("文件与补丁均已就绪"));
 files.set("/repo/extras/gnome-look.css", "新样式");
-receive("refresh");
+await receive("refresh");
 assert.ok(panel.webview.html.includes("副本待更新"));
 assert.ok(panel.webview.html.includes("状态已刷新。"));
 assert.ok(panel.webview.html.includes("button.focus();"));
@@ -104,7 +105,7 @@ assert.equal(sandbox.pangoFamily("无效描述"), undefined);
 assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('</style>'));
 assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
 // 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
-(async () => {
+await (async () => {
   await sandbox.readSystemFonts();
   const generated = sandbox.cssSource(context, "gnome-fonts.css");
   assert.ok(generated.includes('"更纱黑体 UI SC"'));
@@ -163,3 +164,6 @@ assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
   assert.ok(cleared);
   console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅使用模拟对象）");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
+
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });
