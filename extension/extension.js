@@ -333,6 +333,7 @@ function appearanceStatus(context) {
   } catch {
     html = undefined;
   }
+  const patch = html?.match(/<!-- !! VSCODE-CUSTOM-CSS-START !! -->([\s\S]*?)<!-- !! VSCODE-CUSTOM-CSS-END !! -->/)?.[1];
   return Object.keys(CSS_FILES).map((name) => {
     const target = path.join(CSS_DIR, name);
     let source;
@@ -345,8 +346,16 @@ function appearanceStatus(context) {
       name,
       copied: source === undefined ? "源文件不可读" : installed === undefined ? "未安装或不可读" :
         installed === source ? "已同步" : "副本待更新",
-      imported: imports.includes(vscode.Uri.file(target).toString()),
-      patched: html === undefined ? "无法读取" : injected !== undefined && html.includes(injected) ?
+      imported: imports.some((value) => {
+        try {
+          const uri = vscode.Uri.parse(value);
+          return uri.scheme === "file" &&
+            (uri.fsPath === target || uri.fsPath === path.join(context.extensionPath, "extras", name));
+        } catch {
+          return false;
+        }
+      }),
+      patched: html === undefined ? "无法读取" : injected !== undefined && patch?.includes(injected) ?
         "磁盘补丁已更新" : "未注入当前版本",
     };
   });
@@ -363,7 +372,7 @@ function showAppearanceStatus(context) {
   const render = () => {
     const rows = appearanceStatus(context);
     const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
-    const ready = rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新");
+    const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新");
     const nonce = Math.random().toString(36).slice(2);
     panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -574,7 +583,14 @@ async function reloadWithStyles(context) {
     // Custom CSS and JS Loader 会把 imports 中的样式重新内联进 workbench.html
     await vscode.commands.executeCommand("extension.updateCustomCSS");
   } catch {
-    // 未安装加载器时忽略，仅重载窗口
+    // 已安装加载器但更新失败时，不把错误当成“未安装”，避免无效重载。
+    if (vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION)) {
+      vscode.window.showErrorMessage("Adwaita：Custom CSS 更新失败，已取消自动重载。请手动检查加载器。");
+      return;
+    }
+  }
+  if (!vscode.workspace.getConfiguration("adwcode").get("autoReload", false)) {
+    return;
   }
   await vscode.commands.executeCommand("workbench.action.reloadWindow");
 }
@@ -690,6 +706,7 @@ function activate(context) {
 function deactivate() {
   extensionContext = undefined;
   stopAccentMonitor();
+  stopReloadWatchers();
 }
 
 /** @type {{ activate: typeof activate, deactivate: typeof deactivate }} */

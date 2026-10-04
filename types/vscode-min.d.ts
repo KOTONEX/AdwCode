@@ -16,10 +16,13 @@ declare module "vscode" {
     }
 
     export interface Uri {
+        readonly scheme: string;
+        readonly fsPath: string;
         toString(): string;
     }
 
     export namespace Uri {
+        function parse(value: string): Uri;
         function file(path: string): Uri;
     }
 

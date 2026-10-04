@@ -413,7 +413,7 @@ class Palette:
         c["scrollbar_outline"] = as_hex(base["scrollbar_outline"])
 
         # 滚动条：currentColor 20%（悬停 60%，激活 100%，对应 Adwaita 悬浮滚动条）
-        c["scrollbar"] = rgba(fg_raw, 0.20)
+        c["scrollbar"] = rgba(fg_raw, 0.40 if self.high_contrast else 0.20)
         c["scrollbar_hover"] = rgba(fg_raw, 0.60)
         c["scrollbar_active"] = fg
 

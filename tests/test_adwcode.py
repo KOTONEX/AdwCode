@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -190,6 +191,15 @@ class ThemeTest(unittest.TestCase):
 
 
 class ExtensionStatusTest(unittest.TestCase):
+    def test_vsix_content_types(self) -> None:
+        import package
+
+        root = ET.fromstring(package.CONTENT_TYPES)
+        entries = {entry.attrib["Extension"]: entry.attrib["ContentType"] for entry in root}
+        self.assertTrue(all(not extension.startswith(".") for extension in entries))
+        self.assertEqual(entries["css"], "text/css")
+        self.assertEqual(entries["json"], "application/json")
+
     def test_offline_status_panel(self) -> None:
         node = shutil.which("node")
         if node is None:
