@@ -4,11 +4,11 @@
 """生成 AdwCode 主题并同步 package.json。
 
 用法：
-    python3 src/build.py                     # blue + 当前系统强调色
-    python3 src/build.py --accents all       # 全部九种 GNOME 强调色
-    python3 src/build.py --accents blue,teal # 指定强调色列表
-    python3 src/build.py --no-system         # 仅 blue
-    python3 src/build.py --check             # 校验已生成的主题
+    python3.14t src/build.py                     # blue + 当前系统强调色
+    python3.14t src/build.py --accents all       # 全部九种 GNOME 强调色
+    python3.14t src/build.py --accents blue,teal # 指定强调色列表
+    python3.14t src/build.py --no-system         # 仅 blue
+    python3.14t src/build.py --check             # 校验已生成的主题
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, cast
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -126,7 +126,7 @@ def relative_luminance(color: str) -> float:
 
     def channel(value: float) -> float:
         value /= 255
-        return value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4
+        return value / 12.92 if value <= 0.03928 else cast(float, ((value + 0.055) / 1.055) ** 2.4)
 
     return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 
@@ -162,7 +162,7 @@ def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = Fals
 
     token_colors: list[tokens.TokenRule]
     if default_syntax:
-        token_colors = json.loads((DEFAULTS / f"{mode}.json").read_text())["tokenColors"]
+        token_colors = cast(list[tokens.TokenRule], json.loads((DEFAULTS / f"{mode}.json").read_text())["tokenColors"])
     else:
         token_colors = tokens.token_colors(mode)
 

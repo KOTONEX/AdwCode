@@ -24,10 +24,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 安装 Python
+      - name: 安装自由线程 Python
+        id: python
         uses: actions/setup-python@v7
         with:
           python-version: "3.14"
+          freethreaded: true
 
       - name: 校验标签与版本一致
         run: |
@@ -41,22 +43,25 @@ jobs:
 
       - name: 安装类型检查工具
         run: |
-          python3 -m pip install mypy
+          "${{ steps.python.outputs.python-path }}" -m pip install ty meson ninja
           npm install -g typescript
 
-      - name: 静态检查（严格类型检查）
-        run: ADWCODE_TYPECHECK_STRICT=1 make lint
+      - name: 配置 Meson
+        run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
+
+      - name: 静态与类型检查
+        run: meson compile -C builddir lint
 
       - name: 生成/构建校验
         run: |
-          python3 src/build.py
+          meson compile -C builddir themes
           git diff --exit-code -- themes package.json
 
       - name: 离线单元测试
-        run: make test
+        run: meson test -C builddir --print-errorlogs
 
       - name: 打包
-        run: python3 src/package.py
+        run: meson compile -C builddir package
 
       - name: 上传到 Release
         if: startsWith(github.ref, 'refs/tags/v')

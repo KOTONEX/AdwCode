@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+option('python', type: 'string', value: 'python3.14t',
+  description: 'Python 3.14 自由线程解释器的命令名或绝对路径')

@@ -10,7 +10,7 @@ VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚�
   要么由项目的令牌块定义。
 
 用法：
-    python3 src/check_css.py [--css PATH] [--verbose]
+    python3.14t src/check_css.py [--css PATH] [--verbose]
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from typing import cast
 
 ROOT: Path = Path(__file__).parent.parent
 EXTRAS: Path = ROOT / "extras"
@@ -67,7 +68,7 @@ def theme_variables() -> set[str]:
     """主题色注册表的键会被 VS Code 以 ``--vscode-<键，点换横线>`` 注入。"""
     if not REGISTRY_KEYS.is_file():
         return set()
-    keys: list[str] = json.loads(REGISTRY_KEYS.read_text(encoding="utf-8"))
+    keys = cast(list[str], json.loads(REGISTRY_KEYS.read_text(encoding="utf-8")))
     return {"--vscode-" + key.replace(".", "-") for key in keys}
 
 

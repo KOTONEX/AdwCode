@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+[environment]
+python-version = "3.9"
+extra-paths = ["src"]
+
+[src]
+include = ["src", "tests"]
+
+[rules]
+all = "error"

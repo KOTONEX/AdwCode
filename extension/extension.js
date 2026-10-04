@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 //
 // JSDoc 类型使用 `import("vscode")` / `import("child_process")` 等写法；
-// 检查由 tsconfig.json + types/ 下的手写最小类型面完成（make typecheck），
+// 检查由 tsconfig.json + types/ 下的手写最小类型面完成（meson compile -C builddir typecheck），
 // 扩展本身仍是无构建步骤、无依赖的纯 JavaScript。
 // @ts-check
 /** @typedef {"blue" | "teal" | "green" | "yellow" | "orange" | "red" | "pink" | "purple" | "slate"} Accent */

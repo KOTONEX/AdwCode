@@ -2,7 +2,7 @@
   "name": "AdwCode",
   "displayName": "AdwCode",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "KOTONEX",
   "license": "AGPL-3.0-or-later",
   "engines": {
@@ -32,12 +32,15 @@
     "onStartupFinished"
   ],
   "scripts": {
-    "build": "python3 src/build.py",
-    "build:all-accents": "python3 src/build.py --accents all",
-    "check": "python3 src/build.py --check",
-    "check:css": "python3 src/check_css.py",
-    "test": "python3 -m unittest discover -s tests -p 'test_*.py'",
-    "package": "python3 src/package.py"
+    "setup": "meson setup builddir",
+    "build": "meson compile -C builddir themes",
+    "build:all-accents": "python3.14t src/build.py --accents all",
+    "check": "meson compile -C builddir check",
+    "check:css": "meson compile -C builddir check-css",
+    "test": "meson test -C builddir --print-errorlogs",
+    "package": "meson compile -C builddir package",
+    "lint": "meson compile -C builddir lint",
+    "typecheck": "meson compile -C builddir typecheck"
   },
   "contributes": {
     "configurationDefaults": {

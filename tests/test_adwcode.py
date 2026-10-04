@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """AdwCode 生成器测试：颜色运算、调色板、语法与主题。
 
-运行：python3 -m unittest discover -s tests -p 'test_*.py'
+运行：python3.14t -m unittest discover -s tests -p 'test_*.py'
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import sys
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "src"
@@ -26,7 +26,7 @@ import tokens
 from palette import ACCENT_NAMES, Palette, mix, over, parse_color, rgba, to_hex
 
 THEMES = ROOT / "themes"
-REGISTRY: list[str] = json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text())
+REGISTRY = cast(list[str], json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text()))
 
 
 class ColorMathTest(unittest.TestCase):
@@ -191,6 +191,14 @@ class ThemeTest(unittest.TestCase):
 
 
 class ExtensionStatusTest(unittest.TestCase):
+    def test_missing_development_tools_fail(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SRC / "dev.py"), "typecheck"],
+            env={"PATH": ""}, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("缺少开发工具：ty、tsc、node", result.stdout)
+
     def test_vsix_content_types(self) -> None:
         import package
 

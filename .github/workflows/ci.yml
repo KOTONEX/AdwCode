@@ -18,26 +18,28 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v7
 
-      - name: 安装 Python
+      - name: 安装自由线程 Python
+        id: python
         uses: actions/setup-python@v7
         with:
           python-version: "3.14"
+          freethreaded: true
 
-      - name: 安装类型检查工具（mypy / tsc）
+      - name: 安装类型检查工具（ty / tsc）
         run: |
-          python3 -m pip install mypy
+          "${{ steps.python.outputs.python-path }}" -m pip install ty meson ninja
           npm install -g typescript
 
-      - name: 类型检查（严格：工具缺失即失败）
-        run: ADWCODE_TYPECHECK_STRICT=1 make typecheck
+      - name: 配置 Meson
+        run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
 
-      - name: 静态检查
-        run: make lint
+      - name: 静态与类型检查
+        run: meson compile -C builddir lint
 
       - name: 生成/构建校验
         run: |
-          python3 src/build.py
+          meson compile -C builddir themes
           git diff --exit-code -- themes package.json
 
       - name: 离线单元测试
-        run: make test
+        run: meson test -C builddir --print-errorlogs

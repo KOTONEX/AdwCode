@@ -368,7 +368,7 @@ def editor_colors(mode: str) -> dict[str, str | None]:
 
     def style(name: str, key: Literal["foreground", "background"]) -> str | None:
         info = styles.get(name)
-        return info.get(key) if info is not None else None
+        return info[key] if info is not None else None
 
     return {
         "text_bg": style("text", "background"),

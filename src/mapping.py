@@ -29,7 +29,7 @@ def build_ui_colors(p: Palette, colorful_status_bar: bool = False) -> dict[str, 
         fallback: str | None = None,
     ) -> str | None:
         info = styles.get(name)
-        return (info.get(key) if info is not None else None) or fallback
+        return (info[key] if info is not None else None) or fallback
 
     def hue(name: str, level_dark: int = 2, level_light: int = 4) -> str:
         return PALETTE[name][level_dark if dark else level_light]

@@ -16,7 +16,7 @@
   7% / 12% 的悬停与激活填充。
 - **界面颜色覆盖** —— 对照随附的 VS Code 颜色注册表与内置主题校验颜色键，
   覆盖聊天、智能体、笔记本、行内编辑、测试、合并编辑器与内联提示等界面。
-  具体覆盖情况可运行 `make check` 查看。
+  具体覆盖情况可运行 `meson compile -C builddir check` 查看。
 - **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 支持 GNOME 全部九种强调色（blue、teal、green、yellow、orange、
@@ -62,8 +62,8 @@ code --install-extension AdwCode-<版本>.vsix
 `src/package.py` 会打印生成的文件名）：
 
 ```sh
-python3 src/build.py            # blue + 当前系统强调色
-python3 src/package.py          # 生成 AdwCode-<版本>.vsix
+python3.14t src/build.py            # blue + 当前系统强调色
+python3.14t src/package.py          # 生成 AdwCode-<版本>.vsix
 code --install-extension AdwCode-<版本>.vsix
 ```
 
@@ -109,7 +109,7 @@ GNOME 扩展
 会自动重新应用 Custom CSS 并重载窗口。VS Code 升级后补丁会被
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
 
-`python3 src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
+`python3.14t src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
 是否仍然存在（由 JavaScript 创建的类名会在 bundle 中搜索），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
 
@@ -152,9 +152,9 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 ## 强调色
 
 ```sh
-python3 src/build.py --accents all          # 全部九种强调色（18+ 个主题）
-python3 src/build.py --accents blue,teal    # 指定子集
-python3 src/build.py --no-system            # 仅 blue
+python3.14t src/build.py --accents all          # 全部九种强调色（18+ 个主题）
+python3.14t src/build.py --accents blue,teal    # 指定子集
+python3.14t src/build.py --no-system            # 仅 blue
 ```
 
 随附扩展会监听 GNOME 强调色偏好并切换所选 Adwaita 主题到对应变体
@@ -170,7 +170,7 @@ AdwCode/
 ├── CHANGELOG.md                 更新日志
 ├── CONTRIBUTING.md              贡献指南
 ├── LICENSE                      AGPL-3.0 全文
-├── Makefile                     统一命令入口
+├── meson.build                  统一命令入口
 ├── README.md                    本文件
 ├── package.json                 扩展清单，版本号唯一事实源
 ├── src/                         构建管线与可导入模块
@@ -198,7 +198,9 @@ AdwCode/
 | 依赖 | 要求 | 用途 |
 | --- | --- | --- |
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
-| Python | 3.9+（CI 与本地开发使用 3.14） | 仅构建与打包需要 |
+| Python | 3.9+（CI 与本地开发使用 3.14 自由线程版本） | 仅构建与打包需要 |
+| Meson / Ninja | Meson ≥ 1.3 | 开发命令与 CI 调度；独立 Python 脚本可直接运行 |
+| ty / tsc / Node.js | 类型检查与扩展测试工具 | 完整开发验证需要，最终扩展无额外运行时库依赖 |
 | GNOME | 提供 `org.gnome.desktop.interface accent-color`（GNOME 47 起） | 扩展跟随系统强调色；没有该键时手动选择主题变体 |
 | VS Code 安装目录写权限 | — | Custom CSS and JS Loader 注入自定义 CSS 的要求 |
 
@@ -208,7 +210,7 @@ AdwCode/
 
 升级会覆盖注入的自定义 CSS：重新执行 **Adwaita: 安装 GNOME 外观（CSS）**，
 或让加载器执行 **Reload Custom CSS and JS**，随后运行
-`python3 src/check_css.py` 确认选择器与设计令牌仍然有效。
+`python3.14t src/check_css.py` 确认选择器与设计令牌仍然有效。
 
 ### 强调色不同步
 
@@ -229,19 +231,31 @@ AdwCode/
 - [开发、验证与发布](docs/04-开发验证与发布.md)：检查、手动预览和发布步骤。
 - [贡献规范](CONTRIBUTING.md)：提交格式与贡献要求。
 
-需要 Python 3.9+（CI 与本地开发使用 3.14）：
+需要 Python 3.9+（CI 与本地开发使用 3.14 自由线程版本）：
 
 ```sh
-python3 src/build.py --check             # 键覆盖、未知键、对比度
-python3 src/check_css.py                 # 自定义 CSS 与已安装 VS Code 的比对
-python3 src/build.py --watch             # 给主题加 _watch，编辑 JSON 即时生效
-python3 src/update_defaults.py           # 刷新 VS Code 默认主题数据与键表
-python3 -m unittest discover -s tests -p 'test_*.py'   # 颜色运算、调色板、语法、主题、CSS
+python3.14t src/build.py --check             # 键覆盖、未知键、对比度
+python3.14t src/check_css.py                 # 自定义 CSS 与已安装 VS Code 的比对
+python3.14t src/build.py --watch             # 给主题加 _watch，编辑 JSON 即时生效
+python3.14t src/update_defaults.py           # 刷新 VS Code 默认主题数据与键表
+python3.14t -m unittest discover -s tests -p 'test_*.py'   # 颜色运算、调色板、语法、主题、CSS
 ```
 
-标准命令入口是 `make lint`、`make typecheck`、`make check`、`make test`、`make build`、
-`make package` 与 `make clean`，语义见 Makefile。贡献流程、提交规范与自测要求
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 与 Node.js，
+再安装自由线程 Python 和开发工具，完成首次配置与完整检查：
+
+```sh
+uv python install 3.14t
+python3.14t -m pip install meson ninja ty
+npm install -g typescript          # 需先安装 Node.js
+meson setup builddir
+meson test -C builddir --print-errorlogs
+```
+
+生成主题使用 `meson compile -C builddir themes`，打包使用
+`meson compile -C builddir package`。Meson 不编译扩展 JavaScript；Python 脚本仍可
+单独运行。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 
 `--check` 会把生成的主题与官方颜色注册表、内置主题比对：未知键（拼写错误）会
 导致检查失败，缺失键会被列出，并校验明暗两种模式的对比度。

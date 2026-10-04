@@ -8,20 +8,26 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何按
 
 | 依赖 | 用途 |
 | --- | --- |
-| Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14） |
+| Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
 | [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
-| VS Code | 供 `python3 src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
+| VS Code | 供 `python3.14t src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
 
 ## 常用命令
 
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 与 Node.js，
+再安装自由线程 Python、Meson、Ninja、ty 和 TypeScript 编译器：
+
 ```sh
-make lint      # 静态检查（py_compile 全部 Python 源文件 / package.json / typecheck）
-make typecheck # 类型检查：mypy（src、tests）+ tsc（extension.js，缺工具时跳过）
-make check     # 校验已生成的主题（键覆盖、未知键、对比度、产品图标）
-make test      # 离线单元测试（unittest，CI 可跑）
-make build     # 生成主题并同步 package.json
-make package   # 打包 AdwCode-<版本>.vsix
-make clean     # 清理本地产物（__pycache__ 等）
+uv python install 3.14t
+python3.14t -m pip install meson ninja ty
+npm install -g typescript
+meson setup builddir
+meson compile -C builddir themes    # 生成主题并同步清单
+meson compile -C builddir lint      # 静态与类型检查
+meson compile -C builddir check     # 主题校验
+meson test -C builddir --print-errorlogs  # 完整检查及离线测试
+meson compile -C builddir package   # 打包 VSIX
+meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ```
 
 `package.json` 中保留了等价别名，`npm run build`、`npm run check`、`npm test`、
@@ -34,10 +40,10 @@ make clean     # 清理本地产物（__pycache__ 等）
 自动化测试应使用独立环境，避免重载正在使用的工作窗口；修改受监视文件前检查
 自动重载设置。
 
-- `themes/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `make build`，
+- `themes/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir themes`，
   并让生成结果随提交一起入库。
 - 新增颜色键必须存在于 `src/vscode_defaults/registry_keys.json`，或在
-  `build.LEGACY_KEYS` 中，否则 `make check` 会失败。
+  `build.LEGACY_KEYS` 中，否则 `meson compile -C builddir check` 会失败。
 - 主题 JSON 中的颜色必须是十六进制（`#rrggbb` / `#rrggbbaa`）：VS Code 会忽略
   CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `palette.as_hex()`。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
@@ -60,7 +66,7 @@ make clean     # 清理本地产物（__pycache__ 等）
   | `杂务:` | 构建、依赖、CI、清理等 | chore |
   | `初始化:` | 仓库 / 模块的初始提交 | init |
 
-- 提交前至少跑通 `make lint`、`make check` 与 `make test`。
+- 提交前必须运行 `meson test -C builddir --print-errorlogs`，静态、类型、主题和离线测试均应通过。
 - PR 描述请填写仓库自带的模板，逐项确认约束检查。
 - 发布：`package.json` 的 `version` 是版本号的唯一事实源；推送形如 `v1.0.0` 的
   标签后，GitHub Actions 会自动构建并上传 VSIX 到对应的 Release（发布说明由提交

@@ -36,7 +36,7 @@ VS Code 的 Adwaita 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 目标是让 VS Code 看起来像原生 GNOME 应用（尤其是 GNOME Builder）。
 
 需要 Python 3.9+（代码中的 `X | Y` 注解均依赖 `from __future__ import annotations`）；
-CI 与本地开发使用最新稳定版 3.14。
+CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 
 ## 目录
 
@@ -44,13 +44,13 @@ CI 与本地开发使用最新稳定版 3.14。
 - `src/mapping.py` —— VS Code 颜色键到 Adwaita 角色的映射
 - `src/tokens.py` —— GtkSourceView 样式名到 TextMate 作用域的映射
 - `src/build.py` / `src/package.py` / `src/update_defaults.py`
-- `tests/test_adwcode.py` —— 离线单元测试，运行 `make test`
+- `tests/test_adwcode.py` —— 离线单元测试，运行 `meson test -C builddir --print-errorlogs`
 - `src/gtksourceview_xml/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
 - `src/vscode_defaults/` —— 随附的 VS Code 默认数据与键表（MIT）
 - `themes/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
 - `product-icons/`、`extras/`、`extension/`
-- `types/`、`mypy.ini`、`tsconfig.json` —— 类型检查配置与手写最小类型面
-- `docs/01-第三方许可证.md` —— 第三方登记；`Makefile` 是统一命令入口
+- `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
+- `docs/01-第三方许可证.md` —— 第三方登记；`meson.build` 是统一命令入口
 
 ## 约定
 
@@ -74,23 +74,26 @@ CI 与本地开发使用最新稳定版 3.14。
 
 ## 常用命令
 
-- 静态检查：`make lint`
-- 类型检查：`make typecheck`（mypy 严格检查 `src/`、`tests/`；tsc 检查
-  `extension/extension.js`，缺工具时跳过，CI 以 `ADWCODE_TYPECHECK_STRICT=1` 强制）
-- 校验（键覆盖、未知键、对比度、产品图标）：`make check`
-- 离线单元测试：`make test`
-- 构建主题并同步 `package.json`：`make build`（等价于 `python3 src/build.py`）
-- 生成全部九种强调色：`python3 src/build.py --accents all`
-- 对照已安装的 VS Code 检查自定义 CSS：`python3 src/check_css.py`
-- 打包 VSIX（无需 Node.js）：`make package`
-- 刷新随附的 VS Code 数据与键表：`python3 src/update_defaults.py`
-- 开发时主题 JSON 即时重载：`python3 src/build.py --watch`
+默认解释器为 `python3.14t`，必须是 GIL 关闭的 Python 3.14 自由线程版本；
+可通过 `-Dpython=/绝对路径/python3.14t` 指定。首次运行 `meson setup builddir`；后续可用 `meson setup --reconfigure builddir` 更新配置。
+
+- 静态检查：`meson compile -C builddir lint`
+- 类型检查：`meson compile -C builddir typecheck`（ty 检查 `src/`、`tests/`；tsc 检查
+  `extension/extension.js`，缺少 ty、tsc 或 Node.js 时失败）
+- 校验（键覆盖、未知键、对比度、产品图标）：`meson compile -C builddir check`
+- 完整检查（静态、类型、主题与离线单元测试）：`meson test -C builddir --print-errorlogs`
+- 构建主题并同步 `package.json`：`meson compile -C builddir themes`（等价于 `python3.14t src/build.py`）
+- 生成全部九种强调色：`python3.14t src/build.py --accents all`
+- 对照已安装的 VS Code 检查自定义 CSS：`python3.14t src/check_css.py`
+- 打包 VSIX（无需 Node.js）：`meson compile -C builddir package`
+- 刷新随附的 VS Code 数据与键表：`python3.14t src/update_defaults.py`
+- 开发时主题 JSON 即时重载：`python3.14t src/build.py --watch`
 - 发布：推送 `v*` 标签后由 GitHub Actions 自动构建并上传 VSIX
   （`.github/workflows/release.yml`，会先校验标签与版本一致、产物与提交一致，
   再跑静态检查与单元测试）；配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
   VSIX 还会发布到 VS Code 扩展市场与 Open VSX（未配置时自动跳过）
 
-任何改动完成前都要跑 `make lint && make check && make test`。
+任何改动完成前都要跑 `meson test -C builddir --print-errorlogs`。
 
 ## 提交
 
