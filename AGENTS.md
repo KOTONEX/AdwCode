@@ -24,6 +24,8 @@
   与测试；开发期间可关闭自动重载，避免文件变化中断工作。
 - 汉堡菜单保留 VS Code 原生位置。`compact` 在活动栏显示按钮，不添加移动
   菜单的脚本，不用 CSS 把它强行挪到顶栏。
+- 产品图标选材优先级为 Adwaita、GNOME Builder、MoreWaita；按语义匹配选用，
+  不为更换来源而丢失状态区别。来源记录和图标陈列同步更新。
 - 外观以 GNOME HIG、libadwaita 1.10 和 GNOME Builder 为参照，当前侧重外观
   完整度，并同时考虑布局、状态、密度和键盘操作。
 - 提交信息、README、文档、代码注释、界面提示与自有脚本说明使用简体中文。
@@ -52,6 +54,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `product-icons/`、`extras/`、`extension/`
 - `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
 - `docs/01-第三方许可证.md` —— 第三方登记；`meson.build` 是统一命令入口
+- `docs/06-产品图标陈列.md` —— 实际使用的字形、缩略图与标识；图标映射变化时同步更新
 
 ## 约定
 

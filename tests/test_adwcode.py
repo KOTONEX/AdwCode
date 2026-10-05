@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -316,6 +317,64 @@ class CssTest(unittest.TestCase):
         if vscode_css is None:
             self.skipTest("未找到已安装的 VS Code")
         self.assertEqual(check_css.check(None), 0)
+
+
+class ProductIconSourcesTests(unittest.TestCase):
+    def test_imported_sources_match_assets_and_mappings(self) -> None:
+        """上游资产保持原字节；码点、字体与所有别名必须能对应到来源记录。"""
+        folder = ROOT / "product-icons"
+        sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
+        theme = json.loads((folder / "adwaita.json").read_text(encoding="utf-8"))
+        fonts = {font["id"]: font for font in theme["fonts"]}
+        self.assertEqual(len(fonts), len(theme["fonts"]))
+        imported_ids = {font["id"] for font in sources["fonts"] if font.get("enabled", True)}
+        mapped: set[str] = set()
+        for font in sources["fonts"]:
+            self.assertRegex(font["revision"], r"^[0-9a-f]{40}$")
+            self.assertTrue(font["license"])
+            self.assertTrue(font["attribution"])
+            enabled = font.get("enabled", True)
+            if enabled:
+                self.assertEqual(fonts[font["id"]]["src"][0]["path"], "./" + font["output"])
+            else:
+                self.assertNotIn(font["id"], fonts)
+            self.assertTrue((folder / font["output"]).is_file())
+            codepoints: set[int] = set()
+            for entry in font["glyphs"]:
+                path = folder / entry["file"]
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), entry["sha256"], entry["file"])
+                self.assertEqual(Path(entry["upstream_path"]).name, path.name)
+                self.assertEqual(ET.parse(path).getroot().tag, "{http://www.w3.org/2000/svg}svg")
+                codepoint = int(entry["codepoint"], 16)
+                self.assertTrue(0xE000 <= codepoint <= 0xF8FF)
+                self.assertNotIn(codepoint, codepoints)
+                codepoints.add(codepoint)
+                self.assertTrue(entry["icons"])
+                if not enabled:
+                    continue
+                for icon in entry["icons"]:
+                    self.assertNotIn(icon, mapped)
+                    mapped.add(icon)
+                    self.assertEqual(theme["iconDefinitions"][icon], {
+                        "fontId": font["id"], "fontCharacter": "\\" + entry["codepoint"],
+                    })
+        self.assertEqual(mapped, {
+            icon for icon, definition in theme["iconDefinitions"].items()
+            if definition["fontId"] in imported_ids
+        })
+
+    def test_adwaita_equivalents_take_priority(self) -> None:
+        """官方已有对应字形时采用 Adwaita；备用 MoreWaita 不参与运行时加载。"""
+        folder = ROOT / "product-icons"
+        sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
+        theme = json.loads((folder / "adwaita.json").read_text(encoding="utf-8"))
+        priority = ["adwcode-adwaita", "adwcode-builder", "adwcode-morewaita"]
+        self.assertEqual(sources["source_priority"], priority)
+        self.assertEqual([font["id"] for font in sources["fonts"]], priority)
+        for icon in ("terminal", "extensions", "debug-continue", "debug-stop", "package", "tools",
+                     "root-folder", "chrome-close", "chrome-maximize", "chrome-minimize", "chrome-restore"):
+            self.assertEqual(theme["iconDefinitions"][icon]["fontId"], "adwcode-adwaita", icon)
+        self.assertNotIn("adwcode-morewaita", {font["id"] for font in theme["fonts"]})
 
 
 if __name__ == "__main__":

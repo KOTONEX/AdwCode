@@ -9,7 +9,8 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何按
 | 依赖 | 用途 |
 | --- | --- |
 | Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
-| [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成自有产品图标字体时需要，见产品图标说明 |
+| [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成导入的单色字体或备用自有字体时需要，见产品图标说明 |
+| [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅将官方描边图标转换为字体轮廓时需要 |
 | [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
 | VS Code | 供 `python3.14t src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
 
@@ -77,6 +78,6 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ## 许可证
 
 本项目以 **AGPL-3.0-or-later** 发布（全文见 [LICENSE](LICENSE)）。提交贡献即表示
-同意以该许可证发布你的贡献；引入第三方代码、数据或资产前，先确认其许可证与
-AGPL-3.0-or-later 兼容，并在 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)
-登记。
+同意以该许可证发布你的自有代码贡献。引入第三方代码或组合依赖前，先确认
+AGPL-3.0-or-later 兼容性；独立艺术资产保留原许可、署名和分发边界。
+所有第三方来源均须在 [docs/01-第三方许可证.md](docs/01-第三方许可证.md) 登记。

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -301,10 +302,20 @@ def check() -> int:
                 if not target.exists():
                     print(f"失败 product-icons：缺少 {source['path']}")
                     failures += 1
-        if len({d.get("fontCharacter") for d in definitions.values()}) != len(definitions):
-            print("失败 product-icons: 图标字形重复")
+        font_ids = {font["id"] for font in fonts}
+        if len(font_ids) != len(fonts):
+            print("失败 product-icons: 字体标识重复")
             failures += 1
-        print(f"产品图标：{len(definitions)} 个字形，{len(fonts)} 个字体")
+        # 同一字形可服务于语义相同的多个产品图标；检查引用，允许有意复用。
+        for icon, definition in definitions.items():
+            character = definition.get("fontCharacter", "")
+            if definition.get("fontId") not in font_ids:
+                print(f"失败 product-icons: {icon} 引用了未知字体")
+                failures += 1
+            if not re.fullmatch(r"\\[0-9a-fA-F]{4,6}", character) or int(character[1:], 16) > 0x10FFFF:
+                print(f"失败 product-icons: {icon} 的字形码点无效")
+                failures += 1
+        print(f"产品图标：{len(definitions)} 个图标映射，{len(fonts)} 个字体")
 
     # 对每个生成的主题做对比度检查（含强调色、变体、高对比度）。
     checks: list[tuple[str, str, float]] = [

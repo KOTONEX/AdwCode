@@ -1,6 +1,28 @@
 {
   "fonts": [
     {
+      "id": "adwcode-adwaita",
+      "src": [
+        {
+          "path": "./adwaita-symbols.ttf",
+          "format": "truetype"
+        }
+      ],
+      "weight": "normal",
+      "style": "normal"
+    },
+    {
+      "id": "adwcode-builder",
+      "src": [
+        {
+          "path": "./builder-symbols.ttf",
+          "format": "truetype"
+        }
+      ],
+      "weight": "normal",
+      "style": "normal"
+    },
+    {
       "id": "adwaita-icons",
       "src": [
         {
@@ -10,71 +32,60 @@
       ],
       "weight": "normal",
       "style": "normal"
-    },
-    {
-      "id": "adwcode-symbols",
-      "src": [
-        {
-          "path": "./adwcode-symbols.ttf",
-          "format": "truetype"
-        }
-      ],
-      "weight": "normal",
-      "style": "normal"
     }
   ],
   "iconDefinitions": {
     "chrome-close": {
-      "fontCharacter": "\\ea01",
-      "fontId": "adwaita-icons"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e306"
     },
     "chrome-maximize": {
-      "fontCharacter": "\\ea02",
-      "fontId": "adwaita-icons"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e322"
     },
     "chrome-minimize": {
-      "fontCharacter": "\\ea03",
-      "fontId": "adwaita-icons"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e323"
     },
     "chrome-restore": {
-      "fontCharacter": "\\ea04",
-      "fontId": "adwaita-icons"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e324"
     },
     "files": {
-      "fontCharacter": "\\f001",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e300",
+      "fontId": "adwcode-adwaita"
     },
     "search": {
-      "fontCharacter": "\\f002",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e301",
+      "fontId": "adwcode-adwaita"
     },
     "source-control": {
-      "fontCharacter": "\\f003",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e103",
+      "fontId": "adwcode-builder"
     },
     "debug-alt": {
-      "fontCharacter": "\\f004",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e100",
+      "fontId": "adwcode-builder"
     },
     "extensions": {
-      "fontCharacter": "\\f005",
-      "fontId": "adwcode-symbols"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31c"
     },
     "terminal": {
-      "fontCharacter": "\\f006",
-      "fontId": "adwcode-symbols"
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31b"
     },
     "settings-gear": {
-      "fontCharacter": "\\f007",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e302",
+      "fontId": "adwcode-adwaita"
     },
     "refresh": {
-      "fontCharacter": "\\f008",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e303",
+      "fontId": "adwcode-adwaita"
     },
     "add": {
-      "fontCharacter": "\\f009",
-      "fontId": "adwcode-symbols"
+      "fontCharacter": "\\e304",
+      "fontId": "adwcode-adwaita"
     },
     "layout-sidebar-left": {
       "fontCharacter": "\\ea05",
@@ -99,6 +110,246 @@
     "layout-sidebar-right-off": {
       "fontCharacter": "\\ea0a",
       "fontId": "adwaita-icons"
+    },
+    "debug": {
+      "fontCharacter": "\\e100",
+      "fontId": "adwcode-builder"
+    },
+    "bug": {
+      "fontCharacter": "\\e100",
+      "fontId": "adwcode-builder"
+    },
+    "git-branch": {
+      "fontCharacter": "\\e103",
+      "fontId": "adwcode-builder"
+    },
+    "git-commit": {
+      "fontCharacter": "\\e104",
+      "fontId": "adwcode-builder"
+    },
+    "tag": {
+      "fontCharacter": "\\e105",
+      "fontId": "adwcode-builder"
+    },
+    "debug-continue": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31d"
+    },
+    "run": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31d"
+    },
+    "play": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31d"
+    },
+    "debug-start": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31d"
+    },
+    "debug-stop": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31e"
+    },
+    "stop": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31e"
+    },
+    "debug-step-into": {
+      "fontCharacter": "\\e109",
+      "fontId": "adwcode-builder"
+    },
+    "debug-step-out": {
+      "fontCharacter": "\\e10a",
+      "fontId": "adwcode-builder"
+    },
+    "debug-step-over": {
+      "fontCharacter": "\\e10b",
+      "fontId": "adwcode-builder"
+    },
+    "debug-breakpoint": {
+      "fontCharacter": "\\e10c",
+      "fontId": "adwcode-builder"
+    },
+    "diff-added": {
+      "fontCharacter": "\\e10d",
+      "fontId": "adwcode-builder"
+    },
+    "diff-modified": {
+      "fontCharacter": "\\e10e",
+      "fontId": "adwcode-builder"
+    },
+    "beaker": {
+      "fontCharacter": "\\e10f",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-class": {
+      "fontCharacter": "\\e110",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-constant": {
+      "fontCharacter": "\\e111",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-enum": {
+      "fontCharacter": "\\e112",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-enum-member": {
+      "fontCharacter": "\\e113",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-function": {
+      "fontCharacter": "\\e114",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-method": {
+      "fontCharacter": "\\e115",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-namespace": {
+      "fontCharacter": "\\e116",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-field": {
+      "fontCharacter": "\\e117",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-struct": {
+      "fontCharacter": "\\e118",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-variable": {
+      "fontCharacter": "\\e119",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-event": {
+      "fontCharacter": "\\e11a",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-snippet": {
+      "fontCharacter": "\\e11b",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-text": {
+      "fontCharacter": "\\e11c",
+      "fontId": "adwcode-builder"
+    },
+    "symbol-module": {
+      "fontCharacter": "\\e11d",
+      "fontId": "adwcode-builder"
+    },
+    "package": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31f"
+    },
+    "symbol-package": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31f"
+    },
+    "tools": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e320"
+    },
+    "root-folder": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e321"
+    },
+    "root-folder-opened": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e321"
+    },
+    "remove": {
+      "fontCharacter": "\\e305",
+      "fontId": "adwcode-adwaita"
+    },
+    "new-file": {
+      "fontCharacter": "\\e307",
+      "fontId": "adwcode-adwaita"
+    },
+    "file-add": {
+      "fontCharacter": "\\e307",
+      "fontId": "adwcode-adwaita"
+    },
+    "new-folder": {
+      "fontCharacter": "\\e308",
+      "fontId": "adwcode-adwaita"
+    },
+    "save": {
+      "fontCharacter": "\\e309",
+      "fontId": "adwcode-adwaita"
+    },
+    "save-as": {
+      "fontCharacter": "\\e30a",
+      "fontId": "adwcode-adwaita"
+    },
+    "copy": {
+      "fontCharacter": "\\e30b",
+      "fontId": "adwcode-adwaita"
+    },
+    "clippy": {
+      "fontCharacter": "\\e30c",
+      "fontId": "adwcode-adwaita"
+    },
+    "discard": {
+      "fontCharacter": "\\e30d",
+      "fontId": "adwcode-adwaita"
+    },
+    "redo": {
+      "fontCharacter": "\\e30e",
+      "fontId": "adwcode-adwaita"
+    },
+    "trash": {
+      "fontCharacter": "\\e30f",
+      "fontId": "adwcode-adwaita"
+    },
+    "replace": {
+      "fontCharacter": "\\e310",
+      "fontId": "adwcode-adwaita"
+    },
+    "debug-pause": {
+      "fontCharacter": "\\e311",
+      "fontId": "adwcode-adwaita"
+    },
+    "error": {
+      "fontCharacter": "\\e312",
+      "fontId": "adwcode-adwaita"
+    },
+    "warning": {
+      "fontCharacter": "\\e313",
+      "fontId": "adwcode-adwaita"
+    },
+    "info": {
+      "fontCharacter": "\\e314",
+      "fontId": "adwcode-adwaita"
+    },
+    "folder": {
+      "fontCharacter": "\\e315",
+      "fontId": "adwcode-adwaita"
+    },
+    "folder-opened": {
+      "fontCharacter": "\\e316",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-right": {
+      "fontCharacter": "\\e317",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-down": {
+      "fontCharacter": "\\e318",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-up": {
+      "fontCharacter": "\\e319",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-left": {
+      "fontCharacter": "\\e31a",
+      "fontId": "adwcode-adwaita"
+    },
+    "close": {
+      "fontCharacter": "\\e306",
+      "fontId": "adwcode-adwaita"
     }
   }
 }

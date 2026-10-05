@@ -19,6 +19,7 @@ CONTENT_TYPES: str = """<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="json" ContentType="application/json"/>
   <Default Extension="js" ContentType="application/javascript"/>
+  <Default Extension="py" ContentType="text/x-python"/>
   <Default Extension="css" ContentType="text/css"/>
   <Default Extension="svg" ContentType="image/svg+xml"/>
   <Default Extension="png" ContentType="image/png"/>
@@ -64,6 +65,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
 
 INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md", "src/vscode_defaults/README.md"]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
+ASSET_BUILD_SCRIPTS = {"build_symbols.py", "build_imported.py"}
 
 
 def collect() -> list[Path]:
@@ -74,7 +76,11 @@ def collect() -> list[Path]:
             files.append(path)
         elif path.is_dir():
             files.extend(p for p in sorted(path.rglob("*")) if p.is_file())
-    return [path for path in files if path.suffix not in SKIP_SUFFIXES and "__pycache__" not in path.parts]
+    # 字体连同对应 SVG、来源记录与再生成脚本一起分发；它们不参与扩展运行。
+    return [path for path in files if "__pycache__" not in path.parts and (
+        path.suffix not in SKIP_SUFFIXES
+        or (path.parent == ROOT / "product-icons" and path.name in ASSET_BUILD_SCRIPTS)
+    )]
 
 
 def main() -> None:

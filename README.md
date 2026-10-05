@@ -24,8 +24,8 @@
   或让扩展跟随 `org.gnome.desktop.interface accent-color`。
 - **变体** —— 默认语法高亮（使用 VS Code 自带的语法颜色）与
   彩色状态栏变体，以及高对比度主题。
-- **产品图标主题** —— Adwaita 风格的窗口控制按钮字形（在
-  `window.controlsStyle` 为 `custom` 时生效）。
+- **产品图标主题** —— GNOME 风格的侧栏、调试、版本控制、补全与文件操作符号；
+  窗口控制字形在 `window.controlsStyle` 为 `custom` 时生效。
 - **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：9px 的按钮/输入框/
   列表行/编辑标签页、15px 的弹出层与快速输入、6px 小控件、Adwaita 阴影、
   内缩细滚动条滑块。
@@ -43,11 +43,13 @@
 | `Adwaita <强调色> 深色` / `Adwaita <强调色> 浅色` | 非蓝色强调色，按需生成 |
 | `Adwaita 深色 高对比度` / `Adwaita 浅色 高对比度` | libadwaita 高对比度参数 |
 
-产品图标主题 `Adwaita` 替换四个窗口控制字形（`chrome-close`、
-`chrome-maximize`、`chrome-minimize`、`chrome-restore`）。它们只在
+产品图标主题 `Adwaita` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
+补全和常用操作。四个窗口控制字形（`chrome-close`、`chrome-maximize`、
+`chrome-minimize`、`chrome-restore`）只在
 `window.controlsStyle` 设为 `custom` 时出现——默认的 `native` 由 GNOME 自己绘制
-按钮，这是推荐配置。标题栏布局按钮、菜单栏溢出与导航箭头刻意保留系统 codicon：
-Adwaita 实心符号字形在这些位置明显偏粗。
+按钮，这是推荐配置。未覆盖的图标保留 VS Code 默认 Codicons；来源、字形范围
+和再生成方式见 [产品图标说明](product-icons/README.md)，逐项预览见
+[产品图标陈列](docs/06-产品图标陈列.md)。
 
 ## 安装
 
@@ -260,7 +262,8 @@ meson test -C builddir --print-errorlogs
 `--check` 会把生成的主题与官方颜色注册表、内置主题比对：未知键（拼写错误）会
 导致检查失败，缺失键会被列出，并校验明暗两种模式的对比度。
 
-产品图标包含上游窗口与布局字形，以及本项目的常用单色字形。
+产品图标优先使用 Adwaita 官方字形，再由 GNOME Builder 补充调试、补全和
+版本控制符号；MoreWaita 仅作为缺项的备用来源。布局状态对保留 Adwaita 派生字形。
 来源、许可证和再生成命令见 [产品图标说明](product-icons/README.md)。
 外观实施、两轮审查与试用步骤见 [外观实现与验收](docs/05-外观实现与验收.md)。
 
@@ -278,7 +281,7 @@ meson test -C builddir --print-errorlogs
 
 ## 许可证
 
-本项目以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME 基金会
-无隶属关系。随附的第三方组件与数据（GtkSourceView 样式方案、VS Code 默认主题
-数据、piousdeer/vscode-adwaita 的 TextMate 作用域映射与产品图标字形等）登记在
+本项目自有代码以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME
+基金会无隶属关系。第三方资产保留各自许可证。随附的第三方组件与数据
+（GtkSourceView 样式方案、VS Code 默认主题数据、TextMate 作用域映射与产品图标等）登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)。
