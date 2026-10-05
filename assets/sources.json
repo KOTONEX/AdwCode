@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "name": "libadwaita",
+      "file": "upstream/libadwaita.svg",
+      "upstream": "https://gitlab.gnome.org/GNOME/libadwaita",
+      "revision": "19098711c1218eea561077889d8fa23457ba0f24",
+      "upstream_path": "doc/libadwaita.svg",
+      "license": "LGPL-2.1-or-later",
+      "attribution": "The GNOME Project",
+      "notice": "upstream/COPYING-libadwaita",
+      "sha256": "d4d7e6294241e21c4646e607189a7a3d8c942e74c58cba714237ba6eaf9e852c"
+    }
+  ]
+}

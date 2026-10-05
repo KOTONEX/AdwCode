@@ -50,6 +50,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
       <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
     </Properties>
     <License>extension/LICENSE</License>
+{icon_metadata}
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
@@ -59,11 +60,12 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
     <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
     <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE" Addressable="true" />
+{icon_asset}
   </Assets>
 </PackageManifest>
 """
 
-INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md", "src/vscode_defaults/README.md"]
+INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "assets", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md", "src/vscode_defaults/README.md"]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
 ASSET_BUILD_SCRIPTS = {"build_symbols.py", "build_imported.py"}
 
@@ -91,7 +93,24 @@ def main() -> None:
     def xml(value: str) -> str:
         return escape(value, {'"': "&quot;", "'": "&apos;"})
 
+    files = collect()
+    icon = manifest.get("icon")
+    icon_metadata = ""
+    icon_asset = ""
+    if icon:
+        icon_path = Path(icon)
+        if icon_path.is_absolute() or ".." in icon_path.parts or ROOT / icon_path not in files:
+            raise ValueError("扩展图标必须是已纳入打包范围的仓库内文件")
+        icon_uri = xml(f"extension/{icon_path.as_posix()}")
+        icon_metadata = f"    <Icon>{icon_uri}</Icon>"
+        icon_asset = (
+            f'    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" '
+            f'Path="{icon_uri}" Addressable="true" />'
+        )
+
     vsix_manifest = MANIFEST.format(
+        icon_metadata=icon_metadata,
+        icon_asset=icon_asset,
         name=xml(name),
         version=xml(version),
         publisher=xml(manifest["publisher"]),
@@ -104,7 +123,7 @@ def main() -> None:
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("[Content_Types].xml", CONTENT_TYPES)
         archive.writestr("extension.vsixmanifest", vsix_manifest)
-        for path in collect():
+        for path in files:
             archive.write(path, f"extension/{path.relative_to(ROOT)}")
     print(f"已生成 {output.relative_to(ROOT)} ({output.stat().st_size / 1024:.0f} KiB)")
 

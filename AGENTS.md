@@ -51,6 +51,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `src/gtksourceview_xml/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
 - `src/vscode_defaults/` —— 随附的 VS Code 默认数据与键表（MIT）
 - `themes/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
+- `assets/` —— 扩展图标 SVG 与 PNG，再生成方式见 `assets/README.md`
 - `product-icons/`、`extras/`、`extension/`
 - `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
 - `docs/01-第三方许可证.md` —— 第三方登记；`meson.build` 是统一命令入口

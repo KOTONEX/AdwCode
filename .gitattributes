@@ -11,7 +11,9 @@
 *.md      text eol=lf
 
 *.ttf     binary
+*.png     binary
 *.vsix    binary
 
 # 上游来源文件保持原字节；保留许可原文的末尾空行。
 product-icons/imported/** -text whitespace=-blank-at-eof
+assets/upstream/** -text whitespace=-blank-at-eof

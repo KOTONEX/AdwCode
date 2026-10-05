@@ -254,6 +254,9 @@ class ExtensionStatusTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             (folder / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
+            icon = folder / manifest["icon"]
+            icon.parent.mkdir(parents=True)
+            icon.write_bytes((ROOT / manifest["icon"]).read_bytes())
             with patch.object(package, "ROOT", folder):
                 package.main()
             with zipfile.ZipFile(folder / f"{manifest['name']}-{manifest['version']}.vsix") as archive:
@@ -261,6 +264,21 @@ class ExtensionStatusTest(unittest.TestCase):
                 description = xml.find("{*}Metadata/{*}Description")
                 assert description is not None
                 self.assertEqual(description.text, manifest["description"])
+                icon_metadata = xml.find("{*}Metadata/{*}Icon")
+                assert icon_metadata is not None
+                icon_uri = "extension/" + manifest["icon"]
+                self.assertEqual(icon_metadata.text, icon_uri)
+                assets = xml.findall("{*}Assets/{*}Asset")
+                registered_icons = [asset for asset in assets if asset.attrib["Type"] == "Microsoft.VisualStudio.Services.Icons.Default"]
+                self.assertEqual(len(registered_icons), 1)
+                self.assertEqual(registered_icons[0].attrib["Path"], icon_uri)
+                self.assertEqual(archive.read(icon_uri), icon.read_bytes())
+            # 配置了图标却未纳入包，或引用仓库之外的文件时必须失败。
+            for bad_icon in ("missing.png", "../outside.png", str(icon)):
+                manifest["icon"] = bad_icon
+                (folder / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
+                with patch.object(package, "ROOT", folder), self.assertRaises(ValueError):
+                    package.main()
 
     def test_recommended_settings_recovery(self) -> None:
         node = shutil.which("node")
