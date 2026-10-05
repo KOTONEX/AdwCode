@@ -85,8 +85,16 @@ const CSS_FILES = {
  * @type {Record<string, string | boolean | number | null>}
  */
 const RECOMMENDED_SETTINGS = {
-  "adwcode.autoReload": true,
+  // 先写入用户级关闭值，工作区仍可显式覆盖。
+  "adwcode.autoReload": false,
   "editor.fontFamily": "Adwaita Mono, monospace",
+  "window.autoDetectColorScheme": true,
+  "window.autoDetectHighContrast": true,
+  "workbench.preferredLightColorTheme": "Adwaita 浅色",
+  "workbench.preferredDarkColorTheme": "Adwaita 深色",
+  "workbench.preferredHighContrastLightColorTheme": "Adwaita 浅色 高对比度",
+  "workbench.preferredHighContrastColorTheme": "Adwaita 深色 高对比度",
+  "workbench.productIconTheme": "adwaita",
   "editor.renderLineHighlight": "none",
   "editor.minimap.enabled": false,
   "editor.guides.indentation": true,
@@ -96,6 +104,8 @@ const RECOMMENDED_SETTINGS = {
   "scm.diffDecorations": "none",
   "window.commandCenter": false,
   "window.menuBarVisibility": "compact",
+  "window.titleBarStyle": "custom",
+  "window.controlsStyle": "native",
   "window.density.editorTabHeight": "compact",
   "workbench.tree.indent": 12,
   "workbench.editor.tabSizing": "shrink",
@@ -568,13 +578,27 @@ async function applyRecommendedSettings(context) {
   settingsRunning = true;
   try {
     await readSystemFonts();
-    const entries = Object.entries({ ...RECOMMENDED_SETTINGS,
+    const candidates = Object.entries({ ...RECOMMENDED_SETTINGS,
       "editor.fontFamily": systemFonts.mono ? `${quotedFont(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
+    });
+    /** @type {string[]} */
+    const unavailable = [];
+    const entries = candidates.filter(([key]) => {
+      const [section, name] = splitSetting(key);
+      const inspected = vscode.workspace.getConfiguration(section).inspect(name);
+      // 旧配置中可能留有未注册的用户键，只把有默认定义的推荐项视为可用。
+      if (!inspected || inspected.defaultValue === undefined) {
+        unavailable.push(key);
+        return false;
+      }
+      return true;
     });
     const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
     const apply = "应用";
     const choice = await vscode.window.showInformationMessage(
-      `Adwaita 将把 ${entries.length} 项设置改为 GNOME Builder 风格：\n\n${preview}`,
+      `Adwaita 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格，用户级自动重载将关闭。\n` +
+        `工作区设置可能覆盖这些用户值。\n\n${preview}` +
+        (unavailable.length ? `\n\n当前 VS Code 未提供以下设置，已跳过：${unavailable.join("、")}` : ""),
       { modal: true },
       apply
     );
@@ -598,14 +622,13 @@ async function applyRecommendedSettings(context) {
       await config.update(name, value, vscode.ConfigurationTarget.Global);
     }
 
-    const reload = "重载窗口";
-    const after = await vscode.window.showInformationMessage(
-      "Adwaita：推荐设置已应用，重载窗口后全部生效。",
-      reload
+    const reloadEnabled = vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
+    await vscode.window.showInformationMessage(
+      "Adwaita：推荐设置已应用。" +
+        (reloadEnabled ? "用户级自动重载已关闭，但工作区仍开启了该项，请在工作区设置中关闭。" : "自动重载已关闭。") +
+        "标题栏和窗口控件等配置可能需要重载；" +
+        "请保存工作并结束扩展会话后手动重载窗口。"
     );
-    if (after === reload) {
-      await vscode.commands.executeCommand("workbench.action.reloadWindow");
-    }
   } catch (error) {
     vscode.window.showErrorMessage(`Adwaita：推荐设置未全部应用，已保留原值供恢复：${/** @type {Error} */ (error).message}`);
   } finally {

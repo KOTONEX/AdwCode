@@ -5,27 +5,29 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const values = new Map([['editor.fontFamily','原有代码字体']]);
-let backup, failAt, errors=0, writes=0;
+const values = new Map([['editor.fontFamily','原有代码字体'], ['adwcode.autoReload',true], ['workbench.productIconTheme','原有产品图标']]);
+const messages = [];
+let backup, failAt, errors=0, writes=0, unavailable, workspaceReload, monoFont;
 const vscode = {
   ConfigurationTarget: {Global:1},
   workspace: {getConfiguration(section){return {
-    get(name,fallback){return values.has(section+'.'+name)?values.get(section+'.'+name):fallback},
-    inspect(name){return {globalValue:values.get(section+'.'+name)}},
+    get(name,fallback){if(section+'.'+name==='adwcode.autoReload'&&workspaceReload!==undefined)return workspaceReload;return values.has(section+'.'+name)?values.get(section+'.'+name):fallback},
+    inspect(name){return {defaultValue:section+'.'+name===unavailable?undefined:null,globalValue:values.get(section+'.'+name)}},
     async update(name,value){
       assert.ok(backup, '配置写入之前必须保留备份');
       writes++;
+      if (writes===1) assert.equal(section+'.'+name,'adwcode.autoReload');
       if (section+'.'+name===failAt) throw Error('模拟写入失败');
       if(value===undefined)values.delete(section+'.'+name);else values.set(section+'.'+name,value);
     },
   }}},
-  window:{async showInformationMessage(_message,options){return options?.modal?'应用':undefined},showErrorMessage(){errors++}},
+  window:{async showInformationMessage(message,options,...actions){messages.push({message,options,actions});return options?.modal?'应用':'重载窗口'},showErrorMessage(){errors++}},
   commands:{async executeCommand(){throw Error('不应执行真实窗口命令')}},
 };
 const context={globalState:{get(){return backup?JSON.parse(JSON.stringify(backup)):undefined},async update(_key,value){backup=value?JSON.parse(JSON.stringify(value)):undefined}}};
 const sandbox={module:{exports:{}},process:{platform:'linux'},setTimeout,clearTimeout,require(name){
   if(name==='vscode')return vscode;
-  if(name==='child_process')return {execFile(_file,_args,_options,callback){callback(Error('无 GNOME 设置'), '')}};
+  if(name==='child_process')return {execFile(_file,args,_options,callback){callback(monoFont?null:Error('无 GNOME 设置'), args.includes('monospace-font-name')?monoFont||'':"'界面字体 11'")}};
   return require(name);
 }};
 vm.createContext(sandbox);
@@ -34,11 +36,22 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   failAt='editor.minimap.enabled';
   await sandbox.applyRecommendedSettings(context);
   assert.equal(errors,1);
+  assert.equal(values.get('adwcode.autoReload'),false);
+  assert.equal(backup['adwcode.autoReload'].value,true);
   assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
   assert.ok(!backup['editor.guides.indentation']);
   failAt=undefined;
   await sandbox.applyRecommendedSettings(context);
   await sandbox.applyRecommendedSettings(context);
+  const workspaceSettings=JSON.parse(fs.readFileSync(path.join(__dirname,'../.vscode/settings.json'),'utf8').split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n'));
+  for (const [key, value] of Object.entries(workspaceSettings)) {
+    if (/^(window\.|workbench\.|breadcrumbs\.|scm\.)/.test(key) || ['adwcode.autoReload','editor.minimap.enabled','editor.renderLineHighlight','editor.guides.indentation','editor.stickyScroll.enabled','editor.smoothScrolling'].includes(key)) assert.equal(values.get(key),value,key);
+  }
+  assert.equal(values.get('window.titleBarStyle'),'custom');
+  assert.equal(values.get('window.controlsStyle'),'native');
+  assert.equal(values.get('window.menuBarVisibility'),'compact');
+  assert.ok(!backup['python.defaultInterpreterPath']);
+  assert.ok(!backup['mesonbuild.buildFolder']);
   assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
   failAt='editor.minimap.enabled';
   await sandbox.revertRecommendedSettings(context);
@@ -50,7 +63,23 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   await sandbox.revertRecommendedSettings(context);
   assert.equal(backup,undefined);
   assert.equal(values.get('editor.fontFamily'),'原有代码字体');
+  assert.equal(values.get('adwcode.autoReload'),true);
+  assert.equal(values.get('workbench.productIconTheme'),'原有产品图标');
   assert.ok(!values.has('editor.minimap.enabled'));
+  assert.ok(!messages.some(message=>message.options==='重载窗口'||message.actions.includes('重载窗口')));
+  // 较旧的 VS Code 不提供某项时，预览和备份应跳过；工作区覆盖需准确提示。
+  unavailable='window.controlsStyle';
+  values.set(unavailable,'旧版保留值');
+  workspaceReload=true;
+  monoFont="'等距更纱黑体 SC 11'";
+  await sandbox.applyRecommendedSettings(context);
+  assert.equal(values.get('editor.fontFamily'),'"等距更纱黑体 SC", "Adwaita Mono", monospace');
+  assert.equal(values.get(unavailable),'旧版保留值');
+  assert.ok(!backup[unavailable]);
+  assert.ok(messages.some(message=>message.message.includes('已跳过：window.controlsStyle')));
+  assert.ok(messages.some(message=>message.message.includes('工作区仍开启')));
+  await sandbox.revertRecommendedSettings(context);
+  workspaceReload=undefined;
   let release;
   vscode.window.showInformationMessage=()=>new Promise(resolve=>{release=resolve});
   const first=sandbox.applyRecommendedSettings(context);
@@ -61,5 +90,5 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   release(undefined);
   await first;
   assert.equal(backup,undefined);
-  console.log('推荐设置：重复应用、部分失败、逐项恢复、并发与取消测试通过');
+  console.log('推荐设置：外观对齐、重载关闭、字体、兼容、重复应用、恢复、并发与取消测试通过');
 })().catch(error=>{console.error(error);process.exitCode=1});

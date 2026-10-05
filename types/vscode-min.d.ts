@@ -40,7 +40,7 @@ declare module "vscode" {
             value: unknown,
             configurationTarget?: ConfigurationTarget | boolean | null
         ): Thenable<void>;
-        inspect<T>(section: string): { globalValue?: T } | undefined;
+        inspect<T>(section: string): { defaultValue?: T; globalValue?: T } | undefined;
     }
 
     export interface Memento {
