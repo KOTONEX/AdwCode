@@ -5,7 +5,7 @@ python-version = "3.9"
 extra-paths = ["src"]
 
 [src]
-include = ["src", "tests"]
+include = ["src", "tests", "benchmarks"]
 
 [rules]
 all = "error"

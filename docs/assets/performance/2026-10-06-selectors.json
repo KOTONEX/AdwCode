@@ -1,0 +1,707 @@
+{
+  "schema": 1,
+  "version": "2.0.0",
+  "browser": "150.0.7871.250",
+  "method": {
+    "runs": 6,
+    "warmup": 1,
+    "fixture": "6000 行 Python 文件、200 个目录文件；本次仅运行非活动状态规则对照，不添加合成压力行",
+    "limits": "独立真实工作台；CSS 开关对比使用相同主题与产品图标；并非完整启动或插件组合基准",
+    "removedInjectedStyleLengths": [
+      1036,
+      17829,
+      17503,
+      1036,
+      483
+    ],
+    "selectorsOnly": true,
+    "frames": "串行 CDP 输入后的 RAF 采样间隔，不是应用帧率或掉帧数据"
+  },
+  "complete": true,
+  "results": [
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 0,
+      "wall_ms": 119,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1260,
+      "metrics": {
+        "TaskDuration": 0.13109599999999988,
+        "ScriptDuration": 9.199999999999833e-05,
+        "RecalcStyleDuration": 0.11624000000000001,
+        "LayoutDuration": 0.0024049999999999974,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 0,
+      "wall_ms": 634.4000000059605,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1260,
+      "metrics": {
+        "TaskDuration": 0.6468670000000001,
+        "ScriptDuration": 0.0022460000000000015,
+        "RecalcStyleDuration": 0.613721,
+        "LayoutDuration": 0.02003,
+        "RecalcStyleCount": 203,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 0,
+      "wall_ms": 121.79999999701977,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1297,
+      "metrics": {
+        "TaskDuration": 0.12829000000000024,
+        "ScriptDuration": 0.0006680000000000019,
+        "RecalcStyleDuration": 0.11879700000000004,
+        "LayoutDuration": 0.0026200000000000043,
+        "RecalcStyleCount": 203,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 1,
+      "wall_ms": 122.70000000298023,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1304,
+      "metrics": {
+        "TaskDuration": 0.13785200000000009,
+        "ScriptDuration": 0.008787000000000003,
+        "RecalcStyleDuration": 0.11712800000000012,
+        "LayoutDuration": 0.002610000000000001,
+        "RecalcStyleCount": 202,
+        "LayoutCount": 201
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 1,
+      "wall_ms": 701.1000000014901,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1309,
+      "metrics": {
+        "TaskDuration": 0.7040109999999999,
+        "ScriptDuration": 0.00015700000000000436,
+        "RecalcStyleDuration": 0.6723059999999998,
+        "LayoutDuration": 0.022246000000000002,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 1,
+      "wall_ms": 119,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1309,
+      "metrics": {
+        "TaskDuration": 0.12648700000000002,
+        "ScriptDuration": 0.00014600000000000724,
+        "RecalcStyleDuration": 0.11340499999999976,
+        "LayoutDuration": 0.0025560000000000027,
+        "RecalcStyleCount": 202,
+        "LayoutCount": 201
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 2,
+      "wall_ms": 120,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1309,
+      "metrics": {
+        "TaskDuration": 0.12505500000000014,
+        "ScriptDuration": 1.8000000000004124e-05,
+        "RecalcStyleDuration": 0.11465600000000009,
+        "LayoutDuration": 0.00247399999999999,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 2,
+      "wall_ms": 668.6000000014901,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1309,
+      "metrics": {
+        "TaskDuration": 0.6723529999999998,
+        "ScriptDuration": 1.7000000000003124e-05,
+        "RecalcStyleDuration": 0.642773,
+        "LayoutDuration": 0.019973000000000005,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 2,
+      "wall_ms": 122.19999999552965,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.14066800000000068,
+        "ScriptDuration": 0.0012519999999999892,
+        "RecalcStyleDuration": 0.12990699999999977,
+        "LayoutDuration": 0.0027719999999999967,
+        "RecalcStyleCount": 205,
+        "LayoutCount": 205
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 3,
+      "wall_ms": 122.39999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12404300000000035,
+        "ScriptDuration": 6.1000000000005494e-05,
+        "RecalcStyleDuration": 0.11687199999999986,
+        "LayoutDuration": 0.0025290000000000035,
+        "RecalcStyleCount": 202,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 3,
+      "wall_ms": 722.3999999985099,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7349699999999997,
+        "ScriptDuration": 0.00012099999999999611,
+        "RecalcStyleDuration": 0.6917499999999999,
+        "LayoutDuration": 0.021601999999999982,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 3,
+      "wall_ms": 119.19999999552965,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.13018400000000074,
+        "ScriptDuration": 3.999999999999837e-05,
+        "RecalcStyleDuration": 0.1137649999999999,
+        "LayoutDuration": 0.002472000000000002,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 4,
+      "wall_ms": 121.59999999403954,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.1229319999999996,
+        "ScriptDuration": 3.900000000001125e-05,
+        "RecalcStyleDuration": 0.1159340000000002,
+        "LayoutDuration": 0.0025489999999999957,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 4,
+      "wall_ms": 695.7000000029802,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7014630000000004,
+        "ScriptDuration": 0.00010000000000000286,
+        "RecalcStyleDuration": 0.6726340000000004,
+        "LayoutDuration": 0.020134000000000013,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 4,
+      "wall_ms": 123.39999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12480599999999953,
+        "ScriptDuration": 5.9000000000003494e-05,
+        "RecalcStyleDuration": 0.11757799999999996,
+        "LayoutDuration": 0.002592000000000011,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 5,
+      "wall_ms": 122.60000000149012,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12818600000000036,
+        "ScriptDuration": 5.4999999999999494e-05,
+        "RecalcStyleDuration": 0.12027400000000021,
+        "LayoutDuration": 0.00256099999999998,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 5,
+      "wall_ms": 701.3999999985099,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7075690000000003,
+        "ScriptDuration": 0.0003180000000000127,
+        "RecalcStyleDuration": 0.677969,
+        "LayoutDuration": 0.02066800000000002,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "light",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 5,
+      "wall_ms": 124.5,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12561300000000042,
+        "ScriptDuration": 4.800000000000637e-05,
+        "RecalcStyleDuration": 0.11873100000000036,
+        "LayoutDuration": 0.0027249999999999774,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 0,
+      "wall_ms": 120.80000000447035,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12587199999999932,
+        "ScriptDuration": 0.000125000000000014,
+        "RecalcStyleDuration": 0.11817799999999945,
+        "LayoutDuration": 0.0025030000000000052,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 0,
+      "wall_ms": 699.7000000029802,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7045950000000012,
+        "ScriptDuration": 0.00015799999999999148,
+        "RecalcStyleDuration": 0.6767079999999996,
+        "LayoutDuration": 0.020042000000000004,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 0,
+      "wall_ms": 123,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12854200000000127,
+        "ScriptDuration": 6.399999999998074e-05,
+        "RecalcStyleDuration": 0.12054799999999943,
+        "LayoutDuration": 0.002568999999999988,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 1,
+      "wall_ms": 123.5,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.1246419999999997,
+        "ScriptDuration": 4.100000000001325e-05,
+        "RecalcStyleDuration": 0.11797699999999978,
+        "LayoutDuration": 0.0025580000000000047,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 1,
+      "wall_ms": 698.6000000014901,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7041269999999997,
+        "ScriptDuration": 7.199999999998874e-05,
+        "RecalcStyleDuration": 0.676069,
+        "LayoutDuration": 0.019747000000000015,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 1,
+      "wall_ms": 120,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.121478999999999,
+        "ScriptDuration": 4.599999999999049e-05,
+        "RecalcStyleDuration": 0.11452000000000062,
+        "LayoutDuration": 0.0025189999999999935,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 2,
+      "wall_ms": 119.89999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12091999999999992,
+        "ScriptDuration": 2.6999999999999247e-05,
+        "RecalcStyleDuration": 0.11447399999999952,
+        "LayoutDuration": 0.002462999999999993,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 2,
+      "wall_ms": 719.6999999955297,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.731306,
+        "ScriptDuration": 5.099999999999549e-05,
+        "RecalcStyleDuration": 0.6894279999999995,
+        "LayoutDuration": 0.021158999999999983,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 2,
+      "wall_ms": 123.69999999552965,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.13565299999999958,
+        "ScriptDuration": 0.00011500000000000399,
+        "RecalcStyleDuration": 0.11802400000000013,
+        "LayoutDuration": 0.0026349999999999985,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 3,
+      "wall_ms": 123.70000000298023,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12490100000000126,
+        "ScriptDuration": 2.8000000000000247e-05,
+        "RecalcStyleDuration": 0.11816600000000044,
+        "LayoutDuration": 0.002589000000000008,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 3,
+      "wall_ms": 698.7000000029802,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7041450000000005,
+        "ScriptDuration": 4.699999999999149e-05,
+        "RecalcStyleDuration": 0.6753260000000001,
+        "LayoutDuration": 0.020143000000000022,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 3,
+      "wall_ms": 118.89999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12003499999999967,
+        "ScriptDuration": 3.0000000000002247e-05,
+        "RecalcStyleDuration": 0.11337999999999937,
+        "LayoutDuration": 0.002477000000000007,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 4,
+      "wall_ms": 119.10000000149012,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12051100000000048,
+        "ScriptDuration": 4.099999999998549e-05,
+        "RecalcStyleDuration": 0.1136809999999997,
+        "LayoutDuration": 0.002466999999999997,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 4,
+      "wall_ms": 696,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7018950000000004,
+        "ScriptDuration": 0.00024099999999999122,
+        "RecalcStyleDuration": 0.6733700000000002,
+        "LayoutDuration": 0.019826999999999984,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 4,
+      "wall_ms": 122.89999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.12404300000000035,
+        "ScriptDuration": 2.9000000000001247e-05,
+        "RecalcStyleDuration": 0.11724800000000002,
+        "LayoutDuration": 0.002587000000000006,
+        "RecalcStyleCount": 200,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "without-inactive-selectors",
+      "enabled": true,
+      "round": 5,
+      "wall_ms": 122.89999999850988,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.1289239999999996,
+        "ScriptDuration": 4.299999999998749e-05,
+        "RecalcStyleDuration": 0.12105000000000032,
+        "LayoutDuration": 0.0025419999999999887,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "full",
+      "enabled": true,
+      "round": 5,
+      "wall_ms": 736.5,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.7481540000000013,
+        "ScriptDuration": 8.499999999997399e-05,
+        "RecalcStyleDuration": 0.7038659999999997,
+        "LayoutDuration": 0.023294000000000037,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    },
+    {
+      "mode": "dark",
+      "scenario": "工作台非活动状态切换",
+      "variant": "native",
+      "enabled": false,
+      "round": 5,
+      "wall_ms": 120.79999999701977,
+      "iterations": 200,
+      "frames": [],
+      "nodes": 1346,
+      "metrics": {
+        "TaskDuration": 0.13604199999999977,
+        "ScriptDuration": 4.600000000001825e-05,
+        "RecalcStyleDuration": 0.1182199999999991,
+        "LayoutDuration": 0.0024980000000000002,
+        "RecalcStyleCount": 201,
+        "LayoutCount": 200
+      }
+    }
+  ]
+}

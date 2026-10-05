@@ -19,6 +19,7 @@ run_target('typecheck', command: [python, dev, 'typecheck'])
 run_target('lint', command: [python, dev, 'lint'])
 run_target('check', command: [python, root / 'src/build.py', '--check'])
 run_target('check-css', command: [python, root / 'src/check_css.py'])
+run_target('performance', command: [python, root / 'benchmarks/run.py'])
 
 test('静态与类型检查', python, args: [dev, 'lint'], workdir: root, timeout: 120)
 test('主题与图标校验', python, args: [root / 'src/build.py', '--check'], workdir: root)

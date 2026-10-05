@@ -56,6 +56,8 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `assets/` —— 扩展图标 SVG 与 PNG，再生成方式见 `assets/README.md`
 - `product-icons/`、`extras/`、`extension/`
 - `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
+- `benchmarks/` —— Linux 性能基准，运行方式见其 README，测量结果见
+  [性能测试](docs/07-性能测试.md)
 - `docs/01-第三方许可证.md` —— 第三方登记；`meson.build` 是统一命令入口
 - `docs/06-产品图标陈列.md` —— 实际使用的字形、缩略图与标识；图标映射变化时同步更新
 
@@ -85,13 +87,15 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 可通过 `-Dpython=/绝对路径/python3.14t` 指定。首次运行 `meson setup builddir`；后续可用 `meson setup --reconfigure builddir` 更新配置。
 
 - 静态检查：`meson compile -C builddir lint`
-- 类型检查：`meson compile -C builddir typecheck`（ty 检查 `src/`、`tests/`；tsc 检查
+- 类型检查：`meson compile -C builddir typecheck`（ty 检查 `src/`、`tests/`、`benchmarks/`；tsc 检查
   `extension/extension.js`，缺少 ty、tsc 或 Node.js 时失败）
 - 校验（键覆盖、未知键、对比度、产品图标）：`meson compile -C builddir check`
 - 完整检查（静态、类型、主题与离线单元测试）：`meson test -C builddir --print-errorlogs`
 - 构建主题并同步 `package.json`：`meson compile -C builddir themes`（等价于 `python3.14t src/build.py`）
 - 生成全部九种强调色：`python3.14t src/build.py --accents all`
 - 对照已安装的 VS Code 检查自定义 CSS：`python3.14t src/check_css.py`
+- 按需运行离线性能基准：`meson compile -C builddir performance`（不属于常规完整检查；
+  独立工作台基准另见 `benchmarks/README.md`）
 - 打包 VSIX（无需 Node.js）：`meson compile -C builddir package`
 - 刷新随附的 VS Code 数据与键表：`python3.14t src/update_defaults.py`
 - 开发时主题 JSON 即时重载：`python3.14t src/build.py --watch`

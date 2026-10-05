@@ -31,7 +31,7 @@ def main() -> int:
     try:
         typecheck()
         if args.action == "lint":
-            for folder in (ROOT / "src", ROOT / "tests"):
+            for folder in (ROOT / "src", ROOT / "tests", ROOT / "benchmarks"):
                 for source in sorted(folder.glob("*.py")):
                     py_compile.compile(str(source), doraise=True)
             json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
