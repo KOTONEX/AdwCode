@@ -2,6 +2,8 @@
   "recommendations": [
     "EditorConfig.EditorConfig",
     "ms-python.python",
+    "astral-sh.ty",
+    "mesonbuild.mesonbuild",
     "redhat.vscode-yaml",
     "github.vscode-github-actions"
   ]

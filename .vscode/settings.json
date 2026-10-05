@@ -1,8 +1,61 @@
 {
+  // 本仓库的开发与外观试用配置；缩进和第三方文件例外由 .editorconfig 管理。
   "files.eol": "\n",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "[javascript][json][jsonc][css][svg][yaml]": {
+    "editor.tabSize": 2
+  },
   "[markdown]": {
-    "files.trimTrailingWhitespace": false
+    "files.trimTrailingWhitespace": false,
+    "editor.wordWrap": "on"
+  },
+
+  // Python 3.14 自由线程版本须在 PATH 中；已有解释器选择需手动切换。
+  "python.defaultInterpreterPath": "python3.14t",
+  "python.languageServer": "None",
+  "ty.diagnosticMode": "workspace",
+  "javascript.validate.enable": true,
+  "mesonbuild.configureOnOpen": false,
+
+  // 跟随系统明暗模式；四个主题分别用于普通及高对比度预览。
+  "window.autoDetectColorScheme": true,
+  "workbench.preferredLightColorTheme": "Adwaita 浅色",
+  "workbench.preferredDarkColorTheme": "Adwaita 深色",
+  "workbench.preferredHighContrastLightColorTheme": "Adwaita 浅色 高对比度",
+  "workbench.preferredHighContrastColorTheme": "Adwaita 深色 高对比度",
+  "workbench.productIconTheme": "adwaita",
+  "workbench.iconTheme": null,
+
+  // GNOME Builder 风格的编辑区和导航；字体沿用用户及系统配置。
+  "editor.minimap.enabled": false,
+  "editor.renderLineHighlight": "none",
+  "editor.guides.indentation": true,
+  "editor.stickyScroll.enabled": false,
+  "editor.smoothScrolling": true,
+  "breadcrumbs.enabled": false,
+  "scm.diffDecorations": "none",
+  "window.commandCenter": false,
+  "window.density.editorTabHeight": "compact",
+  "workbench.editor.tabSizing": "shrink",
+  "workbench.tree.indent": 12,
+  "workbench.list.smoothScrolling": true,
+
+  // 连续开发时保留会话，保存工作后手动安装外观并重载。
+  "adwcode.autoReload": false,
+
+  // 隐藏缓存目录；构建日志仍可通过路径直接打开。
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".mypy_cache": true,
+    "builddir": true
+  },
+  "search.exclude": {
+    "builddir": true,
+    ".tools": true,
+    ".kilo/worktrees": true
   }
 }
