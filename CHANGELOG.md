@@ -7,6 +7,8 @@
 
 ## [未发布]
 
+- 减轻产品图标线条，分别校准 Adwaita 与 Builder 字重，保护终端和语言符号细节；
+  陈列改用真实字体轮廓预览，原始 SVG、颜色、布局尺寸与来源优先级保持不变。
 - 产品图标选材按 Adwaita、GNOME Builder、MoreWaita 排序；官方已有对应的
   窗口、终端、扩展、运行与项目图标优先使用 Adwaita，MoreWaita 暂作备用。
 - 产品图标新增 GNOME Builder、MoreWaita 与 Adwaita 官方主题的 59 个上游字形，

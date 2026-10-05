@@ -10,7 +10,7 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何按
 | --- | --- |
 | Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
 | [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成导入的单色字体或备用自有字体时需要，见产品图标说明 |
-| [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅将官方描边图标转换为字体轮廓时需要 |
+| [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅再生成资产时处理描边、裁切与字重内缩 |
 | [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
 | VS Code | 供 `python3.14t src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
 

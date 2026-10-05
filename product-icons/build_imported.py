@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
-"""从固定版本 SVG 生成独立授权的字体；再生成时依赖 fontTools，描边另需 skia-pathops。"""
+"""从固定版本 SVG 生成独立授权的字体与预览；再生成时依赖 fontTools 和 skia-pathops。"""
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from xml.etree import ElementTree
@@ -15,6 +16,7 @@ from fontTools.misc.transform import Identity, Transform
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.recordingPen import RecordingPen
+from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
@@ -147,6 +149,28 @@ def main() -> None:
             glyph = pen.glyph()
             if glyph.numberOfContours == 0:
                 raise ValueError(f"字形为空：{source.name}")
+            inset = entry.get("weight_inset", font.get("weight_inset", 0))
+            if not isinstance(inset, (int, float)) or not math.isfinite(inset) or not 0 <= inset <= 0.25:
+                raise ValueError(f"字重内缩需在 0 至 0.25 个 SVG 像素之间：{source.name}")
+            if inset:
+                # 围绕闭合轮廓移除窄边带，外轮廓收缩、内孔扩张；保留原中心线。
+                try:
+                    import pathops
+                except ImportError as error:
+                    raise RuntimeError("再生成字重调整还需要 skia-pathops；扩展运行不需要该依赖") from error
+
+                filled = pathops.Path()
+                glyph.draw(filled.getPen(), None)
+                filled.simplify()
+                boundary = pathops.Path(filled)
+                boundary.stroke(inset * 128, pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
+                boundary.convertConicsToQuads(0.5)
+                adjusted = pathops.op(filled, boundary, pathops.PathOp.DIFFERENCE)
+                adjusted_pen = TTGlyphPen(None)
+                adjusted.draw(Cu2QuPen(adjusted_pen, 1, reverse_direction=True))
+                glyph = adjusted_pen.glyph()
+                if not glyph.numberOfContours or abs(adjusted.area) < abs(filled.area) * 0.55:
+                    raise ValueError(f"字重调整损失过多可见轮廓：{source.name}")
             glyphs[name] = glyph
         builder.setupGlyf(glyphs)
         for glyph in glyphs.values():
@@ -159,7 +183,7 @@ def main() -> None:
             "familyName": font["family"], "styleName": "Regular", "fullName": font["family"],
             "uniqueFontIdentifier": ps_name, "psName": ps_name, "version": "Version 1.0",
             "copyright": font["attribution"],
-            "licenseDescription": font["license"] + "；由 AdwCode 转换为单色轮廓；来源见 sources.json",
+            "licenseDescription": font["license"] + "；由 AdwCode 转换为单色轮廓；来源与字重参数见 sources.json",
             "licenseInfoURL": font["license_url"],
         })
         builder.setupOS2(sTypoAscender=896, sTypoDescender=-128, usWinAscent=896, usWinDescent=128)
@@ -167,6 +191,21 @@ def main() -> None:
         builder.font["head"].created = builder.font["head"].modified = 3863548800
         builder.font.recalcTimestamp = False
         builder.save(ROOT / font["output"])
+        # 陈列使用字体的实际轮廓，避免继续展示未调整字重的原始 SVG。
+        preview_folder = ROOT / "rendered" / font["id"]
+        preview_folder.mkdir(parents=True, exist_ok=True)
+        expected_previews = {entry["codepoint"] + ".svg" for entry in entries}
+        for entry, name in zip(entries, order[1:]):
+            svg_pen = SVGPathPen(None)
+            glyphs[name].draw(TransformPen(svg_pen, (1 / 64, 0, 0, -1 / 64, 0, 14)), glyphs)
+            svg = (f'<!-- SPDX-License-Identifier: {font["license"]} -->\n'
+                   f'<!-- 署名：{font["attribution"]}；由 AdwCode 从字体轮廓生成，来源见 sources.json。 -->\n'
+                   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+                   f'<path fill="currentColor" d="{svg_pen.getCommands()}"/></svg>\n')
+            (preview_folder / (entry["codepoint"] + ".svg")).write_text(svg, encoding="utf-8")
+        for obsolete in preview_folder.glob("*.svg"):
+            if obsolete.name not in expected_previews:
+                obsolete.unlink()
         state = "启用" if font.get("enabled", True) else "备用"
         print(f"已生成 {font['output']}：{len(entries)} 个字形，{font['license']}，{state}")
 
