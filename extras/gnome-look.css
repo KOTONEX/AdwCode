@@ -357,18 +357,6 @@
 	background-color: var(--vscode-toolbar-activeBackground);
 }
 
-.monaco-workbench :is(.monaco-toolbar, .editor-actions) .action-item:not(.disabled) .action-label:is(.checked, [aria-pressed="true"]) {
-	background-color: var(--vscode-inputOption-activeBackground);
-	color: var(--vscode-inputOption-activeForeground);
-}
-
-/* 标题栏布局按钮使用中性选中底色，不借用输入选项的强调色。
-   覆盖原生选中规则及下方禁用选中规则的背景，焦点环和禁用透明度保持独立。 */
-.monaco-workbench .part.titlebar .monaco-toolbar .action-label[class*="codicon-layout-"]:is(.checked, [aria-pressed="true"]) {
-	background-color: var(--vscode-actionBar-toggledBackground) !important;
-	color: var(--vscode-titleBar-activeForeground);
-}
-
 .monaco-workbench .monaco-action-bar .action-item:not(.disabled):focus-visible .action-label,
 .monaco-workbench .monaco-action-bar .action-item:not(.disabled) .action-label:not([aria-disabled="true"]):focus-visible {
 	outline: 2px solid var(--vscode-focusBorder);
@@ -509,13 +497,9 @@
 	opacity: 0.75;
 }
 
-/* 工作台的通用悬停规则会命中禁用的工具栏图标，显式保留其默认状态。 */
-.monaco-workbench .monaco-toolbar .action-item:is(.disabled, [aria-disabled="true"]) .action-label,
-.monaco-workbench .monaco-toolbar .action-label[aria-disabled="true"] {
+/* 工作台的通用悬停规则会命中禁用的工具栏图标；选中项保留原生状态。 */
+.monaco-workbench .monaco-toolbar .action-item:is(.disabled, [aria-disabled="true"]) .action-label:not(.checked):not([aria-pressed="true"]),
+.monaco-workbench .monaco-toolbar .action-label[aria-disabled="true"]:not(.checked):not([aria-pressed="true"]) {
 	background-color: transparent !important;
 	cursor: default;
-}
-
-.monaco-workbench .monaco-toolbar .action-item:is(.disabled, [aria-disabled="true"]) .action-label:is(.checked, [aria-pressed="true"]) {
-	background-color: var(--vscode-inputOption-activeBackground) !important;
 }
