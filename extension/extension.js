@@ -81,7 +81,7 @@ const CSS_FILES = {
 };
 
 /**
- * “Adwaita: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
+ * “AdwCode: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
  * @type {Record<string, string | boolean | number | null>}
  */
 const RECOMMENDED_SETTINGS = {
@@ -251,7 +251,7 @@ async function syncAccent(announce = false) {
   if (autoAccent === false) {
     stopAccentMonitor();
     if (announce) {
-      vscode.window.showInformationMessage("Adwaita：自动强调色已禁用。");
+      vscode.window.showInformationMessage("AdwCode：自动强调色已禁用。");
     }
     return;
   }
@@ -269,7 +269,7 @@ async function syncAccent(announce = false) {
   const accent = await readSystemAccent();
   if (!accent) {
     if (announce) {
-      vscode.window.showWarningMessage("Adwaita：无法获取 GNOME 强调色。");
+      vscode.window.showWarningMessage("AdwCode：无法获取 GNOME 强调色。");
     }
     return;
   }
@@ -297,11 +297,11 @@ async function syncAccent(announce = false) {
   if (updates.length > 0) {
     await Promise.all(updates);
     if (announce) {
-      vscode.window.showInformationMessage(`Adwaita：已切换到${ACCENT_LABELS[accent]}强调色。`);
+      vscode.window.showInformationMessage(`AdwCode：已切换到${ACCENT_LABELS[accent]}强调色。`);
     }
   } else if (announce) {
     vscode.window.showInformationMessage(
-      `Adwaita：未安装${ACCENT_LABELS[accent]}强调色变体。`
+      `AdwCode：未安装${ACCENT_LABELS[accent]}强调色变体。`
     );
   }
 }
@@ -424,7 +424,7 @@ function escapeHtml(value) {
 
 /** @param {import("vscode").ExtensionContext} context @returns {void} */
 function showAppearanceStatus(context) {
-  const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "Adwaita 外观状态", vscode.ViewColumn.One, { enableScripts: true });
+  const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "AdwCode 外观状态", vscode.ViewColumn.One, { enableScripts: true });
   let disposed = false;
   const render = (refreshed = false) => {
     const rows = appearanceStatus(context);
@@ -472,7 +472,7 @@ function showAppearanceStatus(context) {
       </div></section>
       <section aria-labelledby="next"><h2 id="next">下一步</h2><div class="card"><ol>
       ${!loader ? '<li>安装 Custom CSS and JS Loader。</li>' : ""}
-      <li>副本或加载配置需要更新时，执行“Adwaita: 安装 GNOME 外观（CSS）”。</li>
+      <li>副本或加载配置需要更新时，执行“AdwCode: 安装 GNOME 外观（CSS）”。</li>
       <li>磁盘补丁需要更新时，首次执行加载器的“Enable Custom CSS and JS”；已启用时执行“Reload Custom CSS and JS”。</li>
       <li>保存工作后手动重载窗口，再检查实际外观。重载可能中断扩展会话或调试任务。</li>
       </ol><p class="muted">此面板不会自动执行这些操作。</p></div></section>
@@ -507,7 +507,7 @@ async function installCss(context, names) {
     }
   } catch (error) {
     const message = /** @type {Error} */ (error).message;
-    vscode.window.showErrorMessage(`Adwaita：无法写入 CSS 文件：${message}`);
+    vscode.window.showErrorMessage(`AdwCode：无法写入 CSS 文件：${message}`);
     return;
   }
 
@@ -537,13 +537,13 @@ async function installCss(context, names) {
         ? [
             "Enable Custom CSS and JS",
             "extension.installCustomCSS",
-            `Adwaita：${names.join("、")} 已配置。请执行一次 “Enable Custom CSS and JS” ` +
+            `AdwCode：${names.join("、")} 已配置。请执行一次 “Enable Custom CSS and JS” ` +
               `为 VS Code 打补丁（需要 ${vscode.env.appRoot} 的写权限），然后重载窗口。`,
           ]
         : [
             "Reload Custom CSS and JS",
             "extension.updateCustomCSS",
-            `Adwaita：外观文件与加载配置已更新。磁盘补丁${state === "enabled" ? "包含这些组件" : state === "unknown" ? "状态无法确认" : "需要更新"}。` +
+            `AdwCode：外观文件与加载配置已更新。磁盘补丁${state === "enabled" ? "包含这些组件" : state === "unknown" ? "状态无法确认" : "需要更新"}。` +
               `保存工作后，可重新加载以应用 ${names.join("、")}。`,
           ];
     const choice = await vscode.window.showInformationMessage(message, action);
@@ -558,7 +558,7 @@ async function installCss(context, names) {
   );
   const open = "打开 CSS 目录";
   const choice = await vscode.window.showInformationMessage(
-    `Adwaita：已写入 ${installed.join("、")}，并把 vscode_custom_css.imports 片段复制到剪贴板。` +
+    `AdwCode：已写入 ${installed.join("、")}，并把 vscode_custom_css.imports 片段复制到剪贴板。` +
       `请安装 “Custom CSS and JS Loader”，把片段粘贴到设置中，执行 “Enable Custom CSS and JS” 后重载窗口。`,
     open
   );
@@ -596,7 +596,7 @@ async function applyRecommendedSettings(context) {
     const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
     const apply = "应用";
     const choice = await vscode.window.showInformationMessage(
-      `Adwaita 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格，用户级自动重载将关闭。\n` +
+      `AdwCode 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格，用户级自动重载将关闭。\n` +
         `工作区设置可能覆盖这些用户值。\n\n${preview}` +
         (unavailable.length ? `\n\n当前 VS Code 未提供以下设置，已跳过：${unavailable.join("、")}` : ""),
       { modal: true },
@@ -624,13 +624,13 @@ async function applyRecommendedSettings(context) {
 
     const reloadEnabled = vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
     await vscode.window.showInformationMessage(
-      "Adwaita：推荐设置已应用。" +
+      "AdwCode：推荐设置已应用。" +
         (reloadEnabled ? "用户级自动重载已关闭，但工作区仍开启了该项，请在工作区设置中关闭。" : "自动重载已关闭。") +
         "标题栏和窗口控件等配置可能需要重载；" +
         "请保存工作并结束扩展会话后手动重载窗口。"
     );
   } catch (error) {
-    vscode.window.showErrorMessage(`Adwaita：推荐设置未全部应用，已保留原值供恢复：${/** @type {Error} */ (error).message}`);
+    vscode.window.showErrorMessage(`AdwCode：推荐设置未全部应用，已保留原值供恢复：${/** @type {Error} */ (error).message}`);
   } finally {
     settingsRunning = false;
   }
@@ -647,7 +647,7 @@ async function revertRecommendedSettings(context) {
     /** @type {Record<string, SettingRecord> | undefined} */
     const previous = context.globalState.get("adwcode.previousSettings");
     if (!previous) {
-      vscode.window.showInformationMessage("Adwaita：没有可恢复的设置。");
+      vscode.window.showInformationMessage("AdwCode：没有可恢复的设置。");
       return;
     }
     for (const [key, record] of Object.entries(previous)) {
@@ -662,9 +662,9 @@ async function revertRecommendedSettings(context) {
       await context.globalState.update("adwcode.previousSettings", { ...previous });
     }
     await context.globalState.update("adwcode.previousSettings", undefined);
-    vscode.window.showInformationMessage("Adwaita：已恢复原有设置。");
+    vscode.window.showInformationMessage("AdwCode：已恢复原有设置。");
   } catch (error) {
-    vscode.window.showErrorMessage(`Adwaita：设置未全部恢复，剩余记录已保留，可再次执行恢复：${/** @type {Error} */ (error).message}`);
+    vscode.window.showErrorMessage(`AdwCode：设置未全部恢复，剩余记录已保留，可再次执行恢复：${/** @type {Error} */ (error).message}`);
   } finally {
     settingsRunning = false;
   }
@@ -705,7 +705,7 @@ async function reloadWithStyles(context) {
     }
   } catch (error) {
     const message = /** @type {Error} */ (error).message;
-    vscode.window.showErrorMessage(`Adwaita：无法同步 CSS 文件：${message}`);
+    vscode.window.showErrorMessage(`AdwCode：无法同步 CSS 文件：${message}`);
     return;
   }
   try {
@@ -714,7 +714,7 @@ async function reloadWithStyles(context) {
   } catch {
     // 已安装加载器但更新失败时，不把错误当成“未安装”，避免无效重载。
     if (vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION)) {
-      vscode.window.showErrorMessage("Adwaita：Custom CSS 更新失败，已取消自动重载。请手动检查加载器。");
+      vscode.window.showErrorMessage("AdwCode：Custom CSS 更新失败，已取消自动重载。请手动检查加载器。");
       return;
     }
   }

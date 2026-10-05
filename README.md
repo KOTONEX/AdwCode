@@ -105,8 +105,8 @@ GNOME 扩展
 - 默认使用 `window.menuBarVisibility: compact` 折叠菜单，汉堡按钮保持
   VS Code 原生的活动栏位置；把设置改回 `classic` 或 `visible` 即可恢复完整菜单栏。
 
-执行 **Adwaita: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
-**Adwaita: 生成仅关闭按钮的窗口控件 CSS**）。开发时可在设置中开启
+执行 **AdwCode: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
+**AdwCode: 生成仅关闭按钮的窗口控件 CSS**）。开发时可在设置中开启
 `adwcode.autoReload`：改动 `extras/*.css`、`extras/*.js`、`themes/*.json` 或扩展代码后，
 会自动重新应用 Custom CSS 并重载窗口。VS Code 升级后补丁会被
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
@@ -117,7 +117,7 @@ GNOME 扩展
 
 ### 一键应用设置
 
-**Adwaita: 应用推荐设置** 先预览再写入用户设置：随系统切换普通与高对比度的
+**AdwCode: 应用推荐设置** 先预览再写入用户设置：随系统切换普通与高对比度的
 Adwaita 主题，采用 Adwaita 产品图标、GNOME 代码字体、原生窗口控件和 Builder
 风格布局（关闭缩略图与面包屑、紧凑标签、12px 树缩进、平滑滚动等）。
 当前 VS Code 未提供的配置会在预览中列明并跳过。
@@ -127,14 +127,14 @@ Adwaita 主题，采用 Adwaita 产品图标、GNOME 代码字体、原生窗口
 标题栏等设置需要重新加载时，请保存工作并结束扩展会话后手动重载。
 工作区可以覆盖用户设置，命令会提示仍然开启自动重载的情况；源码仓库默认在
 工作区也关闭此项。如需在本仓库开启，应在工作区明确修改。
-被覆盖的旧用户值会被记住，**Adwaita: 恢复推荐设置** 可逐项恢复，包括原有的
+被覆盖的旧用户值会被记住，**AdwCode: 恢复推荐设置** 可逐项恢复，包括原有的
 自动重载状态；恢复仍会覆盖应用推荐设置之后的手动修改。
 工作区还提供 Python 自由线程、ty 与 Adwaita 预览配置，详见
 [开发、验证与发布](docs/04-开发验证与发布.md#vs-code-工作区配置)。
 
 ### 外观安装状态
 
-执行 **Adwaita: 查看外观安装状态**，可检查加载器是否安装、每个外观文件的
+执行 **AdwCode: 查看外观安装状态**，可检查加载器是否安装、每个外观文件的
 副本是否与源码一致、是否加入加载器配置，以及磁盘上的工作台 HTML 是否注入
 当前版本。面板支持手动刷新，不会修改配置或重载窗口。
 
@@ -152,7 +152,7 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 - `"window.controlsStyle": "native"`（推荐）由 GTK 按该布局绘制，无需额外配置。
 - VS Code 的自绘控件始终绘制最小化、最大化/还原与关闭三个按钮（固定 46px 宽、
   容器 138px），颜色主题与产品图标主题都无法隐藏。若要在自绘控件上保持 GNOME
-  布局，执行 **Adwaita: 生成仅关闭按钮的窗口控件 CSS**：它会写入
+  布局，执行 **AdwCode: 生成仅关闭按钮的窗口控件 CSS**：它会写入
   `~/.config/adwcode/controls-close-only.css`，并在检测到
   [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css)
   时自动加入 `vscode_custom_css.imports`；否则把设置片段复制到剪贴板。先执行一次
@@ -168,7 +168,7 @@ python3.14t src/build.py --no-system            # 仅 blue
 
 随附扩展会监听 GNOME 强调色偏好并切换所选 Adwaita 主题到对应变体
 （`adwcode.autoAccent`，默认 `true`；只会改动以 `Adwaita` 开头的主题）。
-也可通过命令 **Adwaita: 立即同步强调色** 手动应用。
+也可通过命令 **AdwCode: 立即同步强调色** 手动应用。
 扩展为无构建步骤、无依赖的纯 JavaScript。
 
 ## 目录结构
@@ -217,14 +217,14 @@ AdwCode/
 
 ### VS Code 升级后 CSS 失效
 
-升级会覆盖注入的自定义 CSS：重新执行 **Adwaita: 安装 GNOME 外观（CSS）**，
+升级会覆盖注入的自定义 CSS：重新执行 **AdwCode: 安装 GNOME 外观（CSS）**，
 或让加载器执行 **Reload Custom CSS and JS**，随后运行
 `python3.14t src/check_css.py` 确认选择器与设计令牌仍然有效。
 
 ### 强调色不同步
 
 检查 `adwcode.autoAccent` 是否为 `true`（只对以 `Adwaita` 开头的当前主题生效），
-或执行命令 **Adwaita: 立即同步强调色**。
+或执行命令 **AdwCode: 立即同步强调色**。
 
 ### 产品图标按钮不出现
 

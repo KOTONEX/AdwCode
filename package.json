@@ -129,32 +129,32 @@
       {
         "command": "adwcode.appearanceStatus",
         "title": "查看外观安装状态",
-        "category": "Adwaita"
+        "category": "AdwCode"
       },
       {
         "command": "adwcode.syncAccent",
         "title": "立即同步强调色",
-        "category": "Adwaita"
+        "category": "AdwCode"
       },
       {
         "command": "adwcode.closeOnlyControls",
         "title": "生成仅关闭按钮的窗口控件 CSS",
-        "category": "Adwaita"
+        "category": "AdwCode"
       },
       {
         "command": "adwcode.installGnomeLook",
         "title": "安装 GNOME 外观（CSS）",
-        "category": "Adwaita"
+        "category": "AdwCode"
       },
       {
         "command": "adwcode.applyRecommendedSettings",
         "title": "应用推荐设置",
-        "category": "Adwaita"
+        "category": "AdwCode"
       },
       {
         "command": "adwcode.revertRecommendedSettings",
         "title": "恢复推荐设置",
-        "category": "Adwaita"
+        "category": "AdwCode"
       }
     ]
   }
