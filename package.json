@@ -49,70 +49,70 @@
     },
     "themes": [
       {
-        "label": "Adwaita 深色",
+        "label": "AdwCode 深色",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwaita-dark.json"
+        "path": "./themes/adwcode-dark.json"
       },
       {
-        "label": "Adwaita 深色 · 彩色状态栏",
+        "label": "AdwCode 深色 · 彩色状态栏",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwaita-dark-colorful-status-bar.json"
+        "path": "./themes/adwcode-dark-colorful-status-bar.json"
       },
       {
-        "label": "Adwaita 深色 · 默认语法高亮",
+        "label": "AdwCode 深色 · 默认语法高亮",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwaita-dark-default-syntax-highlighting.json"
+        "path": "./themes/adwcode-dark-default-syntax-highlighting.json"
       },
       {
-        "label": "Adwaita 深色 · 默认语法高亮 · 彩色状态栏",
+        "label": "AdwCode 深色 · 默认语法高亮 · 彩色状态栏",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwaita-dark-default-syntax-highlighting-colorful-status-bar.json"
+        "path": "./themes/adwcode-dark-default-syntax-highlighting-colorful-status-bar.json"
       },
       {
-        "label": "Adwaita 深色 高对比度",
+        "label": "AdwCode 深色 高对比度",
         "uiTheme": "hc-black",
-        "path": "./themes/adwaita-dark-high-contrast.json"
+        "path": "./themes/adwcode-dark-high-contrast.json"
       },
       {
-        "label": "Adwaita 浅色",
+        "label": "AdwCode 浅色",
         "uiTheme": "vs",
-        "path": "./themes/adwaita-light.json"
+        "path": "./themes/adwcode-light.json"
       },
       {
-        "label": "Adwaita 浅色 · 彩色状态栏",
+        "label": "AdwCode 浅色 · 彩色状态栏",
         "uiTheme": "vs",
-        "path": "./themes/adwaita-light-colorful-status-bar.json"
+        "path": "./themes/adwcode-light-colorful-status-bar.json"
       },
       {
-        "label": "Adwaita 浅色 · 默认语法高亮",
+        "label": "AdwCode 浅色 · 默认语法高亮",
         "uiTheme": "vs",
-        "path": "./themes/adwaita-light-default-syntax-highlighting.json"
+        "path": "./themes/adwcode-light-default-syntax-highlighting.json"
       },
       {
-        "label": "Adwaita 浅色 · 默认语法高亮 · 彩色状态栏",
+        "label": "AdwCode 浅色 · 默认语法高亮 · 彩色状态栏",
         "uiTheme": "vs",
-        "path": "./themes/adwaita-light-default-syntax-highlighting-colorful-status-bar.json"
+        "path": "./themes/adwcode-light-default-syntax-highlighting-colorful-status-bar.json"
       },
       {
-        "label": "Adwaita 浅色 高对比度",
+        "label": "AdwCode 浅色 高对比度",
         "uiTheme": "hc-light",
-        "path": "./themes/adwaita-light-high-contrast.json"
+        "path": "./themes/adwcode-light-high-contrast.json"
       }
     ],
     "productIconThemes": [
       {
-        "id": "adwaita",
-        "label": "Adwaita",
-        "path": "./product-icons/adwaita.json"
+        "id": "adwcode",
+        "label": "AdwCode",
+        "path": "./product-icons/adwcode.json"
       }
     ],
     "configuration": {
-      "title": "Adwaita",
+      "title": "AdwCode",
       "properties": {
         "adwcode.autoAccent": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），在 Adwaita 主题的各强调色变体之间切换。仅在当前使用 Adwaita 主题时生效。"
+          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），在 AdwCode 主题的各强调色变体之间切换。仅在当前使用 AdwCode 主题时生效。"
         },
         "adwcode.autoReload": {
           "type": "boolean",

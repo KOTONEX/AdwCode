@@ -37,13 +37,13 @@
 
 | 标签 | 说明 |
 | --- | --- |
-| `Adwaita 深色` / `Adwaita 浅色` | Builder 语法，标准状态栏 |
-| `Adwaita 深色 · 彩色状态栏` / `Adwaita 浅色 · 彩色状态栏` | 状态栏填充强调色 |
-| `Adwaita 深色 · 默认语法高亮` / `Adwaita 浅色 · 默认语法高亮` | 使用 VS Code 自带 token 颜色 |
-| `Adwaita <强调色> 深色` / `Adwaita <强调色> 浅色` | 非蓝色强调色，按需生成 |
-| `Adwaita 深色 高对比度` / `Adwaita 浅色 高对比度` | libadwaita 高对比度参数 |
+| `AdwCode 深色` / `AdwCode 浅色` | Builder 语法，标准状态栏 |
+| `AdwCode 深色 · 彩色状态栏` / `AdwCode 浅色 · 彩色状态栏` | 状态栏填充强调色 |
+| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带 token 颜色 |
+| `AdwCode <强调色> 深色` / `AdwCode <强调色> 浅色` | 非蓝色强调色，按需生成 |
+| `AdwCode 深色 高对比度` / `AdwCode 浅色 高对比度` | libadwaita 高对比度参数 |
 
-产品图标主题 `Adwaita` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
+产品图标主题 `AdwCode` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
 补全和常用操作。四个窗口控制字形（`chrome-close`、`chrome-maximize`、
 `chrome-minimize`、`chrome-restore`）只在
 `window.controlsStyle` 设为 `custom` 时出现——默认的 `native` 由 GNOME 自己绘制
@@ -77,12 +77,12 @@ code --install-extension AdwCode-<版本>.vsix
 "window.titleBarStyle": "custom",
 "window.controlsStyle": "native",        // 由 GNOME 绘制窗口按钮
 "window.autoDetectColorScheme": true,
-"workbench.preferredDarkColorTheme": "Adwaita 深色",
-"workbench.preferredLightColorTheme": "Adwaita 浅色",
-"workbench.productIconTheme": "adwaita",
+"workbench.preferredDarkColorTheme": "AdwCode 深色",
+"workbench.preferredLightColorTheme": "AdwCode 浅色",
+"workbench.productIconTheme": "adwcode",
 "editor.renderLineHighlight": "none",    // libadwaita 没有当前行边框
 "workbench.tree.indent": 12,
-"workbench.iconTheme": null,             // 没有 Adwaita 文件图标主题
+"workbench.iconTheme": null,             // 本项目未提供文件图标主题
 "editor.fontFamily": "Adwaita Mono"      // GNOME 48+ 自带
 ```
 
@@ -118,7 +118,7 @@ GNOME 扩展
 ### 一键应用设置
 
 **AdwCode: 应用推荐设置** 先预览再写入用户设置：随系统切换普通与高对比度的
-Adwaita 主题，采用 Adwaita 产品图标、GNOME 代码字体、原生窗口控件和 Builder
+AdwCode 主题，采用 AdwCode 产品图标、GNOME 代码字体、原生窗口控件和 Builder
 风格布局（关闭缩略图与面包屑、紧凑标签、12px 树缩进、平滑滚动等）。
 当前 VS Code 未提供的配置会在预览中列明并跳过。
 命令用于日常外观，不写入 Python、ty、Meson 或格式化等项目开发配置。
@@ -129,8 +129,12 @@ Adwaita 主题，采用 Adwaita 产品图标、GNOME 代码字体、原生窗口
 工作区也关闭此项。如需在本仓库开启，应在工作区明确修改。
 被覆盖的旧用户值会被记住，**AdwCode: 恢复推荐设置** 可逐项恢复，包括原有的
 自动重载状态；恢复仍会覆盖应用推荐设置之后的手动修改。
-工作区还提供 Python 自由线程、ty 与 Adwaita 预览配置，详见
+工作区还提供 Python 自由线程、ty 与 AdwCode 预览配置，详见
 [开发、验证与发布](docs/04-开发验证与发布.md#vs-code-工作区配置)。
+
+升级到 2.0 后，主题名称与产品图标标识统一为 AdwCode。安装新版后，请重新选择
+AdwCode 颜色主题与产品图标主题，或执行“AdwCode: 应用推荐设置”更新首选配置。
+扩展不会自动改写已有的用户配置；手动保存的首选主题也需要更新名称。
 
 ### 外观安装状态
 
@@ -166,8 +170,8 @@ python3.14t src/build.py --accents blue,teal    # 指定子集
 python3.14t src/build.py --no-system            # 仅 blue
 ```
 
-随附扩展会监听 GNOME 强调色偏好并切换所选 Adwaita 主题到对应变体
-（`adwcode.autoAccent`，默认 `true`；只会改动以 `Adwaita` 开头的主题）。
+随附扩展会监听 GNOME 强调色偏好并切换所选 AdwCode 主题到对应变体
+（`adwcode.autoAccent`，默认 `true`；只会改动以 `AdwCode` 开头的主题）。
 也可通过命令 **AdwCode: 立即同步强调色** 手动应用。
 扩展为无构建步骤、无依赖的纯 JavaScript。
 
@@ -223,7 +227,7 @@ AdwCode/
 
 ### 强调色不同步
 
-检查 `adwcode.autoAccent` 是否为 `true`（只对以 `Adwaita` 开头的当前主题生效），
+检查 `adwcode.autoAccent` 是否为 `true`（只对以 `AdwCode` 开头的当前主题生效），
 或执行命令 **AdwCode: 立即同步强调色**。
 
 ### 产品图标按钮不出现

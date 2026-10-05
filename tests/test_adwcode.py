@@ -173,15 +173,23 @@ class ThemeTest(unittest.TestCase):
                 )
 
     def test_labels_are_chinese(self) -> None:
-        """主题标签必须能被扩展的正则解析（Adwaita [强调色] 深色/浅色[后缀]）。"""
+        """主题标签必须能被扩展的正则解析（AdwCode [强调色] 深色/浅色[后缀]）。"""
         for theme in self.themes():
             name = theme["name"]
-            self.assertTrue(name.startswith("Adwaita "), name)
+            self.assertTrue(name.startswith("AdwCode "), name)
             self.assertIn("深色" if theme["type"] == "dark" else "浅色", name)
             # 默认蓝色不带强调色前缀，其余强调色必须出现在标签里
             self.assertNotIn("蓝色", name)
             if theme["colors"]["button.background"] != Palette("dark", "blue")["accent_bg"]:
-                self.assertRegex(name, r"^Adwaita (青色|绿色|黄色|橙色|红色|粉色|紫色|石板灰) ")
+                self.assertRegex(name, r"^AdwCode (青色|绿色|黄色|橙色|红色|粉色|紫色|石板灰) ")
+
+        # 覆盖按需构建的全部强调色和变体，防止仅默认主题完成更名。
+        from build import build_plan, build_theme, theme_filename
+        for request in build_plan(list(ACCENT_NAMES)):
+            theme = build_theme(request["mode"], request["accent"], request["variant"], request["hc"])
+            filename = theme_filename(request["mode"], request["accent"], request["variant"], request["hc"])
+            self.assertTrue(theme["name"].startswith("AdwCode "), theme["name"])
+            self.assertTrue(filename.startswith("adwcode-"), filename)
 
     def test_ui_theme_matches_type(self) -> None:
         manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
@@ -342,7 +350,7 @@ class ProductIconSourcesTests(unittest.TestCase):
         """上游资产保持原字节；码点、字体与所有别名必须能对应到来源记录。"""
         folder = ROOT / "product-icons"
         sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
-        theme = json.loads((folder / "adwaita.json").read_text(encoding="utf-8"))
+        theme = json.loads((folder / "adwcode.json").read_text(encoding="utf-8"))
         fonts = {font["id"]: font for font in theme["fonts"]}
         self.assertEqual(len(fonts), len(theme["fonts"]))
         imported_ids = {font["id"] for font in sources["fonts"] if font.get("enabled", True)}
@@ -392,7 +400,7 @@ class ProductIconSourcesTests(unittest.TestCase):
         """官方已有对应字形时采用 Adwaita；备用 MoreWaita 不参与运行时加载。"""
         folder = ROOT / "product-icons"
         sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
-        theme = json.loads((folder / "adwaita.json").read_text(encoding="utf-8"))
+        theme = json.loads((folder / "adwcode.json").read_text(encoding="utf-8"))
         priority = ["adwcode-adwaita", "adwcode-builder", "adwcode-morewaita"]
         self.assertEqual(sources["source_priority"], priority)
         self.assertEqual([font["id"] for font in sources["fonts"]], priority)

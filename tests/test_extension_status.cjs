@@ -106,9 +106,20 @@ assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('</style>'));
 assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
 // 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
 await (async () => {
-  assert.equal(sandbox.parseTheme("Adwaita Dark High Contrast"), undefined);
-  assert.equal(sandbox.parseTheme("Adwaita 深色 高对比度"), undefined);
-  assert.equal(sandbox.parseTheme("Adwaita Dark").kind, "dark");
+  assert.equal(sandbox.parseTheme("AdwCode Dark High Contrast"), undefined);
+  assert.equal(sandbox.parseTheme("AdwCode 深色 高对比度"), undefined);
+  assert.equal(sandbox.parseTheme("AdwCode Dark").kind, "dark");
+  assert.equal(sandbox.parseTheme("AdwCode 深色").accent, "blue");
+  const variant = sandbox.parseTheme("AdwCode 青色 浅色 · 彩色状态栏");
+  assert.equal(variant.kind, "light");
+  assert.equal(variant.accent, "teal");
+  assert.equal(variant.suffix, " · 彩色状态栏");
+  // 第三方的 Adwaita 标签不能被当作本项目主题处理。
+  assert.equal(sandbox.parseTheme("Adwaita Dark"), undefined);
+  assert.equal(sandbox.labelFor("teal", "light", variant.suffix,
+    new Set(["AdwCode 青色 浅色 · 彩色状态栏"])), "AdwCode 青色 浅色 · 彩色状态栏");
+  assert.equal(sandbox.labelFor("teal", "light", variant.suffix,
+    new Set(["AdwCode 浅色"])), "AdwCode 浅色");
   await sandbox.readSystemFonts();
   const generated = sandbox.cssSource(context, "gnome-fonts.css");
   assert.ok(generated.includes('"更纱黑体 UI SC"'));

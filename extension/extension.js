@@ -46,12 +46,12 @@ const ACCENT_LABELS = {
 };
 /** @type {Record<ThemeKind, string>} */
 const MODE_LABELS = { dark: "深色", light: "浅色" };
-const PREFIX = "Adwaita ";
-// 主题标签使用中文，同时兼容旧版英文标签。
+const PREFIX = "AdwCode ";
+// 主题标签使用中文，同时识别本项目名称下的英文模式标签。
 /** @type {RegExp[]} */
 const THEME_PATTERNS = [
-  /^Adwaita (?:(\S+) )?(深色|浅色)(.*)$/,
-  /^Adwaita (?:(\w+) )?(Dark|Light)(.*)$/,
+  /^AdwCode (?:(\S+) )?(深色|浅色)(.*)$/,
+  /^AdwCode (?:(\w+) )?(Dark|Light)(.*)$/,
 ];
 /** @type {Record<string, ThemeKind>} */
 const MODE_FROM_LABEL = { 深色: "dark", 浅色: "light", Dark: "dark", Light: "light" };
@@ -90,11 +90,11 @@ const RECOMMENDED_SETTINGS = {
   "editor.fontFamily": "Adwaita Mono, monospace",
   "window.autoDetectColorScheme": true,
   "window.autoDetectHighContrast": true,
-  "workbench.preferredLightColorTheme": "Adwaita 浅色",
-  "workbench.preferredDarkColorTheme": "Adwaita 深色",
-  "workbench.preferredHighContrastLightColorTheme": "Adwaita 浅色 高对比度",
-  "workbench.preferredHighContrastColorTheme": "Adwaita 深色 高对比度",
-  "workbench.productIconTheme": "adwaita",
+  "workbench.preferredLightColorTheme": "AdwCode 浅色",
+  "workbench.preferredDarkColorTheme": "AdwCode 深色",
+  "workbench.preferredHighContrastLightColorTheme": "AdwCode 浅色 高对比度",
+  "workbench.preferredHighContrastColorTheme": "AdwCode 深色 高对比度",
+  "workbench.productIconTheme": "adwcode",
   "editor.renderLineHighlight": "none",
   "editor.minimap.enabled": false,
   "editor.guides.indentation": true,
@@ -203,10 +203,10 @@ function labelFor(accent, kind, suffix, available) {
   const kindLabel = MODE_LABELS[kind];
   const accentPart = accent === "blue" ? "" : `${ACCENT_LABELS[accent]} `;
   const candidates = [
-    `Adwaita ${accentPart}${kindLabel}${suffix}`,
-    `Adwaita ${kindLabel}${suffix}`,
-    `Adwaita ${accentPart}${kindLabel}`,
-    `Adwaita ${kindLabel}`,
+    `AdwCode ${accentPart}${kindLabel}${suffix}`,
+    `AdwCode ${kindLabel}${suffix}`,
+    `AdwCode ${accentPart}${kindLabel}`,
+    `AdwCode ${kindLabel}`,
   ];
   return candidates.find((label) => available.has(label));
 }

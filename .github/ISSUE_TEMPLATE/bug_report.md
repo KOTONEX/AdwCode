@@ -25,7 +25,7 @@ labels: ["bug"]
 ## 环境
 
 - VS Code 版本：
-- 主题名称（如 `Adwaita 深色 · 彩色状态栏`）：
+- 主题名称（如 `AdwCode 深色 · 彩色状态栏`）：
 - 扩展版本（`package.json` 的 `version`）：
 - 发行版 / GNOME 版本：
 - 是否使用 Custom CSS and JS Loader：是 / 否

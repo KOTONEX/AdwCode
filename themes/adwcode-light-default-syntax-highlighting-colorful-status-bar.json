@@ -1,6 +1,6 @@
 {
   "$schema": "vscode://schemas/color-theme",
-  "name": "Adwaita 浅色 · 默认语法高亮 · 彩色状态栏",
+  "name": "AdwCode 浅色 · 默认语法高亮 · 彩色状态栏",
   "type": "light",
   "semanticHighlighting": true,
   "colors": {

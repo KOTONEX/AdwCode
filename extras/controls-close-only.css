@@ -2,7 +2,7 @@
 /* SPDX-FileCopyrightText: 2026 AdwCode contributors */
 
 /*
- * Adwaita：当 window.controlsStyle 为 "custom" 时只保留关闭按钮。
+ * AdwCode：当 window.controlsStyle 为 "custom" 时只保留关闭按钮。
  *
  * GNOME 默认的窗口按钮布局是 ":close"（仅关闭，位于右侧）：
  *     gsettings get org.gnome.desktop.wm.preferences button-layout

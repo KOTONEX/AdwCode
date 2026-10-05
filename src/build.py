@@ -73,7 +73,7 @@ Theme = TypedDict(
 
 def theme_filename(mode: str, accent: str, variant: str, high_contrast: bool = False) -> str:
     """主题文件名（保持 ASCII，与主题标签的中文解耦）。"""
-    parts = ["adwaita"]
+    parts = ["adwcode"]
     if accent != "blue":
         parts.append(accent)
     parts.append(mode)
@@ -143,8 +143,8 @@ def contrast(color_a: str, color_b: str) -> float:
 def theme_label(mode: str, accent: str) -> str:
     kind = MODE_LABELS[mode]
     if accent == "blue":
-        return f"Adwaita {kind}"
-    return f"Adwaita {ACCENT_LABELS[accent]} {kind}"
+        return f"AdwCode {kind}"
+    return f"AdwCode {ACCENT_LABELS[accent]} {kind}"
 
 
 def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = False) -> Theme:
@@ -155,7 +155,7 @@ def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = Fals
     default_syntax = variant in ("default", "default-colorful")
 
     if high_contrast:
-        label = f"Adwaita {MODE_LABELS[mode]} 高对比度"
+        label = f"AdwCode {MODE_LABELS[mode]} 高对比度"
     else:
         label = theme_label(mode, accent)
         if default_syntax:
@@ -288,13 +288,13 @@ def check() -> int:
         failures += 1
 
     # 产品图标主题
-    icons_path = ROOT / "product-icons" / "adwaita.json"
+    icons_path = ROOT / "product-icons" / "adwcode.json"
     if icons_path.exists():
         icons = json.loads(icons_path.read_text(encoding="utf-8"))
         fonts = icons.get("fonts", [])
         definitions = icons.get("iconDefinitions", {})
         if not fonts or not definitions:
-            print("失败 product-icons/adwaita.json: 缺少 fonts 或 iconDefinitions")
+            print("失败 product-icons/adwcode.json: 缺少 fonts 或 iconDefinitions")
             failures += 1
         for font in fonts:
             for source in font.get("src", []):

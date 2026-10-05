@@ -30,12 +30,14 @@
   完整度，并同时考虑布局、状态、密度和键盘操作。
 - 提交信息、README、文档、代码注释、界面提示与自有脚本说明使用简体中文。
   API、配置键、文件名、专有名称、第三方命令名称与许可证原文保留原文。
+- 本项目的主题标签、产品图标主题与设置分组使用 AdwCode，主题和图标映射文件
+  使用 `adwcode` 前缀；上游项目、字体、配色方案与图标来源标识保留原名。
 - Git 身份先查本机配置；必要时核对本机 gh 账号与历史提交。不要猜测身份，
   不修改全局 Git 配置。提交、推送、打标签和发布是分别授权的动作。
 
 ## 项目一句话
 
-VS Code 的 Adwaita 主题，由 **libadwaita 1.10**（GNOME 51）的取值生成。
+VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生成。
 目标是让 VS Code 看起来像原生 GNOME 应用（尤其是 GNOME Builder）。
 
 需要 Python 3.9+（代码中的 `X | Y` 注解均依赖 `from __future__ import annotations`）；

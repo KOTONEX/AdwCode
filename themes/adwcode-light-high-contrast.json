@@ -1,6 +1,6 @@
 {
   "$schema": "vscode://schemas/color-theme",
-  "name": "Adwaita 浅色 高对比度",
+  "name": "AdwCode 浅色 高对比度",
   "type": "light",
   "semanticHighlighting": true,
   "colors": {
