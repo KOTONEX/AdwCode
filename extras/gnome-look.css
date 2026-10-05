@@ -362,6 +362,13 @@
 	color: var(--vscode-inputOption-activeForeground);
 }
 
+/* 标题栏布局按钮使用中性选中底色，不借用输入选项的强调色。
+   覆盖原生选中规则及下方禁用选中规则的背景，焦点环和禁用透明度保持独立。 */
+.monaco-workbench .part.titlebar .monaco-toolbar .action-label[class*="codicon-layout-"]:is(.checked, [aria-pressed="true"]) {
+	background-color: var(--vscode-actionBar-toggledBackground) !important;
+	color: var(--vscode-titleBar-activeForeground);
+}
+
 .monaco-workbench .monaco-action-bar .action-item:not(.disabled):focus-visible .action-label,
 .monaco-workbench .monaco-action-bar .action-item:not(.disabled) .action-label:not([aria-disabled="true"]):focus-visible {
 	outline: 2px solid var(--vscode-focusBorder);

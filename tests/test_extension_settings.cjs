@@ -43,10 +43,12 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   failAt=undefined;
   await sandbox.applyRecommendedSettings(context);
   await sandbox.applyRecommendedSettings(context);
-  const workspaceSettings=JSON.parse(fs.readFileSync(path.join(__dirname,'../.vscode/settings.json'),'utf8').split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n'));
-  for (const [key, value] of Object.entries(workspaceSettings)) {
-    if (/^(window\.|workbench\.|breadcrumbs\.|scm\.)/.test(key) || ['adwcode.autoReload','editor.minimap.enabled','editor.renderLineHighlight','editor.guides.indentation','editor.stickyScroll.enabled','editor.smoothScrolling'].includes(key)) assert.equal(values.get(key),value,key);
+  // 推荐主题必须在扩展中注册；操作者的工作区偏好可以独立覆盖推荐值。
+  const contributes=JSON.parse(fs.readFileSync(path.join(__dirname,'../package.json'),'utf8')).contributes;
+  for (const key of ['workbench.preferredLightColorTheme','workbench.preferredDarkColorTheme','workbench.preferredHighContrastLightColorTheme','workbench.preferredHighContrastColorTheme']) {
+    assert.ok(contributes.themes.some(theme=>theme.label===values.get(key)),key);
   }
+  assert.ok(contributes.productIconThemes.some(theme=>theme.id===values.get('workbench.productIconTheme')));
   assert.equal(values.get('window.titleBarStyle'),'custom');
   assert.equal(values.get('window.controlsStyle'),'native');
   assert.equal(values.get('window.menuBarVisibility'),'compact');
