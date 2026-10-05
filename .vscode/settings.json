@@ -14,8 +14,8 @@
     "editor.wordWrap": "on"
   },
 
-  // Python 3.14 自由线程版本须在 PATH 中；已有解释器选择需手动切换。
-  "python.defaultInterpreterPath": "python3.14t",
+  // uv 默认安装目录的解释器路径；已有解释器选择需手动切换。
+  "python.defaultInterpreterPath": "${userHome}/.local/bin/python3.14t",
   "python.languageServer": "None",
   "ty.diagnosticMode": "workspace",
   "javascript.validate.enable": true,
