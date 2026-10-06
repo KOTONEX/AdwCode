@@ -11,7 +11,7 @@ VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚�
   要么由项目的令牌块定义。
 
 用法：
-    python3.14t src/check_css.py [--css PATH] [--verbose]
+    python3.14t src/检查样式.py [--样式表 PATH] [--verbose]
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ VAR_REF_RE: re.Pattern[str] = re.compile(r"var\(\s*(--vscode-[\w-]+)")
 VAR_DEF_RE: re.Pattern[str] = re.compile(r"(--vscode-[\w-]+)\s*:")
 
 
-def find_vscode_assets(explicit: Path | None = None) -> tuple[Path | None, Path | None]:
+def 查找VSCode资源(explicit: Path | None = None) -> tuple[Path | None, Path | None]:
     """返回已安装 VS Code 的（workbench CSS, workbench JS）。"""
     if explicit:
         if explicit.is_file():
@@ -65,7 +65,7 @@ def find_vscode_assets(explicit: Path | None = None) -> tuple[Path | None, Path 
     return None, None
 
 
-def theme_variables() -> set[str]:
+def 主题变量() -> set[str]:
     """主题色注册表的键会被 VS Code 以 ``--vscode-<键，点换横线>`` 注入。"""
     if not REGISTRY_KEYS.is_file():
         return set()
@@ -73,7 +73,7 @@ def theme_variables() -> set[str]:
     return {"--vscode-" + key.replace(".", "-") for key in keys}
 
 
-def selectors_and_declarations(text: str) -> tuple[str, str]:
+def 选择器与声明(text: str) -> tuple[str, str]:
     """把样式表拆分为选择器文本与声明文本。"""
     text = COMMENT_RE.sub("", text)
     selectors = BLOCK_RE.sub(" ", text)
@@ -81,14 +81,14 @@ def selectors_and_declarations(text: str) -> tuple[str, str]:
     return selectors, declarations
 
 
-def check(css_path: Path | None, verbose: bool = False) -> int:
-    vscode_css, vscode_js = find_vscode_assets(css_path)
+def 校验(css_path: Path | None, verbose: bool = False) -> int:
+    vscode_css, vscode_js = 查找VSCode资源(css_path)
     if vscode_css is None:
-        print("未执行 CSS 校验：未找到 VS Code 样式表，请使用 --css PATH 指定有效路径")
+        print("未执行 CSS 校验：未找到 VS Code 样式表，请使用 --样式表 PATH 指定有效路径")
         return 1
     vscode_text = vscode_css.read_text(encoding="utf-8", errors="ignore")
-    vscode_classes = set(CLASS_RE.findall(selectors_and_declarations(vscode_text)[0]))
-    vscode_vars = set(VAR_DEF_RE.findall(vscode_text)) | theme_variables()
+    vscode_classes = set(CLASS_RE.findall(选择器与声明(vscode_text)[0]))
+    vscode_vars = set(VAR_DEF_RE.findall(vscode_text)) | 主题变量()
     # 由 JavaScript 创建的类名（例如窗口控制按钮）不会出现在编译后的 CSS 里，
     # 因此同时搜索 JS bundle。
     if vscode_js is not None:
@@ -108,7 +108,7 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
         )
     failures = 0
     for sheet in sorted(EXTRAS.glob("*.css")):
-        selectors, declarations = selectors_and_declarations(sheet.read_text(encoding="utf-8"))
+        selectors, declarations = 选择器与声明(sheet.read_text(encoding="utf-8"))
         classes = set(CLASS_RE.findall(selectors))
         missing = sorted(classes - vscode_classes - project_classes)
         if missing:
@@ -133,13 +133,13 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
     return 1 if failures else 0
 
 
-def main() -> int:
+def 入口() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--css", type=Path, help="workbench.desktop.main.css 的路径")
-    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--样式表", dest="css", type=Path, help="workbench.desktop.main.css 的路径")
+    parser.add_argument("--详细", dest="verbose", action="store_true")
     args = parser.parse_args()
-    return check(args.css, args.verbose)
+    return 校验(args.css, args.verbose)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(入口())

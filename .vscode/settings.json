@@ -48,7 +48,7 @@
   "workbench.list.smoothScrolling": true,
 
   // 连续开发时保留会话，保存工作后手动安装外观并重载。
-  "adwcode.autoReload": false,
+  "adwcode.自动重载": false,
 
   // 隐藏缓存目录；构建日志仍可通过路径直接打开。
   "files.exclude": {

@@ -152,8 +152,8 @@ def draw_svg(source: Path, pen: TTGlyphPen) -> None:
     visit(root, Identity)
 
 
-def main() -> None:
-    sources = json.loads((ROOT / "sources.json").read_text(encoding="utf-8"))
+def 入口() -> None:
+    sources = json.loads((ROOT / "来源.json").read_text(encoding="utf-8"))
     for font in sources["fonts"]:
         entries = font["glyphs"]
         builder = FontBuilder(1024, isTTF=True)
@@ -221,7 +221,7 @@ def main() -> None:
                 "version": "Version 1.0",
                 "copyright": font["attribution"],
                 "licenseDescription": font["license"]
-                + "；由 AdwCode 转换为单色轮廓；来源与字重参数见 sources.json",
+                + "；由 AdwCode 转换为单色轮廓；来源与字重参数见 来源.json",
                 "licenseInfoURL": font["license_url"],
             }
         )
@@ -239,7 +239,7 @@ def main() -> None:
             glyphs[name].draw(TransformPen(svg_pen, (1 / 64, 0, 0, -1 / 64, 0, 14)), glyphs)
             svg = (
                 f"<!-- SPDX-License-Identifier: {font['license']} -->\n"
-                f"<!-- 署名：{font['attribution']}；由 AdwCode 从字体轮廓生成，来源见 sources.json。 -->\n"
+                f"<!-- 署名：{font['attribution']}；由 AdwCode 从字体轮廓生成，来源见 来源.json。 -->\n"
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
                 f'<path fill="currentColor" d="{svg_pen.getCommands()}"/></svg>\n'
             )
@@ -252,4 +252,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    入口()

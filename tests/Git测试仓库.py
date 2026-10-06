@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 
-def git(root: Path, *arguments: str) -> str:
+def 执行Git(root: Path, *arguments: str) -> str:
     result = subprocess.run(
         [
             "git",

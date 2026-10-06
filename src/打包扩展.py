@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from release_notes import generate_changelog
+from 生成变更日志 import 生成变更日志
 
 ROOT: Path = Path(__file__).parent.parent
 
@@ -53,7 +53,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
       <Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
       <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
     </Properties>
-    <License>extension/LICENSING.md</License>
+    <License>extension/许可声明.md</License>
 {icon_metadata}
   </Metadata>
   <Installation>
@@ -63,7 +63,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
     <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
-    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSING.md" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/许可声明.md" Addressable="true" />
 {icon_asset}
   </Assets>
 </PackageManifest>
@@ -73,7 +73,7 @@ INCLUDE: list[str] = [
     "package.json",
     "README.md",
     "LICENSE",
-    "LICENSING.md",
+    "许可声明.md",
     "LICENSES",
     "assets",
     "extension",
@@ -86,10 +86,10 @@ INCLUDE: list[str] = [
     "src/vscode_defaults/README.md",
 ]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
-ASSET_BUILD_SCRIPTS = {"build_symbols.py", "build_imported.py"}
+ASSET_BUILD_SCRIPTS = {"生成自有字形.py", "生成导入字形.py"}
 
 
-def collect() -> list[Path]:
+def 收集文件() -> list[Path]:
     files: list[Path] = []
     for item in INCLUDE:
         path = ROOT / item
@@ -109,7 +109,7 @@ def collect() -> list[Path]:
     ]
 
 
-def main(changelog_path: Path | None = None) -> None:
+def 入口(changelog_path: Path | None = None) -> None:
     manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     name = manifest["name"]
     version = manifest["version"]
@@ -118,7 +118,7 @@ def main(changelog_path: Path | None = None) -> None:
     def xml(value: str) -> str:
         return escape(value, {'"': "&quot;", "'": "&apos;"})
 
-    files = collect()
+    files = 收集文件()
     icon = manifest.get("icon")
     icon_metadata = ""
     icon_asset = ""
@@ -149,7 +149,7 @@ def main(changelog_path: Path | None = None) -> None:
     changelog = (
         changelog_path.read_text(encoding="utf-8")
         if changelog_path is not None
-        else generate_changelog(ROOT)
+        else 生成变更日志(ROOT)
     )
     if not changelog.strip():
         raise ValueError("用于打包的变更日志为空")
@@ -164,8 +164,10 @@ def main(changelog_path: Path | None = None) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--changelog", type=Path, help="无 Git 的导出副本使用预先生成的变更日志")
+    parser.add_argument(
+        "--变更日志", dest="changelog", type=Path, help="无 Git 的导出副本使用预先生成的变更日志"
+    )
     try:
-        main(parser.parse_args().changelog)
+        入口(parser.parse_args().changelog)
     except (ValueError, OSError) as error:
         raise SystemExit(str(error)) from error

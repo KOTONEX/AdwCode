@@ -9,8 +9,8 @@ AdwCode 使用原创的 GNOME 风格编辑器图标：暖白色圆角窗口、�
 - `adwcode.png`：1254 × 1254 透明 PNG，是最终图标的位图原件。
 - `package.json` 的 `icon` 指向此 PNG，README 开头以 128 × 128 显示同一文件。
 - 打包器将 PNG 纳入 VSIX，并登记扩展列表与详情页使用的图标资源。
-- [设计说明](design-notes.md)：构图、制作方式与验证要求。
-- [来源记录](sources.json)：许可、制作方式、尺寸与文件哈希。
+- [设计说明](设计说明.md)：构图、制作方式与验证要求。
+- [来源记录](来源.json)：许可、制作方式、尺寸与文件哈希。
 
 本图标没有对应的 SVG 源文件；日常构建和安装直接读取随附 PNG，不需要图像
 生成工具。重新设计时保留编辑器的识别结构，完成后同步来源记录和设计说明。
@@ -29,7 +29,7 @@ AdwCode 使用原创的 GNOME 风格编辑器图标：暖白色圆角窗口、�
 
 ```sh
 meson test -C builddir --print-errorlogs
-meson compile -C builddir package
+meson compile -C builddir 打包
 ```
 
 检查透明通道、浅色与深色背景，以及 128、64、32、16 像素下的辨识度；核对

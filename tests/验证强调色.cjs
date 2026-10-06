@@ -35,17 +35,17 @@ function fixture() {
     fakeContext: {},
   };
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '../extension/extension.js'), 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../extension/扩展.js'), 'utf8'), sandbox);
   vm.runInContext('extensionContext = fakeContext', sandbox);
-  sandbox.startAccentMonitor = sandbox.stopAccentMonitor = () => {};
-  sandbox.availableThemes = () => new Set(['AdwCode 深色', 'AdwCode 绿色 深色', 'AdwCode 红色 深色']);
-  sandbox.readSystemAccent = () => new Promise(resolve => pending.push(resolve));
+  sandbox.启动强调色监听 = sandbox.停止强调色监听 = () => {};
+  sandbox.已安装主题 = () => new Set(['AdwCode 深色', 'AdwCode 绿色 深色', 'AdwCode 红色 深色']);
+  sandbox.读取系统强调色 = () => new Promise(resolve => pending.push(resolve));
   return { sandbox, values, workspaceValues, pending, updates, messages, disable() { enabled = false; } };
 }
 async function main() {
   for (const action of ['switch', 'disable', 'deactivate']) {
     const f = fixture();
-    const work = f.sandbox.syncAccent();
+    const work = f.sandbox.同步强调色();
     assert.equal(f.pending.length, 1);
     if (action === 'switch') f.values.set('colorTheme', '其他主题');
     if (action === 'disable') f.disable();
@@ -56,8 +56,8 @@ async function main() {
   }
   const f = fixture();
   f.values.set('colorTheme', 'AdwCode 红色 深色');
-  const older = f.sandbox.syncAccent();
-  const newer = f.sandbox.syncAccent(true);
+  const older = f.sandbox.同步强调色();
+  const newer = f.sandbox.同步强调色(true);
   f.pending[1]('red');
   await newer;
   assert.equal(f.updates.length, 0);
@@ -66,20 +66,20 @@ async function main() {
   await older;
   assert.equal(f.updates.length, 0, '过期读取不得覆盖较新的结果');
   const live = fixture();
-  const work = live.sandbox.syncAccent();
+  const work = live.sandbox.同步强调色();
   live.pending[0]('green');
   await work;
   assert.deepEqual(live.updates, [['colorTheme', 'AdwCode 绿色 深色']]);
   const fallback = fixture();
-  fallback.sandbox.availableThemes = () => new Set(['AdwCode 深色']);
-  const missing = fallback.sandbox.syncAccent(true);
+  fallback.sandbox.已安装主题 = () => new Set(['AdwCode 深色']);
+  const missing = fallback.sandbox.同步强调色(true);
   fallback.pending[0]('green');
   await missing;
   assert.ok(fallback.messages.some(message => message.includes('未安装绿色')));
   const scoped = fixture();
   scoped.values.set('colorTheme', '其他主题');
   scoped.workspaceValues.set('colorTheme', 'AdwCode 深色');
-  const scopedWork = scoped.sandbox.syncAccent(true);
+  const scopedWork = scoped.sandbox.同步强调色(true);
   scoped.pending[0]('green');
   await scopedWork;
   assert.equal(scoped.updates.length, 0);

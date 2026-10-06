@@ -14,12 +14,12 @@
 
 ## 自测
 
-- [ ] `meson compile -C builddir lint` 通过（含 Ruff 检查和格式检查）
-- [ ] `meson compile -C builddir check` 通过
+- [ ] `meson compile -C builddir 静态检查` 通过（含 Ruff 检查和格式检查）
+- [ ] `meson compile -C builddir 校验` 通过
 - [ ] `meson test -C builddir --print-errorlogs` 通过（未运行时请在下方说明原因）
 
 ## 约束检查
 
-- [ ] 改动 `themes/` 后已重跑 `meson compile -C builddir themes`，且未手工编辑生成物
+- [ ] 改动 `themes/` 后已重跑 `meson compile -C builddir 主题`，且未手工编辑生成物
 - [ ] 主题颜色使用十六进制（`#rrggbb` / `#rrggbbaa`），`contrastBorder` 只出现在高对比度主题
 - [ ] 新增颜色键已存在于 `src/vscode_defaults/registry_keys.json` 或 `build.LEGACY_KEYS`

@@ -36,15 +36,15 @@ jobs:
         run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
 
       - name: 静态、格式与类型检查
-        run: meson compile -C builddir lint
+        run: meson compile -C builddir 静态检查
 
       - name: 生成/构建校验
         run: |
-          meson compile -C builddir themes
+          meson compile -C builddir 主题
           git diff --exit-code -- themes package.json
 
       - name: 离线单元测试
         run: meson test -C builddir --print-errorlogs
 
       - name: 自动生成变更日志
-        run: meson compile -C builddir changelog
+        run: meson compile -C builddir 变更日志

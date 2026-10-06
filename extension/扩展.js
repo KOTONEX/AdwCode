@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 //
 // JSDoc 类型使用 `import("vscode")` / `import("child_process")` 等写法；
-// 检查由 tsconfig.json + types/ 下的手写最小类型面完成（meson compile -C builddir typecheck），
+// 检查由 tsconfig.json + types/ 下的手写最小类型面完成（meson compile -C builddir 类型检查），
 // 扩展本身仍是无构建步骤、无依赖的纯 JavaScript。
 // @ts-check
 /** @typedef {"blue" | "teal" | "green" | "yellow" | "orange" | "red" | "pink" | "purple" | "slate"} Accent */
@@ -47,14 +47,13 @@ const ACCENT_LABELS = {
 /** @type {Record<ThemeKind, string>} */
 const MODE_LABELS = { dark: "深色", light: "浅色" };
 const PREFIX = "AdwCode ";
-// 主题标签使用中文，同时识别本项目名称下的英文模式标签。
+// 主题标签仅使用中文，不保留英文标签兼容入口。
 /** @type {RegExp[]} */
 const THEME_PATTERNS = [
   /^AdwCode (?:(\S+) )?(深色|浅色)(.*)$/,
-  /^AdwCode (?:(\w+) )?(Dark|Light)(.*)$/,
 ];
 /** @type {Record<string, ThemeKind>} */
-const MODE_FROM_LABEL = { 深色: "dark", 浅色: "light", Dark: "dark", Light: "light" };
+const MODE_FROM_LABEL = { 深色: "dark", 浅色: "light" };
 /** @type {Record<string, Accent>} */
 const ACCENT_FROM_LABEL = {
   蓝色: "blue",
@@ -75,11 +74,14 @@ const CSS_DIR = path.join(os.homedir(), ".config", "adwcode");
  * @type {Record<string, string>}
  */
 const CSS_FILES = {
-  "gnome-look.css": "--vscode-cornerRadius-small",
-  "controls-close-only.css": "window-max-restore",
-  "gnome-fonts.css": "--adwcode-ui-font",
-  "window-state.js": "adwcode.windowState",
+  "GNOME外观.css": "--vscode-cornerRadius-small",
+  "仅关闭窗口控件.css": "window-max-restore",
+  "GNOME字体.css": "--adwcode-ui-font",
+  "窗口状态.js": "adwcode.windowState",
 };
+
+// 旧文件名只用于移除失效加载引用，不作为可调用的兼容入口。
+const RETIRED_CSS_FILES = ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css", "window-state.js", "gnome-menu.js"];
 
 /**
  * “AdwCode: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
@@ -87,7 +89,7 @@ const CSS_FILES = {
  */
 const RECOMMENDED_SETTINGS = {
   // 先写入用户级关闭值，工作区仍可显式覆盖。
-  "adwcode.autoReload": false,
+  "adwcode.自动重载": false,
   "editor.fontFamily": "Adwaita Mono, monospace",
   "window.autoDetectColorScheme": true,
   "window.autoDetectHighContrast": true,
@@ -120,7 +122,7 @@ let systemFonts = {};
 /** 从 Pango 字体描述中取出字体族，不把字号或样式写进 CSS。
  * @param {string} description @returns {string | undefined}
  */
-function pangoFamily(description) {
+function 解析Pango字体(description) {
   const value = description.trim().replace(/^'|'$/g, "").replace(/\\(['\\])/g, "$1");
   if (!/\s+\d+(?:\.\d+)?$/.test(value)) return undefined;
   return value.replace(/\s+\d+(?:\.\d+)?$/, "")
@@ -128,48 +130,48 @@ function pangoFamily(description) {
 }
 
 /** @param {string} value @returns {string} */
-function quotedFont(value) {
+function 引用字体名称(value) {
   return '"' + value.replace(/[\\"\x00-\x1f<>]/g, (char) => `\\${char.charCodeAt(0).toString(16)} `) + '"';
 }
 
 /** @returns {Promise<void>} */
-async function readSystemFonts() {
+async function 读取系统字体() {
   const read = (/** @type {string} */ key) => new Promise((resolve) => {
     execFile("gsettings", ["get", "org.gnome.desktop.interface", key], { timeout: 5000 },
-      (error, stdout) => resolve(error ? undefined : pangoFamily(String(stdout))));
+      (error, stdout) => resolve(error ? undefined : 解析Pango字体(String(stdout))));
   });
   const [ui, mono] = await Promise.all([read("font-name"), read("monospace-font-name")]);
   systemFonts = { ui: /** @type {string | undefined} */ (ui), mono: /** @type {string | undefined} */ (mono) };
 }
 
 /** @returns {string} */
-function uiFontStack() {
-  const configured = vscode.workspace.getConfiguration("adwcode").get("uiFontFamily", "");
+function 界面字体栈() {
+  const configured = vscode.workspace.getConfiguration("adwcode").get("界面字体", "");
   const family = typeof configured === "string" && configured.trim() ? configured.trim() : systemFonts.ui;
-  return (family ? `${quotedFont(family)}, ` : "") + '"Adwaita Sans", "Cantarell", system-ui, sans-serif';
+  return (family ? `${引用字体名称(family)}, ` : "") + '"Adwaita Sans", "Cantarell", system-ui, sans-serif';
 }
 
 /** 生成字体适配文件；其他外观文件原样读取，状态检查也使用同一份预期内容。
  * @param {import("vscode").ExtensionContext} context
  * @param {string} name @returns {string}
  */
-function cssSource(context, name) {
+function 样式源码(context, name) {
   const source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8");
-  if (name !== "gnome-fonts.css") return source;
-  return source + `\n:root, .monaco-workbench { --adwcode-ui-font: ${uiFontStack()}; }\n`;
+  if (name !== "GNOME字体.css") return source;
+  return source + `\n:root, .monaco-workbench { --adwcode-ui-font: ${界面字体栈()}; }\n`;
 }
 
 /** 只识别本扩展源目录及安装目录，保留其他位置的用户文件。
  * @param {import("vscode").ExtensionContext} context
  * @param {string} value @returns {string | undefined}
  */
-function cssImportName(context, value) {
+function 识别加载文件(context, value) {
   try {
     const uri = vscode.Uri.parse(value);
     if (uri.scheme !== "file") return undefined;
     const file = path.resolve(uri.fsPath);
     const name = path.basename(file);
-    if (![...Object.keys(CSS_FILES), "gnome-menu.js"].includes(name)) return undefined;
+    if (![...Object.keys(CSS_FILES), ...RETIRED_CSS_FILES].includes(name)) return undefined;
     return [CSS_DIR, path.join(context.extensionPath, "extras")].some((folder) =>
       file === path.resolve(folder, name)) ? name : undefined;
   } catch {
@@ -182,12 +184,12 @@ function cssImportName(context, value) {
  * @param {string[]} imports
  * @param {string[]} names @returns {string[]}
  */
-function mergeCssImports(context, imports, names) {
+function 合并加载引用(context, imports, names) {
   const merged = [];
   const added = new Set();
   for (const value of imports) {
-    const name = cssImportName(context, value);
-    if (name === "gnome-menu.js") continue;
+    const name = 识别加载文件(context, value);
+    if (name && RETIRED_CSS_FILES.includes(name)) continue;
     if (name && names.includes(name)) {
       if (!added.has(name)) {
         merged.push(vscode.Uri.file(path.join(CSS_DIR, name)).toString());
@@ -216,7 +218,7 @@ let accentSyncSequence = 0;
  * @param {unknown} name
  * @returns {name is string}
  */
-function isOurTheme(name) {
+function 是否项目主题(name) {
   return typeof name === "string" && name.startsWith(PREFIX) && !/(?:高对比度|High Contrast)/i.test(name);
 }
 
@@ -224,8 +226,8 @@ function isOurTheme(name) {
  * @param {unknown} name
  * @returns {ParsedTheme | undefined}
  */
-function parseTheme(name) {
-  if (!isOurTheme(name)) {
+function 解析主题(name) {
+  if (!是否项目主题(name)) {
     return undefined;
   }
   for (const pattern of THEME_PATTERNS) {
@@ -248,7 +250,7 @@ function parseTheme(name) {
  * @param {Set<string>} available
  * @returns {string | undefined}
  */
-function labelFor(accent, kind, suffix, available) {
+function 查找主题标签(accent, kind, suffix, available) {
   const kindLabel = MODE_LABELS[kind];
   const accentPart = accent === "blue" ? "" : `${ACCENT_LABELS[accent]} `;
   const candidates = [
@@ -261,7 +263,7 @@ function labelFor(accent, kind, suffix, available) {
 }
 
 /** @returns {Set<string>} */
-function availableThemes() {
+function 已安装主题() {
   const extension = vscode.extensions.getExtension("KOTONEX.AdwCode");
   /** @type {Array<{ label: string }>} */
   const themes =
@@ -272,7 +274,7 @@ function availableThemes() {
 }
 
 /** @returns {Promise<Accent | undefined>} */
-function readSystemAccent() {
+function 读取系统强调色() {
   return new Promise((resolve) => {
     execFile(
       "gsettings",
@@ -294,14 +296,14 @@ function readSystemAccent() {
  * @param {boolean} [announce]
  * @returns {Promise<void>}
  */
-async function syncAccent(announce = false) {
+async function 同步强调色(announce = false) {
   const context = extensionContext;
   const sequence = ++accentSyncSequence;
   if (!context) return;
   const config = vscode.workspace.getConfiguration("adwcode");
-  const autoAccent = /** @type {boolean} */ (config.get("autoAccent", true));
+  const autoAccent = /** @type {boolean} */ (config.get("自动强调色", true));
   if (autoAccent === false) {
-    stopAccentMonitor();
+    停止强调色监听();
     if (announce) {
       vscode.window.showInformationMessage("AdwCode：自动强调色已禁用。");
     }
@@ -312,16 +314,16 @@ async function syncAccent(announce = false) {
   const current = workbench.get("colorTheme");
   const preferredDark = workbench.get("preferredDarkColorTheme");
   const preferredLight = workbench.get("preferredLightColorTheme");
-  if (![current, preferredDark, preferredLight].some(isOurTheme)) {
-    stopAccentMonitor();
+  if (![current, preferredDark, preferredLight].some(是否项目主题)) {
+    停止强调色监听();
     return;
   }
-  startAccentMonitor();
+  启动强调色监听();
 
-  const accent = await readSystemAccent();
+  const accent = await 读取系统强调色();
   if (extensionContext !== context || sequence !== accentSyncSequence) return;
-  if (!vscode.workspace.getConfiguration("adwcode").get("autoAccent", true)) {
-    stopAccentMonitor();
+  if (!vscode.workspace.getConfiguration("adwcode").get("自动强调色", true)) {
+    停止强调色监听();
     return;
   }
   if (!accent) {
@@ -332,7 +334,7 @@ async function syncAccent(announce = false) {
   }
 
   const currentWorkbench = vscode.workspace.getConfiguration("workbench");
-  const available = availableThemes();
+  const available = 已安装主题();
   let supported = false;
   let candidateFound = false;
   let workspaceOverride = false;
@@ -347,13 +349,13 @@ async function syncAccent(announce = false) {
   for (const [name, kind, setter] of candidates) {
     // 读取系统设置期间，操作者可能已经切换主题；不要覆盖更新后的值。
     if (currentWorkbench.get(setter) !== name) continue;
-    const parsed = parseTheme(name);
+    const parsed = 解析主题(name);
     if (!parsed) {
       continue;
     }
     candidateFound = true;
-    const label = labelFor(accent, kind || parsed.kind, parsed.suffix, available);
-    supported ||= parseTheme(label)?.accent === accent;
+    const label = 查找主题标签(accent, kind || parsed.kind, parsed.suffix, available);
+    supported ||= 解析主题(label)?.accent === accent;
     if (label && label !== name) {
       const inspected = currentWorkbench.inspect(setter);
       if (inspected?.workspaceValue !== undefined || inspected?.workspaceFolderValue !== undefined) {
@@ -378,14 +380,14 @@ async function syncAccent(announce = false) {
 }
 
 /** @returns {void} */
-function startAccentMonitor() {
+function 启动强调色监听() {
   if (accentMonitor || process.platform !== "linux") {
     return;
   }
   const child = execFile("gsettings", ["monitor", "org.gnome.desktop.interface", "accent-color"]);
   const stdout = /** @type {import("stream").Readable} */ (child.stdout);
   stdout.on("data", () => {
-    syncAccent().catch(() => undefined);
+    同步强调色().catch(() => undefined);
   });
   child.on("error", () => {
     if (accentMonitor === child) {
@@ -399,7 +401,7 @@ function startAccentMonitor() {
     accentMonitor = undefined;
     setTimeout(() => {
       if (extensionContext) {
-        syncAccent().catch(() => undefined);
+        同步强调色().catch(() => undefined);
       }
     }, 5000);
   });
@@ -407,7 +409,7 @@ function startAccentMonitor() {
 }
 
 /** @returns {void} */
-function stopAccentMonitor() {
+function 停止强调色监听() {
   if (accentMonitor) {
     accentMonitor.kill();
     accentMonitor = undefined;
@@ -415,7 +417,7 @@ function stopAccentMonitor() {
 }
 
 /** @returns {string | undefined} */
-function workbenchHtmlPath() {
+function 工作台HTML路径() {
   const candidates = [
     path.join(vscode.env.appRoot, "out", "vs", "code", "electron-browser", "workbench", "workbench.esm.html"),
     path.join(vscode.env.appRoot, "out", "vs", "code", "electron-browser", "workbench", "workbench.html"),
@@ -428,8 +430,8 @@ function workbenchHtmlPath() {
  * @param {string[]} markers
  * @returns {CssPatchState}
  */
-function cssPatchState(markers) {
-  const html = workbenchHtmlPath();
+function 样式补丁状态(markers) {
+  const html = 工作台HTML路径();
   if (!html) {
     return "unknown";
   }
@@ -451,9 +453,9 @@ function cssPatchState(markers) {
  * @param {import("vscode").ExtensionContext} context
  * @returns {{name: string, copied: string, imported: boolean, importCount: number, patched: string}[]}
  */
-function appearanceStatus(context) {
+function 外观安装状态(context) {
   const imports = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
-  const htmlPath = workbenchHtmlPath();
+  const htmlPath = 工作台HTML路径();
   let html;
   try {
     html = htmlPath ? fs.readFileSync(htmlPath, "utf8") : undefined;
@@ -465,11 +467,11 @@ function appearanceStatus(context) {
     const target = path.join(CSS_DIR, name);
     let source;
     let installed;
-    try { source = cssSource(context, name); } catch { /* 单独报告 */ }
+    try { source = 样式源码(context, name); } catch { /* 单独报告 */ }
     try { installed = fs.readFileSync(target, "utf8"); } catch { /* 单独报告 */ }
     const injected = source === undefined ? undefined :
       (name.endsWith(".js") ? `<script>${source}</script>` : `<style>${source}</style>`);
-    const importCount = imports.filter((value) => cssImportName(context, value) === name).length;
+    const importCount = imports.filter((value) => 识别加载文件(context, value) === name).length;
     const patchCount = [...(patch || "").matchAll(/<(?:style|script)>([\s\S]*?)<\/(?:style|script)>/g)]
       .filter((match) => match[1].includes(CSS_FILES[name]) || match[0] === injected).length;
     return {
@@ -485,28 +487,28 @@ function appearanceStatus(context) {
 }
 
 /** @param {string} value @returns {string} */
-function escapeHtml(value) {
+function 转义HTML(value) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
 }
 
 /** @param {import("vscode").ExtensionContext} context @returns {void} */
-function showAppearanceStatus(context) {
-  const panel = vscode.window.createWebviewPanel("adwcode.appearanceStatus", "AdwCode 外观状态", vscode.ViewColumn.One, { enableScripts: true });
+function 显示外观安装状态(context) {
+  const panel = vscode.window.createWebviewPanel("adwcode.查看外观安装状态", "AdwCode 外观状态", vscode.ViewColumn.One, { enableScripts: true });
   let disposed = false;
   const render = (refreshed = false) => {
-    const rows = appearanceStatus(context);
+    const rows = 外观安装状态(context);
     const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
     const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.importCount === 1 && row.patched === "磁盘补丁已更新");
     const nonce = Math.random().toString(36).slice(2);
     const labels = /** @type {Record<string, string>} */ ({
-      "gnome-look.css": "工作台外观", "controls-close-only.css": "窗口按钮", "gnome-fonts.css": "界面字体", "window-state.js": "窗口状态",
+      "GNOME外观.css": "工作台外观", "仅关闭窗口控件.css": "窗口按钮", "GNOME字体.css": "界面字体", "窗口状态.js": "窗口状态",
     });
     panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
       <style>
         * { box-sizing: border-box; }
-        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-panel-background); font-family: ${uiFontStack()}; line-height: 1.6; }
+        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-panel-background); font-family: ${界面字体栈()}; line-height: 1.6; }
         header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
         h1 { font-size: 24px; line-height: 1.3; margin: 0; } h2 { font-size: 16px; margin: 24px 0 8px; }
         h3 { font-size: 15px; margin: 0 0 4px; } p { margin: 8px 0; }
@@ -532,7 +534,7 @@ function showAppearanceStatus(context) {
       <dl><div class="row"><dt>加载器</dt><dd>Custom CSS and JS Loader：${loader ? "已安装" : "未安装"}</dd></div>
       <div class="row"><dt>当前窗口</dt><dd>无法直接确认是否已加载。磁盘补丁状态与窗口显示分别检查。</dd></div></dl></div></section>
       <section aria-labelledby="files"><h2 id="files">外观组件</h2><div class="files">
-      ${rows.map((row) => `<article><h3>${labels[row.name] || escapeHtml(row.name)}</h3><code class="muted">${escapeHtml(row.name)}</code><dl>
+      ${rows.map((row) => `<article><h3>${labels[row.name] || 转义HTML(row.name)}</h3><code class="muted">${转义HTML(row.name)}</code><dl>
       <div class="row"><dt>安装副本</dt><dd>${row.copied}</dd></div>
       <div class="row"><dt>加载器配置</dt><dd>${row.importCount > 1 ? `重复引用（${row.importCount} 项），请重新安装外观` : row.imported ? "已加入" : "未加入"}</dd></div>
       <div class="row"><dt>磁盘补丁</dt><dd>${row.patched}</dd></div></dl></article>`).join("")}
@@ -548,7 +550,7 @@ function showAppearanceStatus(context) {
   };
   const listener = panel.webview.onDidReceiveMessage(async (message) => {
     if (message === "refresh") {
-      await readSystemFonts();
+      await 读取系统字体();
       if (!disposed) render(true);
     }
   });
@@ -561,15 +563,15 @@ function showAppearanceStatus(context) {
  * @param {string[]} names
  * @returns {Promise<void>}
  */
-async function installCss(context, names) {
+async function 安装样式(context, names) {
   /** @type {string[]} */
   const installed = [];
-  await readSystemFonts();
+  await 读取系统字体();
   try {
     await fs.promises.mkdir(CSS_DIR, { recursive: true });
     for (const name of names) {
       const target = path.join(CSS_DIR, name);
-      await fs.promises.writeFile(target, cssSource(context, name), "utf8");
+      await fs.promises.writeFile(target, 样式源码(context, name), "utf8");
       installed.push(target);
     }
   } catch (error) {
@@ -581,20 +583,20 @@ async function installCss(context, names) {
   const uris = installed.map((file) => vscode.Uri.file(file).toString());
   const markers = names.map((name) => CSS_FILES[name]);
   const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
-  const state = cssPatchState(markers);
+  const state = 样式补丁状态(markers);
 
   if (loader) {
     const config = vscode.workspace.getConfiguration("vscode_custom_css");
     const inspected = config.inspect("imports");
     const imports = /** @type {string[]} */ (inspected?.globalValue ?? inspected?.defaultValue ?? []);
-    const merged = mergeCssImports(context, imports, names);
+    const merged = 合并加载引用(context, imports, names);
     if (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index])) {
       await config.update("imports", merged, vscode.ConfigurationTarget.Global);
     }
     const activeConfig = vscode.workspace.getConfiguration("vscode_custom_css");
     const activeScope = activeConfig.inspect("imports");
     const effective = activeConfig.get("imports", /** @type {string[]} */ ([]));
-    const normalized = mergeCssImports(context, effective, names);
+    const normalized = 合并加载引用(context, effective, names);
     if ((activeScope?.workspaceValue !== undefined || activeScope?.workspaceFolderValue !== undefined) &&
         (normalized.length !== effective.length || normalized.some((value, index) => value !== effective[index]))) {
       await vscode.window.showWarningMessage(
@@ -606,13 +608,13 @@ async function installCss(context, names) {
     const [action, command, message] =
       state === "not-enabled"
         ? [
-            "Enable Custom CSS and JS",
+            "启用外观加载器",
             "extension.installCustomCSS",
             `AdwCode：${names.join("、")} 已配置。请执行一次 “Enable Custom CSS and JS” ` +
               `为 VS Code 打补丁（需要 ${vscode.env.appRoot} 的写权限），然后重载窗口。`,
           ]
         : [
-            "Reload Custom CSS and JS",
+            "重新加载外观",
             "extension.updateCustomCSS",
             `AdwCode：外观文件与加载配置已更新。磁盘补丁${state === "enabled" ? "包含这些组件" : state === "unknown" ? "状态无法确认" : "需要更新"}。` +
               `保存工作后，可重新加载以应用 ${names.join("、")}。`,
@@ -644,18 +646,18 @@ let settingsRunning = false;
  * @param {import("vscode").ExtensionContext} context
  * @returns {Promise<void>}
  */
-async function applyRecommendedSettings(context) {
+async function 应用推荐设置(context) {
   if (settingsRunning) return;
   settingsRunning = true;
   try {
-    await readSystemFonts();
+    await 读取系统字体();
     const candidates = Object.entries({ ...RECOMMENDED_SETTINGS,
-      "editor.fontFamily": systemFonts.mono ? `${quotedFont(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
+      "editor.fontFamily": systemFonts.mono ? `${引用字体名称(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
     });
     /** @type {string[]} */
     const unavailable = [];
     const entries = candidates.filter(([key]) => {
-      const [section, name] = splitSetting(key);
+      const [section, name] = 拆分设置键(key);
       const inspected = vscode.workspace.getConfiguration(section).inspect(name);
       // 旧配置中可能留有未注册的用户键，只把有默认定义的推荐项视为可用。
       if (!inspected || inspected.defaultValue === undefined) {
@@ -681,7 +683,7 @@ async function applyRecommendedSettings(context) {
     /** @type {Record<string, SettingRecord>} */
     const previous = /** @type {Record<string, SettingRecord>} */ (context.globalState.get("adwcode.previousSettings") || {});
     for (const [key, value] of entries) {
-      const [section, name] = splitSetting(key);
+      const [section, name] = 拆分设置键(key);
       const config = vscode.workspace.getConfiguration(section);
       const inspected = config.inspect(name);
       const oldValue = inspected ? inspected.globalValue : undefined;
@@ -693,7 +695,7 @@ async function applyRecommendedSettings(context) {
       await config.update(name, value, vscode.ConfigurationTarget.Global);
     }
 
-    const reloadEnabled = vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
+    const reloadEnabled = vscode.workspace.getConfiguration("adwcode").get("自动重载", false);
     await vscode.window.showInformationMessage(
       "AdwCode：推荐设置已应用。" +
         (reloadEnabled ? "用户级自动重载已关闭，但工作区仍开启了该项，请在工作区设置中关闭。" : "自动重载已关闭。") +
@@ -711,7 +713,7 @@ async function applyRecommendedSettings(context) {
  * @param {import("vscode").ExtensionContext} context
  * @returns {Promise<void>}
  */
-async function revertRecommendedSettings(context) {
+async function 恢复推荐设置(context) {
   if (settingsRunning) return;
   settingsRunning = true;
   try {
@@ -722,7 +724,7 @@ async function revertRecommendedSettings(context) {
       return;
     }
     for (const [key, record] of Object.entries(previous)) {
-      const [section, name] = splitSetting(key);
+      const [section, name] = 拆分设置键(key);
       const target = record && record.wasSet ? record.value : undefined;
       await vscode.workspace.getConfiguration(section).update(
         name,
@@ -745,7 +747,7 @@ async function revertRecommendedSettings(context) {
  * @param {string} key
  * @returns {[string, string]}
  */
-function splitSetting(key) {
+function 拆分设置键(key) {
   const index = key.indexOf(".");
   return [key.slice(0, index), key.slice(index + 1)];
 }
@@ -762,11 +764,11 @@ let reloadGeneration = 0;
  * @param {import("vscode").ExtensionContext} context
  * @returns {Promise<void>}
  */
-async function reloadWithStyles(context) {
+async function 应用样式并重载(context) {
   const generation = reloadGeneration;
-  const allowed = () => extensionContext === context && generation === reloadGeneration && vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
+  const allowed = () => extensionContext === context && generation === reloadGeneration && vscode.workspace.getConfiguration("adwcode").get("自动重载", false);
   if (!allowed()) return;
-  await readSystemFonts();
+  await 读取系统字体();
   if (!allowed()) return;
   try {
     // 加载器读取安装目录中的副本，只同步用户已安装的样式。
@@ -774,7 +776,7 @@ async function reloadWithStyles(context) {
       if (!allowed()) return;
       const target = path.join(CSS_DIR, name);
       if (fs.existsSync(target)) {
-        await fs.promises.writeFile(target, cssSource(context, name), "utf8");
+        await fs.promises.writeFile(target, 样式源码(context, name), "utf8");
       }
     }
   } catch (error) {
@@ -804,7 +806,7 @@ async function reloadWithStyles(context) {
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
  */
-function scheduleReload(context) {
+function 安排重载(context) {
   if (reloadTimer !== undefined) {
     clearTimeout(reloadTimer);
   }
@@ -812,11 +814,11 @@ function scheduleReload(context) {
     reloadTimer = undefined;
     // 加载器会恢复备份并重新写入 HTML，不允许两次更新同时执行。
     if (reloadRunning) {
-      scheduleReload(context);
+      安排重载(context);
       return;
     }
     reloadRunning = true;
-    reloadWithStyles(context).catch(() => undefined).finally(() => {
+    应用样式并重载(context).catch(() => undefined).finally(() => {
       reloadRunning = false;
     });
   }, 1500);
@@ -826,23 +828,23 @@ function scheduleReload(context) {
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
  */
-function startReloadWatchers(context) {
+function 启动文件监视(context) {
   if (reloadWatchers.length > 0) {
     return;
   }
-  for (const pattern of ["extension/extension.js", "extras/*.css", "extras/*.js", "themes/*.json", "package.json"]) {
+  for (const pattern of ["extension/扩展.js", "extras/*.css", "extras/*.js", "themes/*.json", "package.json"]) {
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(context.extensionPath, pattern)
     );
-    watcher.onDidChange(() => scheduleReload(context));
-    watcher.onDidCreate(() => scheduleReload(context));
-    watcher.onDidDelete(() => scheduleReload(context));
+    watcher.onDidChange(() => 安排重载(context));
+    watcher.onDidCreate(() => 安排重载(context));
+    watcher.onDidDelete(() => 安排重载(context));
     reloadWatchers.push(watcher);
   }
 }
 
 /** @returns {void} */
-function stopReloadWatchers() {
+function 停止文件监视() {
   // 即使随后重新开启，也不能恢复上一次已经取消的异步更新。
   reloadGeneration++;
   for (const watcher of reloadWatchers) {
@@ -856,18 +858,18 @@ function stopReloadWatchers() {
 }
 
 /**
- * 按 `adwcode.autoReload` 设置启停文件监视。
+ * 按 `adwcode.自动重载` 设置启停文件监视。
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
  */
-function syncReloadWatchers(context) {
+function 同步文件监视(context) {
   const enabled = /** @type {boolean} */ (
-    vscode.workspace.getConfiguration("adwcode").get("autoReload", false)
+    vscode.workspace.getConfiguration("adwcode").get("自动重载", false)
   );
   if (enabled) {
-    startReloadWatchers(context);
+    启动文件监视(context);
   } else {
-    stopReloadWatchers();
+    停止文件监视();
   }
 }
 
@@ -882,46 +884,46 @@ function activate(context) {
   extensionContext = context;
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("adwcode.appearanceStatus", async () => { await readSystemFonts(); showAppearanceStatus(context); }),
-    vscode.commands.registerCommand("adwcode.syncAccent", () => syncAccent(true)),
-    vscode.commands.registerCommand("adwcode.installGnomeLook", () =>
-      installCss(context, Object.keys(CSS_FILES))
+    vscode.commands.registerCommand("adwcode.查看外观安装状态", async () => { await 读取系统字体(); 显示外观安装状态(context); }),
+    vscode.commands.registerCommand("adwcode.同步强调色", () => 同步强调色(true)),
+    vscode.commands.registerCommand("adwcode.安装GNOME外观", () =>
+      安装样式(context, Object.keys(CSS_FILES))
     ),
-    vscode.commands.registerCommand("adwcode.closeOnlyControls", () =>
-      installCss(context, ["controls-close-only.css"])
+    vscode.commands.registerCommand("adwcode.安装仅关闭窗口控件", () =>
+      安装样式(context, ["仅关闭窗口控件.css"])
     ),
-    vscode.commands.registerCommand("adwcode.applyRecommendedSettings", () =>
-      applyRecommendedSettings(context)
+    vscode.commands.registerCommand("adwcode.应用推荐设置", () =>
+      应用推荐设置(context)
     ),
-    vscode.commands.registerCommand("adwcode.revertRecommendedSettings", () =>
-      revertRecommendedSettings(context)
+    vscode.commands.registerCommand("adwcode.恢复推荐设置", () =>
+      恢复推荐设置(context)
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("adwcode.autoReload")) {
-        syncReloadWatchers(context);
+      if (event.affectsConfiguration("adwcode.自动重载")) {
+        同步文件监视(context);
       }
       if (
         event.affectsConfiguration("workbench.colorTheme") ||
         event.affectsConfiguration("workbench.preferredDarkColorTheme") ||
         event.affectsConfiguration("workbench.preferredLightColorTheme") ||
-        event.affectsConfiguration("adwcode.autoAccent")
+        event.affectsConfiguration("adwcode.自动强调色")
       ) {
-        syncAccent().catch(() => undefined);
+        同步强调色().catch(() => undefined);
       }
     }),
-    { dispose: stopAccentMonitor },
-    { dispose: stopReloadWatchers }
+    { dispose: 停止强调色监听 },
+    { dispose: 停止文件监视 }
   );
 
-  syncAccent().catch(() => undefined);
-  syncReloadWatchers(context);
+  同步强调色().catch(() => undefined);
+  同步文件监视(context);
 }
 
 /** @returns {void} */
 function deactivate() {
   extensionContext = undefined;
-  stopAccentMonitor();
-  stopReloadWatchers();
+  停止强调色监听();
+  停止文件监视();
 }
 
 /** @type {{ activate: typeof activate, deactivate: typeof deactivate }} */

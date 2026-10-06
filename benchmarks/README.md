@@ -10,23 +10,23 @@
 
 ```sh
 meson setup --reconfigure builddir
-meson compile -C builddir performance
+meson compile -C builddir 性能基准
 ```
 
 默认每个命令预热 2 次，采集 20 个新进程样本，保留操作系统文件缓存。
 结果写入 `builddir/performance.json`。也可以增加样本数：
 
 ```sh
-python3.14t benchmarks/run.py --runs 50 --output builddir/performance.json
+python3.14t benchmarks/运行基准.py --次数 50 --输出 builddir/performance.json
 ```
 
-`run.py` 在临时副本中生成主题和 VSIX，不改动已跟踪的仓库产物；采集墙钟时间、子进程
+`运行基准.py` 在临时副本中生成主题和 VSIX，不改动已跟踪的仓库产物；采集墙钟时间、子进程
 CPU 时间与 exec 后的内存高水位。内存每 0.5 ms 采样，短进程可能漏掉最后的峰值。
 准备阶段从 Git 生成固定的 `builddir/CHANGELOG.md`，临时副本显式使用该日志打包。
 生成日志的耗时不计入 VSIX 打包样本，临时副本也不复制 Git 仓库。
 随后只读监听 GNOME 强调色 3 秒，记录 CPU 计数和 RSS，结束后立即停止监听器。
 
-`extension.cjs` 使用真实临时文件和模拟 VS Code API，测量脚本加载、激活与停用、
+`扩展基准.cjs` 使用真实临时文件和模拟 VS Code API，测量脚本加载、激活与停用、
 安装状态读取、状态面板生成和主题名称解析。模拟激活关闭自动强调色和自动重载，
 禁止配置写入、外部命令与子进程。这些数值不能代替真实扩展宿主的完整启动耗时。
 
@@ -36,13 +36,13 @@ CPU 时间与 exec 后的内存高水位。内存每 0.5 ms 采样，短进程�
 
 ```sh
 npm install --prefix /tmp/adwcode-performance-tools playwright-core
-python3.14t benchmarks/ui.py \
-  --playwright /tmp/adwcode-performance-tools/node_modules/playwright-core \
-  --output builddir/performance-ui.json
+python3.14t benchmarks/工作台基准.py \
+  --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
+  --输出 builddir/performance-ui.json
 ```
 
 该命令新建临时用户数据、扩展目录和测试工作区，仅复制本项目扩展。
-如需指定安装路径，可传入 `--code /路径/bin/code`。
+如需指定安装路径，可传入 `--编辑器程序 /路径/bin/code`。
 不执行窗口重载或加载器命令，不修改 VS Code 安装文件或操作者配置；结束后关闭
 测试窗口并清理临时目录。独立窗口可能暂时取得焦点，测试期间避免向它输入内容。
 
@@ -57,21 +57,21 @@ python3.14t benchmarks/ui.py \
 修改前后的配对比较可保存原样式并传入参考文件：
 
 ```sh
-git show c36fdb5:extras/gnome-look.css > builddir/gnome-look-before.css
-python3.14t benchmarks/ui.py \
-  --playwright /tmp/adwcode-performance-tools/node_modules/playwright-core \
-  --reference-css builddir/gnome-look-before.css \
-  --output builddir/performance-fixed-ui.json
+git show c36fdb5:extras/gnome-look.css > builddir/修改前外观.css
+python3.14t benchmarks/工作台基准.py \
+  --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
+  --参考样式 builddir/修改前外观.css \
+  --输出 builddir/performance-fixed-ui.json
 ```
 
-追加 `--scenario scroll --runs 8` 可单独复核滚动，输出到另一个结果文件。
+追加 `--场景 scroll --次数 8` 可单独复核滚动，输出到另一个结果文件。
 
 如需确认非活动样式这一组规则的开销：
 
 ```sh
-python3.14t benchmarks/ui.py \
-  --playwright /tmp/adwcode-performance-tools/node_modules/playwright-core \
-  --selectors-only --output builddir/performance-selectors.json
+python3.14t benchmarks/工作台基准.py \
+  --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
+  --仅选择器 --输出 builddir/performance-selectors.json
 ```
 
 该对照在原生样式、完整 CSS 和临时剔除非活动规则的 CSS 之间交替，不修改源码。

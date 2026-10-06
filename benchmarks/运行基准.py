@@ -139,15 +139,19 @@ def idle_monitor() -> dict[str, float]:
             process.wait()
 
 
-def main() -> None:
+def 入口() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runs", type=int, default=20, help="每个命令的有效样本数")
+    parser.add_argument("--次数", dest="runs", type=int, default=20, help="每个命令的有效样本数")
     parser.add_argument(
-        "--output", type=Path, default=ROOT / "builddir/performance.json", help="原始结果 JSON"
+        "--输出",
+        dest="output",
+        type=Path,
+        default=ROOT / "builddir/performance.json",
+        help="原始结果 JSON",
     )
     args = parser.parse_args()
     if sys.platform != "linux" or args.runs < 5:
-        parser.error("需要 Linux，且 --runs 至少为 5")
+        parser.error("需要 Linux，且 --次数 至少为 5")
     before = fingerprint()
     result: dict[str, Any] = {
         "schema": 1,
@@ -201,23 +205,23 @@ def main() -> None:
             "package.json",
             "README.md",
             "LICENSE",
-            "LICENSING.md",
+            "许可声明.md",
             "CONTRIBUTING.md",
             "AGENTS.md",
         ]:
             shutil.copy2(ROOT / name, clone / name)
         python = sys.executable
         # 先生成固定日志，临时副本不含 Git；准备过程不计入打包测量。
-        subprocess.run([python, str(ROOT / "src/release_notes.py"), "changelog"], check=True)
+        subprocess.run([python, str(ROOT / "src/生成变更日志.py"), "变更日志"], check=True)
         (clone / "builddir").mkdir()
         shutil.copy2(ROOT / "builddir/CHANGELOG.md", clone / "builddir/CHANGELOG.md")
         commands = [
             ("Python 空进程", [python, "-c", "pass"]),
-            ("默认构建（10 个主题，不读取系统）", [python, "src/build.py", "--no-system"]),
-            ("全部强调色构建（26 个主题）", [python, "src/build.py", "--accents", "all"]),
-            ("默认主题校验", [python, "src/build.py", "--check"]),
-            ("CSS 兼容校验", [python, "src/check_css.py"]),
-            ("VSIX 打包", [python, "src/package.py", "--changelog", "builddir/CHANGELOG.md"]),
+            ("默认构建（10 个主题，不读取系统）", [python, "src/生成主题.py", "--不读取系统"]),
+            ("全部强调色构建（26 个主题）", [python, "src/生成主题.py", "--强调色", "全部"]),
+            ("默认主题校验", [python, "src/生成主题.py", "--校验"]),
+            ("CSS 兼容校验", [python, "src/检查样式.py"]),
+            ("VSIX 打包", [python, "src/打包扩展.py", "--变更日志", "builddir/CHANGELOG.md"]),
             (
                 "读取 GNOME 强调色",
                 [
@@ -230,7 +234,7 @@ def main() -> None:
         ]
         for title, command in commands:
             if title == "默认主题校验":
-                sample([python, "src/build.py", "--no-system"], clone)
+                sample([python, "src/生成主题.py", "--不读取系统"], clone)
             for _ in range(2):
                 sample(command, clone)
             samples = [sample(command, clone) for _ in range(args.runs)]
@@ -250,7 +254,7 @@ def main() -> None:
         if not node:
             raise RuntimeError("扩展基准需要 Node.js")
         extension = subprocess.run(
-            [node, "--expose-gc", str(ROOT / "benchmarks/extension.cjs"), str(clone)],
+            [node, "--expose-gc", str(ROOT / "benchmarks/扩展基准.cjs"), str(clone)],
             check=True,
             capture_output=True,
             text=True,
@@ -267,4 +271,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    入口()

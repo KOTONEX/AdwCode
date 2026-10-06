@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def typecheck() -> None:
+def 检查类型() -> None:
     """检查 Python 与 JavaScript；工具缺失时失败，不静默跳过。"""
     tools = {name: shutil.which(name) for name in ("ty", "tsc", "node")}
     missing = [name for name, command in tools.items() if command is None]
@@ -24,7 +24,7 @@ def typecheck() -> None:
     subprocess.run([str(tools["tsc"]), "-p", "tsconfig.json"], cwd=ROOT, check=True)
 
 
-def ruff(*arguments: str) -> None:
+def 调用Ruff(*arguments: str) -> None:
     """按仓库配置检查或格式化全部 Python 文件。"""
     command = shutil.which("ruff")
     if command is None:
@@ -32,18 +32,19 @@ def ruff(*arguments: str) -> None:
     subprocess.run([command, *arguments, "."], cwd=ROOT, check=True)
 
 
-def main() -> int:
+def 入口() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("lint", "typecheck", "format"))
+    parser.add_argument("action", choices=("静态检查", "类型检查", "格式化"))
     args = parser.parse_args()
+    args.action = {"静态检查": "lint", "类型检查": "typecheck", "格式化": "format"}[args.action]
     try:
         if args.action == "format":
-            ruff("format")
+            调用Ruff("format")
         else:
             if args.action == "lint":
-                ruff("check", "--output-format", "concise")
-                ruff("format", "--check", "--output-format", "concise")
-            typecheck()
+                调用Ruff("check", "--output-format", "concise")
+                调用Ruff("format", "--check", "--output-format", "concise")
+            检查类型()
         if args.action == "lint":
             # Ruff 只处理 Python；对其余 JavaScript 文件做无副作用的语法检查。
             node = str(shutil.which("node"))
@@ -66,4 +67,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(入口())

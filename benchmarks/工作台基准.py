@@ -18,26 +18,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def main() -> None:
+def 入口() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--playwright", required=True, type=Path, help="独立安装的 playwright 模块目录"
+        "--浏览器工具",
+        dest="playwright",
+        required=True,
+        type=Path,
+        help="独立安装的 playwright 模块目录",
     )
-    parser.add_argument("--code", type=Path, help="VS Code 的 bin/code 路径")
-    parser.add_argument("--runs", type=int, default=6, help="每个场景每种样式的样本数")
-    parser.add_argument("--output", type=Path, default=ROOT / "builddir/performance-ui.json")
+    parser.add_argument("--编辑器程序", dest="code", type=Path, help="VS Code 的 bin/code 路径")
+    parser.add_argument("--次数", dest="runs", type=int, default=6, help="每个场景每种样式的样本数")
     parser.add_argument(
-        "--selectors-only", action="store_true", help="仅对比非活动状态选择器的开销"
+        "--输出", dest="output", type=Path, default=ROOT / "builddir/performance-ui.json"
     )
-    parser.add_argument("--reference-css", type=Path, help="额外比较修改前的外观 CSS")
     parser.add_argument(
-        "--scenario", choices=["all", "scroll"], default="all", help="单独复核滚动或运行全部场景"
+        "--仅选择器",
+        dest="selectors_only",
+        action="store_true",
+        help="仅对比非活动状态选择器的开销",
+    )
+    parser.add_argument(
+        "--参考样式", dest="reference_css", type=Path, help="额外比较修改前的外观 CSS"
+    )
+    parser.add_argument(
+        "--场景",
+        dest="scenario",
+        choices=["all", "scroll"],
+        default="all",
+        help="单独复核滚动或运行全部场景",
     )
     args = parser.parse_args()
     if args.runs < 4:
-        parser.error("--runs 至少为 4")
+        parser.error("--次数 至少为 4")
     if args.selectors_only and args.scenario != "all":
-        parser.error("--selectors-only 不能与单独滚动场景同时使用")
+        parser.error("--仅选择器 不能与单独滚动场景同时使用")
     code_cli = args.code or Path(shutil.which("code") or "")
     code = code_cli.resolve().parent.parent / "code"
     node = shutil.which("node")
@@ -63,8 +78,8 @@ def main() -> None:
             "workbench.productIconTheme": "adwcode",
             "workbench.startupEditor": "none",
             "window.restoreWindows": "none",
-            "adwcode.autoReload": False,
-            "adwcode.autoAccent": False,
+            "adwcode.自动重载": False,
+            "adwcode.自动强调色": False,
             "security.workspace.trust.enabled": False,
             "telemetry.telemetryLevel": "off",
             "update.mode": "none",
@@ -139,7 +154,7 @@ def main() -> None:
                 subprocess.run(
                     [
                         node,
-                        str(ROOT / "benchmarks/ui.cjs"),
+                        str(ROOT / "benchmarks/工作台基准.cjs"),
                         str(session),
                         str(args.playwright.resolve()),
                         str(args.output),
@@ -161,4 +176,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    入口()

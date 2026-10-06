@@ -20,7 +20,7 @@ import re
 from typing import Literal, TypedDict
 
 
-class BaseColors(TypedDict):
+class 基础颜色(TypedDict):
     """单个明暗模式的基础颜色表（``LIGHT`` / ``DARK``）。"""
 
     window_bg: str
@@ -135,7 +135,7 @@ ANSI: dict[str, str] = {
     "terminal.ansiBrightWhite": PALETTE["light"][2],
 }
 
-LIGHT: BaseColors = {
+LIGHT: 基础颜色 = {
     "window_bg": "#fafafb",
     "view_bg": "#ffffff",
     "headerbar_bg": "#ffffff",
@@ -169,7 +169,7 @@ LIGHT: BaseColors = {
     "warning": ("#e5a50a", "rgb(0 0 0 / 80%)", "#905400"),
 }
 
-DARK: BaseColors = {
+DARK: 基础颜色 = {
     "window_bg": "#222226",
     "view_bg": "#1d1d20",
     "headerbar_bg": "#2e2e32",
@@ -234,7 +234,7 @@ _RGB_RE: re.Pattern[str] = re.compile(
 )
 
 
-def parse_color(color: str) -> tuple[int, int, int, float]:
+def 解析颜色(color: str) -> tuple[int, int, int, float]:
     """解析 ``#rgb``/``#rrggbb``/``#rrggbbaa``/``rgb()``，返回 ``(r, g, b, alpha)``。"""
     color = color.strip()
     if color.startswith("#"):
@@ -262,56 +262,56 @@ def parse_color(color: str) -> tuple[int, int, int, float]:
     return r, g, b, alpha
 
 
-def to_hex(r: float, g: float, b: float, alpha: float = 1.0) -> str:
+def 转为十六进制(r: float, g: float, b: float, alpha: float = 1.0) -> str:
     r, g, b = (min(255, max(0, round(v))) for v in (r, g, b))
     if alpha >= 1.0:
         return f"#{r:02x}{g:02x}{b:02x}"
     return f"#{r:02x}{g:02x}{b:02x}{min(255, max(0, round(alpha * 255))):02x}"
 
 
-def rgba(color: str, alpha: float) -> str:
+def 合成透明颜色(color: str, alpha: float) -> str:
     """在颜色原有的透明度上乘以 ``alpha``。"""
-    r, g, b, base_alpha = parse_color(color)
-    return to_hex(r, g, b, alpha * base_alpha)
+    r, g, b, base_alpha = 解析颜色(color)
+    return 转为十六进制(r, g, b, alpha * base_alpha)
 
 
-def as_hex(color: str) -> str:
+def 规范颜色格式(color: str) -> str:
     """把颜色规范化为 ``#rrggbb`` / ``#rrggbbaa``。
 
     VS Code 主题解析器只接受十六进制，因此 libadwaita 表中的 CSS Color 4 写法
     （如 ``rgb(0 0 6 / 36%)``）必须在写入主题 JSON 之前转换。
     """
-    r, g, b, alpha = parse_color(color)
-    return to_hex(r, g, b, alpha)
+    r, g, b, alpha = 解析颜色(color)
+    return 转为十六进制(r, g, b, alpha)
 
 
-def mix(color_a: str, color_b: str, weight: float) -> str:
+def 混色(color_a: str, color_b: str, weight: float) -> str:
     """把 ``weight`` 份的 ``color_a`` 混入 ``color_b``（两者都必须不透明）。"""
-    ra, ga, ba, aa = parse_color(color_a)
-    rb, gb, bb, ab = parse_color(color_b)
+    ra, ga, ba, aa = 解析颜色(color_a)
+    rb, gb, bb, ab = 解析颜色(color_b)
     if aa < 1 or ab < 1:
         raise ValueError("mix() 要求颜色不透明")
-    return to_hex(
+    return 转为十六进制(
         ra * weight + rb * (1 - weight),
         ga * weight + gb * (1 - weight),
         ba * weight + bb * (1 - weight),
     )
 
 
-def over(color: str, bg: str) -> str:
+def 叠加颜色(color: str, bg: str) -> str:
     """把（可能半透明的）颜色合成到不透明背景之上。"""
-    r, g, b, alpha = parse_color(color)
-    br, bg_, bb, _ = parse_color(bg)
+    r, g, b, alpha = 解析颜色(color)
+    br, bg_, bb, _ = 解析颜色(bg)
     if alpha >= 1.0:
-        return to_hex(r, g, b)
-    return to_hex(
+        return 转为十六进制(r, g, b)
+    return 转为十六进制(
         r * alpha + br * (1 - alpha),
         g * alpha + bg_ * (1 - alpha),
         b * alpha + bb * (1 - alpha),
     )
 
 
-class Palette:
+class 调色板对象:
     """某一（模式, 强调色, 对比度）组合的具体颜色。"""
 
     def __init__(
@@ -334,12 +334,12 @@ class Palette:
         if high_contrast:
             for key, value in HIGH_CONTRAST.items():
                 base[key] = value
-        self.base: BaseColors = base
+        self.base: 基础颜色 = base
         dark = mode == "dark"
 
         fg_raw = "rgb(0 0 6 / 100%)" if high_contrast and not dark else base["fg"]
-        fg_r, fg_g, fg_b, fg_alpha = parse_color(fg_raw)
-        fg = to_hex(fg_r, fg_g, fg_b)
+        fg_r, fg_g, fg_b, fg_alpha = 解析颜色(fg_raw)
+        fg = 转为十六进制(fg_r, fg_g, fg_b)
         border_opacity = base["border_opacity"]
         dim_opacity = base["dim_opacity"]
         disabled_opacity = base["disabled_opacity"]
@@ -354,14 +354,14 @@ class Palette:
         self._c: dict[str, str] = c
 
         # 文本
-        c["fg"] = over(fg_raw, window)
+        c["fg"] = 叠加颜色(fg_raw, window)
         c["fg_window"] = c["fg"]
-        c["fg_view"] = over(fg_raw, view)
-        c["fg_headerbar"] = over(fg_raw, headerbar)
-        c["fg_sidebar"] = over(fg_raw, sidebar)
-        c["fg_sidebar_secondary"] = over(fg_raw, base["secondary_sidebar_bg"])
-        c["fg_card"] = over(fg_raw, c["bg_card"])
-        c["fg_popover"] = over(fg_raw, base["popover_bg"])
+        c["fg_view"] = 叠加颜色(fg_raw, view)
+        c["fg_headerbar"] = 叠加颜色(fg_raw, headerbar)
+        c["fg_sidebar"] = 叠加颜色(fg_raw, sidebar)
+        c["fg_sidebar_secondary"] = 叠加颜色(fg_raw, base["secondary_sidebar_bg"])
+        c["fg_card"] = 叠加颜色(fg_raw, c["bg_card"])
+        c["fg_popover"] = 叠加颜色(fg_raw, base["popover_bg"])
 
         # 交互表面（libadwaita 的按钮/列表行使用 currentColor 的 7-15%）
         for name, bg in (
@@ -372,32 +372,34 @@ class Palette:
             ("popover", base["popover_bg"]),
             ("card", c["bg_card"]),
         ):
-            c[f"bg_hover_{name}"] = over(rgba(fg_raw, 0.07), bg)
-            c[f"bg_active_{name}"] = over(rgba(fg_raw, 0.12), bg)
-            c[f"fg_dim_{name}"] = over(rgba(fg_raw, dim_opacity), bg)
-            c[f"fg_disabled_{name}"] = over(rgba(fg_raw, disabled_opacity), bg)
+            c[f"bg_hover_{name}"] = 叠加颜色(合成透明颜色(fg_raw, 0.07), bg)
+            c[f"bg_active_{name}"] = 叠加颜色(合成透明颜色(fg_raw, 0.12), bg)
+            c[f"fg_dim_{name}"] = 叠加颜色(合成透明颜色(fg_raw, dim_opacity), bg)
+            c[f"fg_disabled_{name}"] = 叠加颜色(合成透明颜色(fg_raw, disabled_opacity), bg)
         c["bg_hover"] = c["bg_hover_window"]
         c["bg_active"] = c["bg_active_window"]
         c["fg_dim"] = c["fg_dim_window"]
         c["fg_disabled"] = c["fg_disabled_window"]
-        c["fg_placeholder"] = over(rgba(fg_raw, disabled_opacity), view)
-        c["bg_button"] = over(rgba(fg_raw, 0.10), window)
-        c["bg_button_headerbar"] = over(rgba(fg_raw, 0.10), headerbar)
-        c["bg_button_view"] = over(rgba(fg_raw, 0.10), view)
-        c["bg_button_sidebar"] = over(rgba(fg_raw, 0.10), sidebar)
-        c["bg_button_hover"] = over(rgba(fg_raw, 0.13), window)
-        c["bg_button_active"] = over(rgba(fg_raw, 0.16), window)
-        c["bg_input"] = view if not dark else over(rgba(fg_raw, 0.07), view)
-        c["bg_input_hover"] = over(rgba(fg_raw, 0.10), c["bg_input"])
-        c["bg_input_disabled"] = over(rgba(fg_raw, 0.05), c["bg_input"])
+        c["fg_placeholder"] = 叠加颜色(合成透明颜色(fg_raw, disabled_opacity), view)
+        c["bg_button"] = 叠加颜色(合成透明颜色(fg_raw, 0.10), window)
+        c["bg_button_headerbar"] = 叠加颜色(合成透明颜色(fg_raw, 0.10), headerbar)
+        c["bg_button_view"] = 叠加颜色(合成透明颜色(fg_raw, 0.10), view)
+        c["bg_button_sidebar"] = 叠加颜色(合成透明颜色(fg_raw, 0.10), sidebar)
+        c["bg_button_hover"] = 叠加颜色(合成透明颜色(fg_raw, 0.13), window)
+        c["bg_button_active"] = 叠加颜色(合成透明颜色(fg_raw, 0.16), window)
+        c["bg_input"] = view if not dark else 叠加颜色(合成透明颜色(fg_raw, 0.07), view)
+        c["bg_input_hover"] = 叠加颜色(合成透明颜色(fg_raw, 0.10), c["bg_input"])
+        c["bg_input_disabled"] = 叠加颜色(合成透明颜色(fg_raw, 0.05), c["bg_input"])
 
         # 边框
-        c["border"] = rgba(fg_raw, border_opacity)
-        c["border_strong"] = rgba(fg_raw, max(border_opacity, 0.5))
-        c["border_dim"] = rgba(fg_raw, border_opacity * 0.6)
-        c["border_input"] = rgba(fg_raw, max(border_opacity, 0.25))
-        c["border_input_focus"] = rgba(ACCENT_COLORS[accent][0], 0.5 if not high_contrast else 1.0)
-        c["border_tab"] = rgba(fg_raw, border_opacity)
+        c["border"] = 合成透明颜色(fg_raw, border_opacity)
+        c["border_strong"] = 合成透明颜色(fg_raw, max(border_opacity, 0.5))
+        c["border_dim"] = 合成透明颜色(fg_raw, border_opacity * 0.6)
+        c["border_input"] = 合成透明颜色(fg_raw, max(border_opacity, 0.25))
+        c["border_input_focus"] = 合成透明颜色(
+            ACCENT_COLORS[accent][0], 0.5 if not high_contrast else 1.0
+        )
+        c["border_tab"] = 合成透明颜色(fg_raw, border_opacity)
         c["contrast_border"] = fg
 
         # 阴影色（转为十六进制：VS Code 只接受 #rrggbb / #rrggbbaa）
@@ -413,12 +415,12 @@ class Palette:
             "popover_shade",
         )
         for name in shade_keys:
-            c[name] = as_hex(base[name])
-        c["scrollbar_outline"] = as_hex(base["scrollbar_outline"])
+            c[name] = 规范颜色格式(base[name])
+        c["scrollbar_outline"] = 规范颜色格式(base["scrollbar_outline"])
 
         # 滚动条：currentColor 20%（悬停 60%，激活 100%，对应 Adwaita 悬浮滚动条）
-        c["scrollbar"] = rgba(fg_raw, 0.40 if self.high_contrast else 0.20)
-        c["scrollbar_hover"] = rgba(fg_raw, 0.60)
+        c["scrollbar"] = 合成透明颜色(fg_raw, 0.40 if self.high_contrast else 0.20)
+        c["scrollbar_hover"] = 合成透明颜色(fg_raw, 0.60)
         c["scrollbar_active"] = fg
 
         # 强调色
@@ -429,14 +431,14 @@ class Palette:
         c["accent_standalone"] = accent_standalone_dark if dark else accent_standalone_light
         # mix 的权重属于第一个颜色；悬停及按下仍以强调色为主体。
         c["accent_hover"] = (
-            mix(accent_bg, "#ffffff", 0.85) if dark else mix(accent_bg, "#000000", 0.88)
+            混色(accent_bg, "#ffffff", 0.85) if dark else 混色(accent_bg, "#000000", 0.88)
         )
         c["accent_active"] = (
-            mix(accent_bg, "#ffffff", 0.75) if dark else mix(accent_bg, "#000000", 0.80)
+            混色(accent_bg, "#ffffff", 0.75) if dark else 混色(accent_bg, "#000000", 0.80)
         )
         for name, bg in (("view", view), ("window", window), ("sidebar", sidebar)):
-            c[f"accent_soft_{name}"] = over(rgba(accent_bg, 0.25), bg)
-            c[f"accent_faint_{name}"] = over(rgba(accent_bg, 0.15), bg)
+            c[f"accent_soft_{name}"] = 叠加颜色(合成透明颜色(accent_bg, 0.25), bg)
+            c[f"accent_faint_{name}"] = 叠加颜色(合成透明颜色(accent_bg, 0.15), bg)
         c["accent_soft"] = c["accent_soft_view"]
         c["accent_faint"] = c["accent_faint_view"]
 
@@ -449,7 +451,7 @@ class Palette:
         for name in status_keys:
             bg, fg_status, standalone = base[name]
             c[f"{name}_bg"] = bg
-            c[f"{name}_fg"] = over(fg_status, bg)
+            c[f"{name}_fg"] = 叠加颜色(fg_status, bg)
             c[f"{name}_standalone"] = standalone
         c["error_bg"] = c["destructive_bg"]
         c["error_fg"] = c["destructive_fg"]
@@ -459,7 +461,9 @@ class Palette:
         scheme = self.scheme
         c["editor_bg"] = scheme.get("text_bg") or view
         c["editor_fg"] = scheme.get("text_fg") or c["fg_view"]
-        c["editor_line_highlight"] = scheme.get("current_line") or over(rgba(fg_raw, 0.05), view)
+        c["editor_line_highlight"] = scheme.get("current_line") or 叠加颜色(
+            合成透明颜色(fg_raw, 0.05), view
+        )
         c["editor_line_number"] = scheme.get("line_numbers_fg") or c["fg_dim_view"]
         c["editor_line_number_bg"] = scheme.get("line_numbers_bg") or c["editor_bg"]
         c["editor_cursor"] = scheme.get("cursor") or c["accent_standalone"]
@@ -468,27 +472,33 @@ class Palette:
         c["editor_background_pattern"] = scheme.get("background_pattern") or c["editor_bg"]
 
         # 由强调色推导的编辑器交互色
-        c["selection"] = over(rgba(accent_bg, 0.25), c["editor_bg"])
-        c["selection_inactive"] = over(rgba(accent_bg, 0.15), c["editor_bg"])
-        c["selection_highlight"] = over(rgba(accent_bg, 0.15), c["editor_bg"])
-        c["word_highlight"] = over(rgba(accent_bg, 0.20), c["editor_bg"])
-        c["word_highlight_strong"] = over(rgba(accent_bg, 0.30), c["editor_bg"])
-        c["find_match"] = over(rgba(accent_bg, 0.35), c["editor_bg"])
-        c["find_match_highlight"] = over(rgba(accent_bg, 0.20), c["editor_bg"])
-        c["bracket_match"] = over(rgba(accent_bg, 0.30), c["editor_bg"])
+        c["selection"] = 叠加颜色(合成透明颜色(accent_bg, 0.25), c["editor_bg"])
+        c["selection_inactive"] = 叠加颜色(合成透明颜色(accent_bg, 0.15), c["editor_bg"])
+        c["selection_highlight"] = 叠加颜色(合成透明颜色(accent_bg, 0.15), c["editor_bg"])
+        c["word_highlight"] = 叠加颜色(合成透明颜色(accent_bg, 0.20), c["editor_bg"])
+        c["word_highlight_strong"] = 叠加颜色(合成透明颜色(accent_bg, 0.30), c["editor_bg"])
+        c["find_match"] = 叠加颜色(合成透明颜色(accent_bg, 0.35), c["editor_bg"])
+        c["find_match_highlight"] = 叠加颜色(合成透明颜色(accent_bg, 0.20), c["editor_bg"])
+        c["bracket_match"] = 叠加颜色(合成透明颜色(accent_bg, 0.30), c["editor_bg"])
         c["bracket_border"] = c["accent_standalone"]
-        c["indent_guide"] = rgba(fg_raw, max(border_opacity, 0.15))
-        c["indent_guide_active"] = rgba(fg_raw, 0.30)
-        c["editor_ruler"] = rgba(fg_raw, 0.15)
+        c["indent_guide"] = 合成透明颜色(fg_raw, max(border_opacity, 0.15))
+        c["indent_guide_active"] = 合成透明颜色(fg_raw, 0.30)
+        c["editor_ruler"] = 合成透明颜色(fg_raw, 0.15)
 
         # 差异 / 合并
-        c["diff_inserted"] = over(rgba(c["success_standalone"], 0.35), c["editor_bg"])
-        c["diff_removed"] = over(rgba(c["destructive_standalone"], 0.35), c["editor_bg"])
-        c["diff_inserted_bg"] = over(rgba(c["success_standalone"], 0.15), c["editor_bg"])
-        c["diff_removed_bg"] = over(rgba(c["destructive_standalone"], 0.15), c["editor_bg"])
+        c["diff_inserted"] = 叠加颜色(合成透明颜色(c["success_standalone"], 0.35), c["editor_bg"])
+        c["diff_removed"] = 叠加颜色(
+            合成透明颜色(c["destructive_standalone"], 0.35), c["editor_bg"]
+        )
+        c["diff_inserted_bg"] = 叠加颜色(
+            合成透明颜色(c["success_standalone"], 0.15), c["editor_bg"]
+        )
+        c["diff_removed_bg"] = 叠加颜色(
+            合成透明颜色(c["destructive_standalone"], 0.15), c["editor_bg"]
+        )
         c["diff_base"] = c["editor_bg"]
 
-    def _surfaces(self, base: BaseColors, window: str) -> dict[str, str]:
+    def _surfaces(self, base: 基础颜色, window: str) -> dict[str, str]:
         return {
             "bg_window": window,
             "bg_view": base["view_bg"],
@@ -498,7 +508,7 @@ class Palette:
             "bg_sidebar_backdrop": base["sidebar_backdrop"],
             "bg_sidebar_secondary": base["secondary_sidebar_bg"],
             "bg_sidebar_secondary_backdrop": base["secondary_sidebar_backdrop"],
-            "bg_card": over(base["card_bg"], window),
+            "bg_card": 叠加颜色(base["card_bg"], window),
             "bg_popover": base["popover_bg"],
             "bg_dialog": base["dialog_bg"],
             "bg_overview": base["overview_bg"],
@@ -514,9 +524,9 @@ class Palette:
     def get(self, role: str, default: str | None = None) -> str | None:
         return self._c.get(role, default)
 
-    def over(self, color: str, weight: float, surface: str) -> str:
+    def 叠加颜色(self, color: str, weight: float, surface: str) -> str:
         """把颜色的 ``weight`` 比例合成到具名表面之上。"""
-        return over(rgba(color, weight), self._c[surface])
+        return 叠加颜色(合成透明颜色(color, weight), self._c[surface])
 
     def roles(self) -> dict[str, str]:
         return dict(self._c)

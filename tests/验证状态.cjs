@@ -55,46 +55,46 @@ const sandbox = {
   clearTimeout,
 };
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension/extension.js"), "utf8"), sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "../extension/扩展.js"), "utf8"), sandbox);
 const context = { extensionPath: "/repo" };
-let rows = sandbox.appearanceStatus(context);
+let rows = sandbox.外观安装状态(context);
 assert.equal(rows[0].copied, "源文件不可读");
 assert.equal(rows[0].patched, "无法读取");
 const html = "/app/out/vs/code/electron-browser/workbench/workbench.esm.html";
 let patch = "<!-- !! VSCODE-CUSTOM-CSS-START !! -->";
 for (const row of rows) {
   files.set(`/repo/extras/${row.name}`, `内容：${row.name}`);
-  const content = sandbox.cssSource(context, row.name);
+  const content = sandbox.样式源码(context, row.name);
   files.set(`/user/.config/adwcode/${row.name}`, content);
   imports.push(`file:///user/.config/adwcode/${row.name}`);
   patch += row.name.endsWith(".js") ? `<script>${content}</script>` : `<style>${content}</style>`;
 }
 patch += "<!-- !! VSCODE-CUSTOM-CSS-END !! -->";
 files.set(html, patch);
-rows = sandbox.appearanceStatus(context);
+rows = sandbox.外观安装状态(context);
 assert.ok(rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新"));
 // 未包在加载器标记内的内容不能被误判为已注入。
 files.set(html, patch.replace(/<!--.*?-->/g, ""));
-assert.ok(sandbox.appearanceStatus(context).every((row) => row.patched === "未注入当前版本"));
+assert.ok(sandbox.外观安装状态(context).every((row) => row.patched === "未注入当前版本"));
 files.set(html, patch);
 // 开发时允许直接加载仓库源码，URI 中的非 ASCII 字符可以编码。
 imports = rows.map((row) => `file:///repo/extras/${row.name}`);
-assert.ok(sandbox.appearanceStatus(context).every((row) => row.imported));
+assert.ok(sandbox.外观安装状态(context).every((row) => row.imported));
 imports.push("不是有效的 URI");
-assert.ok(sandbox.appearanceStatus(context).every((row) => row.imported));
+assert.ok(sandbox.外观安装状态(context).every((row) => row.imported));
 // 源文件和副本同时引用时，不能宣称安装已经就绪。
-imports.push("file:///user/.config/adwcode/gnome-look.css");
-assert.equal(sandbox.appearanceStatus(context)[0].importCount, 2);
-sandbox.showAppearanceStatus(context);
+imports.push("file:///user/.config/adwcode/GNOME外观.css");
+assert.equal(sandbox.外观安装状态(context)[0].importCount, 2);
+sandbox.显示外观安装状态(context);
 assert.ok(panel.webview.html.includes("重复引用（2 项）"));
 assert.ok(!panel.webview.html.includes("文件与补丁均已就绪"));
-files.set(html, patch.replace("<!-- !! VSCODE-CUSTOM-CSS-END !! -->", "<style>内容：gnome-look.css</style><!-- !! VSCODE-CUSTOM-CSS-END !! -->"));
-assert.equal(sandbox.appearanceStatus(context)[0].patched, "重复注入，补丁待更新");
+files.set(html, patch.replace("<!-- !! VSCODE-CUSTOM-CSS-END !! -->", "<style>内容：GNOME外观.css</style><!-- !! VSCODE-CUSTOM-CSS-END !! -->"));
+assert.equal(sandbox.外观安装状态(context)[0].patched, "重复注入，补丁待更新");
 files.set(html, patch);
 imports.pop();
-sandbox.showAppearanceStatus(context);
+sandbox.显示外观安装状态(context);
 assert.ok(panel.webview.html.includes("文件与补丁均已就绪"));
-files.set("/repo/extras/gnome-look.css", "新样式");
+files.set("/repo/extras/GNOME外观.css", "新样式");
 await receive("refresh");
 assert.ok(panel.webview.html.includes("副本待更新"));
 assert.ok(panel.webview.html.includes("状态已刷新。"));
@@ -102,7 +102,7 @@ assert.ok(panel.webview.html.includes("button.focus();"));
 assert.ok(!panel.webview.html.includes("<table>"));
 assert.ok(panel.webview.html.includes("未注入当前版本"));
 imports = [];
-rows = sandbox.appearanceStatus(context);
+rows = sandbox.外观安装状态(context);
 assert.ok(rows.every((row) => !row.imported));
 disposed();
 assert.ok(listenerDisposed);
@@ -110,17 +110,18 @@ assert.ok(listenerDisposed);
 console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
 
 // 合并只处理本次安装的项目文件；保留其他来源、无效 URI 及原有顺序。
-const mixed = ["file:///other/custom.css", "file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/gnome-look.css", "不是有效的 URI", "file:///other/gnome-look.css", "file:///repo/extras/gnome-menu.js", "file:///repo/extras/gnome-fonts.css"];
-const merged = sandbox.mergeCssImports(context, mixed, ["gnome-look.css", "controls-close-only.css"]);
-assert.deepEqual(Array.from(merged), ["file:///other/custom.css", "file:///user/.config/adwcode/gnome-look.css", "不是有效的 URI", "file:///other/gnome-look.css", "file:///repo/extras/gnome-fonts.css", "file:///user/.config/adwcode/controls-close-only.css"]);
-assert.deepEqual(Array.from(sandbox.mergeCssImports(context, merged, ["gnome-look.css", "controls-close-only.css"])), Array.from(merged));
-assert.equal(sandbox.cssImportName({ extensionPath: "/项目" }, "file:///" + encodeURIComponent("项目") + "/extras/gnome-look.css"), "gnome-look.css");
-assert.equal(sandbox.cssImportName(context, "https://example.org/gnome-look.css"), undefined);
+const mixed = ["file:///other/custom.css", "file:///repo/extras/GNOME外观.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/extras/gnome-menu.js", "file:///repo/extras/GNOME字体.css"];
+mixed.push("file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/window-state.js");
+const merged = sandbox.合并加载引用(context, mixed, ["GNOME外观.css", "仅关闭窗口控件.css"]);
+assert.deepEqual(Array.from(merged), ["file:///other/custom.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/extras/GNOME字体.css", "file:///user/.config/adwcode/仅关闭窗口控件.css"]);
+assert.deepEqual(Array.from(sandbox.合并加载引用(context, merged, ["GNOME外观.css", "仅关闭窗口控件.css"])), Array.from(merged));
+assert.equal(sandbox.识别加载文件({ extensionPath: "/项目" }, "file:///" + encodeURIComponent("项目") + "/extras/GNOME外观.css"), "GNOME外观.css");
+assert.equal(sandbox.识别加载文件(context, "https://example.org/GNOME外观.css"), undefined);
 
 // 安装命令应调用去重逻辑；拒绝补丁按钮时不执行任何外部命令。
 let updates = 0;
 let workspaceImports;
-imports = ["file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/gnome-look.css"];
+imports = ["file:///repo/extras/GNOME外观.css", "file:///user/.config/adwcode/GNOME外观.css"];
 vscode.ConfigurationTarget = { Global: 1 };
 vscode.workspace.getConfiguration = () => ({
   get: (key, fallback) => key === "imports" ? workspaceImports || imports : fallback,
@@ -133,18 +134,18 @@ sandbox.mockFs.promises = {
 };
 vscode.window.showInformationMessage = async () => undefined;
 vscode.commands = { async executeCommand() { throw Error("禁止真实命令"); } };
-await sandbox.installCss(context, ["gnome-look.css"]);
+await sandbox.安装样式(context, ["GNOME外观.css"]);
 assert.equal(updates, 1);
-assert.deepEqual(Array.from(imports), ["file:///user/.config/adwcode/gnome-look.css"]);
-await sandbox.installCss(context, ["gnome-look.css"]);
+assert.deepEqual(Array.from(imports), ["file:///user/.config/adwcode/GNOME外观.css"]);
+await sandbox.安装样式(context, ["GNOME外观.css"]);
 assert.equal(updates, 1);
 // 工作区覆盖不能被复制到用户设置；不向错误的有效加载项发送补丁命令。
 imports = ["file:///other/user.css"];
 workspaceImports = ["file:///other/workspace.css"];
 let warnings = [];
 vscode.window.showWarningMessage = async message => { warnings.push(message); };
-await sandbox.installCss(context, ["gnome-look.css"]);
-assert.deepEqual(Array.from(imports), ["file:///other/user.css", "file:///user/.config/adwcode/gnome-look.css"]);
+await sandbox.安装样式(context, ["GNOME外观.css"]);
+assert.deepEqual(Array.from(imports), ["file:///other/user.css", "file:///user/.config/adwcode/GNOME外观.css"]);
 assert.deepEqual(workspaceImports, ["file:///other/workspace.css"]);
 assert.ok(warnings.some(message => message.includes("工作区")));
 workspaceImports = undefined;
@@ -153,34 +154,34 @@ let copied;
 const getExtension = vscode.extensions.getExtension;
 vscode.extensions.getExtension = () => undefined;
 vscode.env.clipboard = { async writeText(text) { copied = text; } };
-await sandbox.installCss(context, ["gnome-look.css"]);
-assert.deepEqual(JSON.parse("{" + copied + "}")["vscode_custom_css.imports"], ["file:///user/.config/adwcode/gnome-look.css"]);
+await sandbox.安装样式(context, ["GNOME外观.css"]);
+assert.deepEqual(JSON.parse("{" + copied + "}")["vscode_custom_css.imports"], ["file:///user/.config/adwcode/GNOME外观.css"]);
 vscode.extensions.getExtension = getExtension;
 console.log("CSS 安装：源码与副本去重、用户加载项保留和重复安装测试通过");
 
-assert.equal(sandbox.pangoFamily("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");
-assert.equal(sandbox.pangoFamily("'Adwaita Sans Bold Italic 10.5'"), "Adwaita Sans");
-assert.equal(sandbox.pangoFamily("无效描述"), undefined);
-assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('</style>'));
-assert.ok(!sandbox.quotedFont('字体"</style>\n').includes('\n'));
+assert.equal(sandbox.解析Pango字体("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");
+assert.equal(sandbox.解析Pango字体("'Adwaita Sans Bold Italic 10.5'"), "Adwaita Sans");
+assert.equal(sandbox.解析Pango字体("无效描述"), undefined);
+assert.ok(!sandbox.引用字体名称('字体"</style>\n').includes('</style>'));
+assert.ok(!sandbox.引用字体名称('字体"</style>\n').includes('\n'));
 // 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
 await (async () => {
-  assert.equal(sandbox.parseTheme("AdwCode Dark High Contrast"), undefined);
-  assert.equal(sandbox.parseTheme("AdwCode 深色 高对比度"), undefined);
-  assert.equal(sandbox.parseTheme("AdwCode Dark").kind, "dark");
-  assert.equal(sandbox.parseTheme("AdwCode 深色").accent, "blue");
-  const variant = sandbox.parseTheme("AdwCode 青色 浅色 · 彩色状态栏");
+  assert.equal(sandbox.解析主题("AdwCode Dark High Contrast"), undefined);
+  assert.equal(sandbox.解析主题("AdwCode 深色 高对比度"), undefined);
+  assert.equal(sandbox.解析主题("AdwCode Dark"), undefined);
+  assert.equal(sandbox.解析主题("AdwCode 深色").accent, "blue");
+  const variant = sandbox.解析主题("AdwCode 青色 浅色 · 彩色状态栏");
   assert.equal(variant.kind, "light");
   assert.equal(variant.accent, "teal");
   assert.equal(variant.suffix, " · 彩色状态栏");
   // 第三方的 Adwaita 标签不能被当作本项目主题处理。
-  assert.equal(sandbox.parseTheme("Adwaita Dark"), undefined);
-  assert.equal(sandbox.labelFor("teal", "light", variant.suffix,
+  assert.equal(sandbox.解析主题("Adwaita Dark"), undefined);
+  assert.equal(sandbox.查找主题标签("teal", "light", variant.suffix,
     new Set(["AdwCode 青色 浅色 · 彩色状态栏"])), "AdwCode 青色 浅色 · 彩色状态栏");
-  assert.equal(sandbox.labelFor("teal", "light", variant.suffix,
+  assert.equal(sandbox.查找主题标签("teal", "light", variant.suffix,
     new Set(["AdwCode 浅色"])), "AdwCode 浅色");
-  await sandbox.readSystemFonts();
-  const generated = sandbox.cssSource(context, "gnome-fonts.css");
+  await sandbox.读取系统字体();
+  const generated = sandbox.样式源码(context, "GNOME字体.css");
   assert.ok(generated.includes('"更纱黑体 UI SC"'));
   assert.ok(generated.includes('system-ui, sans-serif'));
   sandbox.testContext = context;
@@ -201,15 +202,15 @@ await (async () => {
       if (command === "workbench.action.reloadWindow") reloads++;
     },
   };
-  await sandbox.reloadWithStyles(context);
+  await sandbox.应用样式并重载(context);
   assert.equal(errors, 1);
   assert.equal(reloads, 0);
   failUpdate = false;
   enabled = false;
-  await sandbox.reloadWithStyles(context);
+  await sandbox.应用样式并重载(context);
   assert.equal(reloads, 0);
   enabled = true;
-  await sandbox.reloadWithStyles(context);
+  await sandbox.应用样式并重载(context);
   assert.equal(reloads, 1);
   // 在异步复制期间关闭或停用，不能继续调用加载器或重载。
   for (const action of ["disable", "deactivate", "re-enable"]) {
@@ -222,7 +223,7 @@ await (async () => {
       else if (action === "deactivate") sandbox.deactivate();
       else {
         enabled = false;
-        sandbox.stopReloadWatchers();
+        sandbox.停止文件监视();
         enabled = true;
       }
       await Promise.resolve();
@@ -231,7 +232,7 @@ await (async () => {
       if (command === "extension.updateCustomCSS") loaderCalls++;
       if (command === "workbench.action.reloadWindow") reloads++;
     };
-    await sandbox.reloadWithStyles(context);
+    await sandbox.应用样式并重载(context);
     assert.equal(loaderCalls, 0, action);
     assert.equal(reloads, 1, action);
   }
@@ -242,7 +243,7 @@ await (async () => {
   let cleared = false;
   sandbox.setTimeout = (fn) => { callback = fn; return 123; };
   sandbox.clearTimeout = (timer) => { cleared = timer === 123; };
-  sandbox.scheduleReload(context);
+  sandbox.安排重载(context);
   assert.equal(typeof callback, "function");
   // 未完成的加载器更新期间，下一次触发应继续防抖，不并发修改补丁。
   let finishUpdate;
@@ -256,7 +257,7 @@ await (async () => {
   callback();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(updates, 1);
-  sandbox.scheduleReload(context);
+  sandbox.安排重载(context);
   callback();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(updates, 1);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 //
-// Node 运行时与环境的最小类型面：只声明 extension/extension.js 用到的 API。
+// Node 运行时与环境的最小类型面：只声明 extension/扩展.js 用到的 API。
 // 官方 @types/node 不在本仓库依赖中。
 
 declare function require(id: string): any;

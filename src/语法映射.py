@@ -19,10 +19,10 @@ from pathlib import Path
 from typing import Literal, TypedDict
 from xml.etree.ElementTree import parse
 
-from palette import to_hex
+from 调色板 import 转为十六进制
 
 
-class StyleInfo(TypedDict):
+class 样式信息(TypedDict):
     """GtkSourceView ``<style>`` 元素解析后的颜色与字体样式。"""
 
     foreground: str | None
@@ -30,14 +30,14 @@ class StyleInfo(TypedDict):
     fontStyle: str
 
 
-class Scheme(TypedDict):
+class 样式方案(TypedDict):
     """解析后的 GtkSourceView 方案。"""
 
     named: dict[str, str | None]
-    styles: dict[str, StyleInfo]
+    styles: dict[str, 样式信息]
 
 
-class TokenRule(TypedDict):
+class 语法规则(TypedDict):
     """TextMate 规则：Builder 生成，或随附的 VS Code 默认主题。
 
     后者常把 ``scope`` 写成单个字符串，因此这里同时接受两种形态。
@@ -324,7 +324,7 @@ _RGBA_RE: re.Pattern[str] = re.compile(
 )
 
 
-def load_scheme(mode: str) -> Scheme:
+def 加载样式方案(mode: str) -> 样式方案:
     """解析随附的 GtkSourceView 方案并解析其中的具名颜色。"""
     path = XML_DIR / ("Adwaita-dark.xml" if mode == "dark" else "Adwaita.xml")
     root = parse(path).getroot()
@@ -340,14 +340,14 @@ def load_scheme(mode: str) -> Scheme:
         match = _RGBA_RE.fullmatch(value)
         if match:
             r, g, b, a = (float(part) for part in match.groups())
-            return to_hex(int(r), int(g), int(b), a)
+            return 转为十六进制(int(r), int(g), int(b), a)
         if value.startswith("#"):
             return value.lower()
         if value in named:
             return resolve(named[value])
         raise KeyError(f"{path.name} 中存在未知颜色名称 {value!r}")
 
-    styles: dict[str, StyleInfo] = {}
+    styles: dict[str, 样式信息] = {}
     for style in root.findall("style"):
         name = style.get("name")
         if name is None:
@@ -365,9 +365,9 @@ def load_scheme(mode: str) -> Scheme:
     return {"named": named, "styles": styles}
 
 
-def editor_colors(mode: str) -> dict[str, str | None]:
+def 编辑器颜色(mode: str) -> dict[str, str | None]:
     """供 :class:`palette.Palette` 使用的编辑器表面颜色。"""
-    styles = load_scheme(mode)["styles"]
+    styles = 加载样式方案(mode)["styles"]
 
     def style(name: str, key: Literal["foreground", "background"]) -> str | None:
         info = styles.get(name)
@@ -386,10 +386,10 @@ def editor_colors(mode: str) -> dict[str, str | None]:
     }
 
 
-def token_colors(mode: str) -> list[TokenRule]:
+def 语法颜色(mode: str) -> list[语法规则]:
     """Builder 语法高亮的 TextMate 规则。"""
-    styles = load_scheme(mode)["styles"]
-    rules: list[TokenRule] = []
+    styles = 加载样式方案(mode)["styles"]
+    rules: list[语法规则] = []
     for style_name, scopes in MAP.items():
         if not scopes:
             continue
@@ -407,9 +407,9 @@ def token_colors(mode: str) -> list[TokenRule]:
     return rules
 
 
-def semantic_token_colors(mode: str) -> dict[str, str | None]:
+def 语义标记颜色(mode: str) -> dict[str, str | None]:
     """映射到 Builder 方案颜色的语义高亮。"""
-    styles = load_scheme(mode)["styles"]
+    styles = 加载样式方案(mode)["styles"]
 
     def color(name: str, fallback: str | None = None) -> str | None:
         info = styles.get(name)

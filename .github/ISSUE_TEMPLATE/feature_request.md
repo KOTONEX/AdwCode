@@ -13,4 +13,4 @@ labels: ["enhancement"]
 
 ## 建议实现位置
 
-<!-- 颜色键在 src/mapping.py；几何与形状在 extras/*.css；语法高亮在 src/tokens.py 与 src/gtksourceview_xml/。 -->
+<!-- 颜色键在 src/界面映射.py；几何与形状在 extras/*.css；语法高亮在 src/语法映射.py 与 src/gtksourceview_xml/。 -->

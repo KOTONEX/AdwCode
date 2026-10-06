@@ -12,7 +12,7 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 | [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成导入的单色字体或备用自有字体时需要，见产品图标说明 |
 | [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅再生成资产时处理描边、裁切与字重内缩 |
 | [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
-| VS Code | 供 `python3.14t src/check_css.py` 对照已安装的构建检查 `extras/*.css` |
+| VS Code | 供 `python3.14t src/检查样式.py` 对照已安装的构建检查 `extras/*.css` |
 
 ## 常用命令
 
@@ -24,19 +24,19 @@ uv python install 3.14t
 python3.14t -m pip install meson ninja ty ruff==0.16.9
 npm install -g typescript
 meson setup builddir
-meson compile -C builddir themes    # 生成主题并同步清单
-meson compile -C builddir lint      # Ruff 检查、格式检查及类型检查
-meson compile -C builddir format    # Ruff 格式化全部 Python 文件
-meson compile -C builddir check     # 主题校验
+meson compile -C builddir 主题    # 生成主题并同步清单
+meson compile -C builddir 静态检查      # Ruff 检查、格式检查及类型检查
+meson compile -C builddir 格式化    # Ruff 格式化全部 Python 文件
+meson compile -C builddir 校验     # 主题校验
 meson test -C builddir --print-errorlogs  # 完整检查及离线测试
-meson compile -C builddir package   # 打包 VSIX
-meson compile -C builddir changelog # 自动生成变更日志
-meson compile -C builddir release-notes # 预览当前版本发布说明
+meson compile -C builddir 打包   # 打包 VSIX
+meson compile -C builddir 变更日志 # 自动生成变更日志
+meson compile -C builddir 发布说明 # 预览当前版本发布说明
 meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ```
 
-`package.json` 中保留了等价别名，`npm run build`、`npm run check`、`npm test`、
-`npm run package` 等与上面的目标一一对应。
+`package.json` 中保留了等价别名，`npm run 构建`、`npm run 校验`、`npm test`、
+`npm run 打包` 等与上面的目标一一对应。
 
 ## 改动流程
 
@@ -45,10 +45,10 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 自动化测试应使用独立环境，避免重载正在使用的工作窗口；修改受监视文件前检查
 自动重载设置。
 
-- `themes/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir themes`，
+- `themes/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir 主题`，
   并让生成结果随提交一起入库。
 - 新增颜色键必须存在于 `src/vscode_defaults/registry_keys.json`，或在
-  `build.LEGACY_KEYS` 中，否则 `meson compile -C builddir check` 会失败。
+  `build.LEGACY_KEYS` 中，否则 `meson compile -C builddir 校验` 会失败。
 - 主题 JSON 中的颜色必须是十六进制（`#rrggbb` / `#rrggbbaa`）：VS Code 会忽略
   CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `palette.as_hex()`。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
@@ -58,7 +58,12 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ## 提交与 PR
 
 - README、项目文档、代码注释、界面提示与自有脚本说明统一使用简体中文。
-  API、配置键、路径、专有名称、第三方命令和许可证原文保留原文。
+  项目自有 API（含模块、函数与类型名称）、配置键、命令标识、脚本参数和文件名，
+  除明确特例外必须采用简体中文，不保留英文兼容别名。特例仅包括外部平台、协议、
+  文件格式或工具规定的接口、字段与标准文件名，第三方 API、命令、原始文件名与
+  上游标识，以及专有名称、许可证标识与原文、文件扩展名和项目规定的 `adwcode` 前缀。
+  特例须有规范、来源或项目明确约定作为依据；习惯使用英文不构成例外。
+  改名时同步更新调用、清单、文档与测试；详见 [中文接口迁移](docs/08-中文接口迁移.md)。
 - 提交信息使用**简体中文类型前缀**（格式 `类型: 描述`，半角冒号 + 空格）：
 
   | 类型 | 用途 | 对应英文约定 |
@@ -85,7 +90,7 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 
 本项目自有代码采用 `AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later`，自有资产采用
 `AGPL-3.0-or-later OR CC-BY-SA-4.0+`。提交自有贡献即同意同时提供该类别的两种
-可选许可，使用者可任选其一；范围与全文见 [许可声明](LICENSING.md)。
+可选许可，使用者可任选其一；范围与全文见 [许可声明](许可声明.md)。
 
 第三方内容及其衍生部分保留原许可；引入前核对兼容性、署名和分发边界，在
 [第三方许可证](docs/01-第三方许可证.md) 登记。包含第三方内容的文件不能因

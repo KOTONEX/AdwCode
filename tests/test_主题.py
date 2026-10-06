@@ -25,8 +25,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import tokens
-from palette import ACCENT_NAMES, Palette, mix, over, parse_color, rgba, to_hex
+import 语法映射
+from 调色板 import ACCENT_NAMES, 叠加颜色, 合成透明颜色, 混色, 解析颜色, 调色板对象, 转为十六进制
 
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "src"
@@ -39,14 +39,14 @@ REGISTRY = cast(
 
 class ColorMathTest(unittest.TestCase):
     def test_parse_hex_forms(self) -> None:
-        self.assertEqual(parse_color("#fff"), (255, 255, 255, 1.0))
-        self.assertEqual(parse_color("#000006"), (0, 0, 6, 1.0))
-        self.assertEqual(parse_color("#00000680"), (0, 0, 6, 128 / 255))
+        self.assertEqual(解析颜色("#fff"), (255, 255, 255, 1.0))
+        self.assertEqual(解析颜色("#000006"), (0, 0, 6, 1.0))
+        self.assertEqual(解析颜色("#00000680"), (0, 0, 6, 128 / 255))
 
     def test_parse_rgb_forms(self) -> None:
-        self.assertEqual(parse_color("rgb(0 0 6 / 80%)"), (0, 0, 6, 0.8))
-        self.assertEqual(parse_color("rgb(255 255 255 / 8%)"), (255, 255, 255, 0.08))
-        self.assertEqual(parse_color("rgb(10 20 30)"), (10, 20, 30, 1.0))
+        self.assertEqual(解析颜色("rgb(0 0 6 / 80%)"), (0, 0, 6, 0.8))
+        self.assertEqual(解析颜色("rgb(255 255 255 / 8%)"), (255, 255, 255, 0.08))
+        self.assertEqual(解析颜色("rgb(10 20 30)"), (10, 20, 30, 1.0))
 
     def test_invalid_colors_rejected(self) -> None:
         for color in (
@@ -58,83 +58,83 @@ class ColorMathTest(unittest.TestCase):
             "rgb(0 0 0 / 1.1)",
         ):
             with self.subTest(color=color), self.assertRaises(ValueError):
-                parse_color(color)
+                解析颜色(color)
 
     def test_round_trip(self) -> None:
-        self.assertEqual(to_hex(0, 0, 6, 1.0), "#000006")
-        self.assertEqual(to_hex(0, 0, 6, 0.8), "#000006cc")
+        self.assertEqual(转为十六进制(0, 0, 6, 1.0), "#000006")
+        self.assertEqual(转为十六进制(0, 0, 6, 0.8), "#000006cc")
 
     def test_mix_and_over(self) -> None:
-        self.assertEqual(mix("#ffffff", "#000000", 0.5), "#808080")
-        self.assertEqual(mix("#ffffff", "#000000", 0.25), "#404040")
-        self.assertEqual(over("#ffffff80", "#000000"), "#808080")
-        self.assertEqual(over("#ffffff", "#000000"), "#ffffff")
-        self.assertEqual(rgba("#3584e4", 0.5), "#3584e480")
+        self.assertEqual(混色("#ffffff", "#000000", 0.5), "#808080")
+        self.assertEqual(混色("#ffffff", "#000000", 0.25), "#404040")
+        self.assertEqual(叠加颜色("#ffffff80", "#000000"), "#808080")
+        self.assertEqual(叠加颜色("#ffffff", "#000000"), "#ffffff")
+        self.assertEqual(合成透明颜色("#3584e4", 0.5), "#3584e480")
 
     def test_mix_rejects_translucent(self) -> None:
         with self.assertRaises(ValueError):
-            mix("#ffffff80", "#000000", 0.5)
+            混色("#ffffff80", "#000000", 0.5)
 
 
 class PaletteTest(unittest.TestCase):
     def test_accent_interaction_contrast(self) -> None:
-        from build import contrast
+        from 生成主题 import 对比度
 
         for mode in ("dark", "light"):
             for accent in ACCENT_NAMES:
-                palette = Palette(mode, accent=accent)
+                调色板 = 调色板对象(mode, accent=accent)
                 for role in ("accent_hover", "accent_active"):
                     with self.subTest(mode=mode, accent=accent, role=role):
-                        self.assertGreaterEqual(contrast(palette["accent_fg"], palette[role]), 2.0)
+                        self.assertGreaterEqual(对比度(调色板["accent_fg"], 调色板[role]), 2.0)
 
     def test_all_roles_parse(self) -> None:
         for mode in ("dark", "light"):
             for accent in ACCENT_NAMES:
                 for high_contrast in (False, True):
-                    palette = Palette(mode, accent=accent, high_contrast=high_contrast)
-                    for role, value in palette.roles().items():
-                        parse_color(value)
+                    调色板 = 调色板对象(mode, accent=accent, high_contrast=high_contrast)
+                    for role, value in 调色板.roles().items():
+                        解析颜色(value)
 
     def test_light_foreground_is_composited(self) -> None:
-        palette = Palette("light")
+        调色板 = 调色板对象("light")
         # 半透明的 rgb(0 0 6 / 80%) 必须被合成为不透明色
-        self.assertEqual(len(palette["fg_view"]), 7)
-        self.assertNotEqual(palette["fg_view"], "#000006")
+        self.assertEqual(len(调色板["fg_view"]), 7)
+        self.assertNotEqual(调色板["fg_view"], "#000006")
 
     def test_high_contrast_borders(self) -> None:
-        normal = Palette("dark")
-        high = Palette("dark", high_contrast=True)
-        self.assertGreater(parse_color(high["border"])[3], parse_color(normal["border"])[3])
-        self.assertEqual(parse_color(high["fg_view"])[3], 1.0)
+        normal = 调色板对象("dark")
+        high = 调色板对象("dark", high_contrast=True)
+        self.assertGreater(解析颜色(high["border"])[3], 解析颜色(normal["border"])[3])
+        self.assertEqual(解析颜色(high["fg_view"])[3], 1.0)
 
     def test_accents_differ(self) -> None:
         self.assertNotEqual(
-            Palette("dark", "blue")["accent_bg"], Palette("dark", "teal")["accent_bg"]
+            调色板对象("dark", "blue")["accent_bg"], 调色板对象("dark", "teal")["accent_bg"]
         )
         self.assertNotEqual(
-            Palette("light", "blue")["accent_standalone"],
-            Palette("dark", "blue")["accent_standalone"],
+            调色板对象("light", "blue")["accent_standalone"],
+            调色板对象("dark", "blue")["accent_standalone"],
         )
 
     def test_unknown_inputs_rejected(self) -> None:
         with self.assertRaises(ValueError):
-            Palette("dark", accent="chartreuse")
+            调色板对象("dark", accent="chartreuse")
         with self.assertRaises(ValueError):
-            Palette("sepia")
+            调色板对象("sepia")
 
 
 class TokensTest(unittest.TestCase):
     def test_editor_colors(self) -> None:
         for mode, expected_bg in (("dark", "#1d1d20"), ("light", "#ffffff")):
-            colors = tokens.editor_colors(mode)
+            colors = 语法映射.编辑器颜色(mode)
             self.assertEqual(colors["text_bg"], expected_bg)
             for value in colors.values():
                 if value is not None:
-                    parse_color(value)
+                    解析颜色(value)
 
     def test_token_rules_are_complete(self) -> None:
         for mode in ("dark", "light"):
-            rules = tokens.token_colors(mode)
+            rules = 语法映射.语法颜色(mode)
             self.assertGreater(len(rules), 30)
             for rule in rules:
                 self.assertTrue(rule["scope"])
@@ -143,35 +143,35 @@ class TokensTest(unittest.TestCase):
 
     def test_semantic_colors_have_no_nulls(self) -> None:
         for mode in ("dark", "light"):
-            for name, value in tokens.semantic_token_colors(mode).items():
+            for name, value in 语法映射.语义标记颜色(mode).items():
                 self.assertIsNotNone(value, name)
                 assert value is not None
-                parse_color(value)
+                解析颜色(value)
 
     def test_current_scheme_uses_def_statement(self) -> None:
         # 当前 GtkSourceView 已将 def:keyword 更名；别名必须继续被容忍
         for mode in ("dark", "light"):
-            self.assertIn("def:statement", tokens.load_scheme(mode)["styles"])
-            self.assertNotIn("def:keyword", tokens.load_scheme(mode)["styles"])
+            self.assertIn("def:statement", 语法映射.加载样式方案(mode)["styles"])
+            self.assertNotIn("def:keyword", 语法映射.加载样式方案(mode)["styles"])
 
 
 class ThemeTest(unittest.TestCase):
     def test_colorful_status_bar_hover_foregrounds(self) -> None:
-        from build import build_theme, contrast
+        from 生成主题 import 对比度, 生成主题对象
 
         for mode in ("dark", "light"):
-            colors = build_theme(mode, "blue", "colorful")["colors"]
+            colors = 生成主题对象(mode, "blue", "colorful")["colors"]
             self.assertEqual(
                 colors["statusBarItem.hoverForeground"], colors["statusBar.foreground"]
             )
             self.assertGreaterEqual(
-                contrast(
+                对比度(
                     colors["statusBarItem.hoverForeground"], colors["statusBarItem.hoverBackground"]
                 ),
                 2.5,
             )
             self.assertGreaterEqual(
-                contrast(
+                对比度(
                     colors["statusBarItem.warningHoverForeground"],
                     colors["statusBarItem.warningHoverBackground"],
                 ),
@@ -191,7 +191,7 @@ class ThemeTest(unittest.TestCase):
         self.assertEqual(len(labels), len(set(labels)))
 
     def test_colors_are_registered(self) -> None:
-        from build import LEGACY_KEYS
+        from 生成主题 import LEGACY_KEYS
 
         builtin = set(
             json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text(encoding="utf-8"))
@@ -205,7 +205,7 @@ class ThemeTest(unittest.TestCase):
         for theme in self.themes():
             self.assertTrue(theme["semanticHighlighting"])
             for value in theme["semanticTokenColors"].values():
-                parse_color(value)
+                解析颜色(value)
             for rule in theme["tokenColors"]:
                 self.assertTrue(rule["scope"])
                 self.assertTrue(rule["settings"])
@@ -228,17 +228,17 @@ class ThemeTest(unittest.TestCase):
             self.assertIn("深色" if theme["type"] == "dark" else "浅色", name)
             # 默认蓝色不带强调色前缀，其余强调色必须出现在标签里
             self.assertNotIn("蓝色", name)
-            if theme["colors"]["button.background"] != Palette("dark", "blue")["accent_bg"]:
+            if theme["colors"]["button.background"] != 调色板对象("dark", "blue")["accent_bg"]:
                 self.assertRegex(name, r"^AdwCode (青色|绿色|黄色|橙色|红色|粉色|紫色|石板灰) ")
 
         # 覆盖按需构建的全部强调色和变体，防止仅默认主题完成更名。
-        from build import build_plan, build_theme, theme_filename
+        from 生成主题 import 主题文件名, 构建计划, 生成主题对象
 
-        for request in build_plan(list(ACCENT_NAMES)):
-            theme = build_theme(
+        for request in 构建计划(list(ACCENT_NAMES)):
+            theme = 生成主题对象(
                 request["mode"], request["accent"], request["variant"], request["hc"]
             )
-            filename = theme_filename(
+            filename = 主题文件名(
                 request["mode"], request["accent"], request["variant"], request["hc"]
             )
             self.assertTrue(theme["name"].startswith("AdwCode "), theme["name"])
@@ -257,23 +257,23 @@ class ThemeTest(unittest.TestCase):
 
     def test_slugs_are_safe(self) -> None:
         for path in THEMES.glob("*.json"):
-            self.assertRegex(path.name, r"^[a-z0-9-]+\.json$")
+            self.assertRegex(path.name, r"^adwcode-[a-z0-9\u4e00-\u9fff-]+\.json$")
 
 
 class GeneratorSafetyTest(unittest.TestCase):
     def test_missing_key_tables_fail(self) -> None:
-        import build
+        import 生成主题
 
         for known in ((None, None), (None, set()), (set(), None)):
             with (
                 self.subTest(known=known),
-                patch.object(build, "load_known_keys", return_value=known),
+                patch.object(生成主题, "加载颜色键表", return_value=known),
                 redirect_stdout(io.StringIO()),
             ):
-                self.assertEqual(build.check(), 1)
+                self.assertEqual(生成主题.校验(), 1)
 
     def test_check_rejects_missing_assets_and_non_hex_colors(self) -> None:
-        import build
+        import 生成主题
 
         for case in (
             "empty",
@@ -315,7 +315,7 @@ class GeneratorSafetyTest(unittest.TestCase):
                     icon_path.write_text(json.dumps(icons), encoding="utf-8")
                 else:
                     if case == "type":
-                        paths[0] = next(path for path in paths if "light" in path.name)
+                        paths[0] = next(path for path in paths if "浅色" in path.name)
                     theme = json.loads(paths[0].read_text(encoding="utf-8"))
                     if case == "label":
                         theme["name"] = "未注册的主题标签"
@@ -329,29 +329,29 @@ class GeneratorSafetyTest(unittest.TestCase):
                         theme["semanticTokenColors"]["class"] = "rgb(0 0 0)"
                     paths[0].write_text(json.dumps(theme), encoding="utf-8")
                 with (
-                    patch.object(build, "ROOT", folder),
-                    patch.object(build, "THEMES", folder / "themes"),
+                    patch.object(生成主题, "ROOT", folder),
+                    patch.object(生成主题, "THEMES", folder / "themes"),
                     redirect_stdout(io.StringIO()),
                 ):
-                    self.assertEqual(build.check(), 1)
+                    self.assertEqual(生成主题.校验(), 1)
 
     def test_jsonc_preserves_string_contents(self) -> None:
-        from update_defaults import strip_jsonc
+        from 更新默认数据 import 清理JSON注释
 
-        data = json.loads(strip_jsonc('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
+        data = json.loads(清理JSON注释('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
         self.assertEqual(data, {"text": ",} // /* ", "list": [1, 2]})
 
     def test_include_cycle_rejected(self) -> None:
-        import update_defaults
+        import 更新默认数据
 
         with patch.dict(
-            update_defaults._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}
+            更新默认数据._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}
         ):
             with self.assertRaisesRegex(ValueError, "include 循环"):
-                update_defaults.resolve_token_colors("a")
+                更新默认数据.解析默认语法颜色("a")
 
     def test_defaults_download_failure_preserves_existing_data(self) -> None:
-        import update_defaults
+        import 更新默认数据
 
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
@@ -359,38 +359,38 @@ class GeneratorSafetyTest(unittest.TestCase):
             for name in files:
                 (folder / name).write_text("原有数据", encoding="utf-8")
             with (
-                patch.object(update_defaults, "OUT", folder),
-                patch.object(update_defaults, "fetch", return_value={"tokenColors": []}),
+                patch.object(更新默认数据, "OUT", folder),
+                patch.object(更新默认数据, "获取默认主题", return_value={"tokenColors": []}),
                 patch.object(
-                    update_defaults.urllib.request, "urlopen", side_effect=OSError("下载失败")
+                    更新默认数据.urllib.request, "urlopen", side_effect=OSError("下载失败")
                 ),
                 redirect_stdout(io.StringIO()),
                 self.assertRaises(OSError),
             ):
-                update_defaults.main()
+                更新默认数据.入口()
             for name in files:
                 self.assertEqual((folder / name).read_text(encoding="utf-8"), "原有数据")
 
     def test_accents_deduplicated(self) -> None:
-        from build import resolve_accents
+        from 生成主题 import 解析强调色
 
-        self.assertEqual(resolve_accents("blue,teal,blue", False), ["blue", "teal"])
+        self.assertEqual(解析强调色("blue,teal,blue", False), ["blue", "teal"])
         with self.assertRaises(SystemExit):
-            resolve_accents(" , ", False)
+            解析强调色(" , ", False)
 
     def test_generation_failure_preserves_existing_themes(self) -> None:
-        import build
+        import 生成主题
 
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             existing = folder / "old.json"
             existing.write_text("原有主题", encoding="utf-8")
             with (
-                patch.object(build, "THEMES", folder),
-                patch.object(build, "build_theme", side_effect=ValueError("生成失败")),
+                patch.object(生成主题, "THEMES", folder),
+                patch.object(生成主题, "生成主题对象", side_effect=ValueError("生成失败")),
             ):
                 with self.assertRaises(ValueError):
-                    build.write_themes(build.build_plan(["blue"]))
+                    生成主题.写入主题(生成主题.构建计划(["blue"]))
             self.assertEqual(existing.read_text(encoding="utf-8"), "原有主题")
 
 
@@ -400,7 +400,7 @@ class ExtensionStatusTest(unittest.TestCase):
         if node is None:
             self.skipTest("未安装 Node.js")
         result = subprocess.run(
-            [node, str(ROOT / "tests/test_extension_accent.cjs")],
+            [node, str(ROOT / "tests/验证强调色.cjs")],
             capture_output=True,
             text=True,
             timeout=10,
@@ -410,13 +410,13 @@ class ExtensionStatusTest(unittest.TestCase):
 
     def test_missing_development_tools_fail(self) -> None:
         for action, missing in (
-            ("typecheck", "ty、tsc、node"),
-            ("lint", "ruff"),
-            ("format", "ruff"),
+            ("类型检查", "ty、tsc、node"),
+            ("静态检查", "ruff"),
+            ("格式化", "ruff"),
         ):
             with self.subTest(action=action):
                 result = subprocess.run(
-                    [sys.executable, str(SRC / "dev.py"), action],
+                    [sys.executable, str(SRC / "开发检查.py"), action],
                     env={"PATH": ""},
                     capture_output=True,
                     text=True,
@@ -427,16 +427,16 @@ class ExtensionStatusTest(unittest.TestCase):
                 self.assertIn(f"缺少开发工具：{missing}", result.stdout)
 
     def test_vsix_content_types(self) -> None:
-        import package
+        import 打包扩展
 
-        root = ET.fromstring(package.CONTENT_TYPES)
+        root = ET.fromstring(打包扩展.CONTENT_TYPES)
         entries = {entry.attrib["Extension"]: entry.attrib["ContentType"] for entry in root}
         self.assertTrue(all(not extension.startswith(".") for extension in entries))
         self.assertEqual(entries["css"], "text/css")
         self.assertEqual(entries["json"], "application/json")
 
     def test_vsix_xml_escapes_metadata(self) -> None:
-        import package
+        import 打包扩展
 
         manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         manifest["description"] = '说明 <示例> & "引号"'
@@ -448,8 +448,8 @@ class ExtensionStatusTest(unittest.TestCase):
             icon.write_bytes((ROOT / manifest["icon"]).read_bytes())
             changelog = folder / "generated.md"
             changelog.write_text("# 自动生成日志\n", encoding="utf-8")
-            with patch.object(package, "ROOT", folder):
-                package.main(changelog)
+            with patch.object(打包扩展, "ROOT", folder):
+                打包扩展.入口(changelog)
             with zipfile.ZipFile(
                 folder / f"{manifest['name']}-{manifest['version']}.vsix"
             ) as archive:
@@ -475,15 +475,15 @@ class ExtensionStatusTest(unittest.TestCase):
             for bad_icon in ("missing.png", "../outside.png", str(icon)):
                 manifest["icon"] = bad_icon
                 (folder / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
-                with patch.object(package, "ROOT", folder), self.assertRaises(ValueError):
-                    package.main(changelog)
+                with patch.object(打包扩展, "ROOT", folder), self.assertRaises(ValueError):
+                    打包扩展.入口(changelog)
 
     def test_recommended_settings_recovery(self) -> None:
         node = shutil.which("node")
         if node is None:
             self.skipTest("未安装 Node.js")
         result = subprocess.run(
-            [node, str(ROOT / "tests/test_extension_settings.cjs")],
+            [node, str(ROOT / "tests/验证设置.cjs")],
             capture_output=True,
             text=True,
             timeout=10,
@@ -496,7 +496,7 @@ class ExtensionStatusTest(unittest.TestCase):
         if node is None:
             self.skipTest("未安装 Node.js，跳过扩展状态面板测试")
         result = subprocess.run(
-            [node, str(ROOT / "tests" / "test_extension_status.cjs")],
+            [node, str(ROOT / "tests" / "验证状态.cjs")],
             capture_output=True,
             text=True,
             timeout=10,
@@ -507,56 +507,52 @@ class ExtensionStatusTest(unittest.TestCase):
 
 class CssTest(unittest.TestCase):
     def test_missing_vscode_css_fails(self) -> None:
-        import check_css
+        import 检查样式
 
         with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()):
-            self.assertEqual(check_css.check(Path(directory) / "missing.css"), 1)
+            self.assertEqual(检查样式.校验(Path(directory) / "missing.css"), 1)
 
     def test_css_files_parse(self) -> None:
-        import check_css
+        import 检查样式
 
         sheets = sorted((ROOT / "extras").glob("*.css"))
         self.assertTrue(sheets)
         for sheet in sheets:
-            selectors, declarations = check_css.selectors_and_declarations(
-                sheet.read_text(encoding="utf-8")
-            )
+            selectors, declarations = 检查样式.选择器与声明(sheet.read_text(encoding="utf-8"))
             self.assertTrue(selectors.strip(), sheet.name)
             self.assertTrue(declarations.strip(), sheet.name)
 
     def test_referenced_variables_are_defined(self) -> None:
-        import check_css
+        import 检查样式
 
-        vscode_css, _ = check_css.find_vscode_assets(None)
-        vscode_defined: set[str] = check_css.theme_variables()
+        vscode_css, _ = 检查样式.查找VSCode资源(None)
+        vscode_defined: set[str] = 检查样式.主题变量()
         if vscode_css is not None:
             vscode_defined |= set(
-                check_css.VAR_DEF_RE.findall(
-                    vscode_css.read_text(encoding="utf-8", errors="ignore")
-                )
+                检查样式.VAR_DEF_RE.findall(vscode_css.read_text(encoding="utf-8", errors="ignore"))
             )
         for sheet in sorted((ROOT / "extras").glob("*.css")):
             text = sheet.read_text(encoding="utf-8")
-            _, declarations = check_css.selectors_and_declarations(text)
-            referenced = set(check_css.VAR_REF_RE.findall(declarations))
-            defined = set(check_css.VAR_DEF_RE.findall(text))
+            _, declarations = 检查样式.选择器与声明(text)
+            referenced = set(检查样式.VAR_REF_RE.findall(declarations))
+            defined = set(检查样式.VAR_DEF_RE.findall(text))
             missing = sorted(referenced - defined - vscode_defined)
             self.assertFalse(missing, f"{sheet.name}: 未定义的变量 {missing}")
 
     def test_vscode_selectors_still_exist(self) -> None:
-        import check_css
+        import 检查样式
 
-        vscode_css, _ = check_css.find_vscode_assets(None)
+        vscode_css, _ = 检查样式.查找VSCode资源(None)
         if vscode_css is None:
             self.skipTest("未找到已安装的 VS Code")
-        self.assertEqual(check_css.check(None), 0)
+        self.assertEqual(检查样式.校验(None), 0)
 
 
 class ProductIconSourcesTests(unittest.TestCase):
     def test_imported_sources_match_assets_and_mappings(self) -> None:
         """上游资产保持原字节；码点、字体与所有别名必须能对应到来源记录。"""
         folder = ROOT / "product-icons"
-        sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
+        sources = json.loads((folder / "来源.json").read_text(encoding="utf-8"))
         theme = json.loads((folder / "adwcode.json").read_text(encoding="utf-8"))
         fonts = {font["id"]: font for font in theme["fonts"]}
         self.assertEqual(len(fonts), len(theme["fonts"]))
@@ -616,7 +612,7 @@ class ProductIconSourcesTests(unittest.TestCase):
     def test_adwaita_equivalents_take_priority(self) -> None:
         """官方已有对应字形时采用 Adwaita；备用 MoreWaita 不参与运行时加载。"""
         folder = ROOT / "product-icons"
-        sources = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
+        sources = json.loads((folder / "来源.json").read_text(encoding="utf-8"))
         theme = json.loads((folder / "adwcode.json").read_text(encoding="utf-8"))
         priority = ["adwcode-adwaita", "adwcode-builder", "adwcode-morewaita"]
         self.assertEqual(sources["source_priority"], priority)
@@ -636,6 +632,20 @@ class ProductIconSourcesTests(unittest.TestCase):
         ):
             self.assertEqual(theme["iconDefinitions"][icon]["fontId"], "adwcode-adwaita", icon)
         self.assertNotIn("adwcode-morewaita", {font["id"] for font in theme["fonts"]})
+
+
+class 中文入口测试(unittest.TestCase):
+    def test_新校验参数及旧参数拒绝(self) -> None:
+        for flag, expected in (("--校验", 0), ("--check", 2)):
+            with self.subTest(flag=flag):
+                result = subprocess.run(
+                    [sys.executable, str(SRC / "生成主题.py"), flag],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

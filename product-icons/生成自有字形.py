@@ -39,7 +39,7 @@ builder.setupNameTable(
         "psName": "AdwCodeSymbols-Regular",
         "version": "Version 1.0",
         "copyright": "2026 AdwCode contributors",
-        "licenseDescription": "AGPL-3.0-or-later OR CC-BY-SA-4.0+; see product-icons/LICENSE",
+        "licenseDescription": "AGPL-3.0-or-later OR CC-BY-SA-4.0+；许可声明见 product-icons/LICENSE",
         "licenseInfoURL": "https://github.com/KOTONEX/AdwCode/blob/main/product-icons/LICENSE",
     }
 )
@@ -48,5 +48,5 @@ builder.setupPost()
 # 固定时间戳，使同一份源资产生成的字体可复现。
 builder.font["head"].created = builder.font["head"].modified = 3863548800
 builder.font.recalcTimestamp = False
-builder.save(ROOT / "adwcode-symbols.ttf")
+builder.save(ROOT / "adwcode-符号.ttf")
 print(f"已生成 {len(sources)} 个单色字形")

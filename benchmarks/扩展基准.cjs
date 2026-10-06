@@ -9,7 +9,7 @@ const { performance } = require('node:perf_hooks');
 const assert = require('node:assert/strict');
 const root = path.resolve(process.argv[2]);
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'adwcode-extension-performance-'));
-const source = fs.readFileSync(path.join(root, 'extension/extension.js'), 'utf8');
+const source = fs.readFileSync(path.join(root, 'extension/扩展.js'), 'utf8');
 const cssDir = path.join(temporary, '.config/adwcode');
 const appRoot = path.join(temporary, 'app');
 const html = path.join(appRoot, 'out/vs/code/electron-browser/workbench/workbench.esm.html');
@@ -67,19 +67,19 @@ try {
   const runtime = load();
   let content = '<!-- !! VSCODE-CUSTOM-CSS-START !! -->';
   for (const name of vm.runInContext('Object.keys(CSS_FILES)', runtime.sandbox)) {
-    const css = runtime.sandbox.cssSource(runtime.context, name);
+    const css = runtime.sandbox.样式源码(runtime.context, name);
     fs.writeFileSync(path.join(cssDir, name), css);
     content += name.endsWith('.js') ? `<script>${css}</script>` : `<style>${css}</style>`;
   }
   content += '<!-- !! VSCODE-CUSTOM-CSS-END !! -->';
   fs.writeFileSync(html, '<!--' + 'x'.repeat(128 * 1024) + '-->' + content);
-  assert.ok(runtime.sandbox.appearanceStatus(runtime.context).every(row => row.copied === '已同步' && row.patched === '磁盘补丁已更新'));
+  assert.ok(runtime.sandbox.外观安装状态(runtime.context).every(row => row.copied === '已同步' && row.patched === '磁盘补丁已更新'));
   const results = [
     bench('脚本加载（含 VM 创建）', () => undefined, () => load(), 200),
     bench('激活与停用（自动强调色与自动重载关闭）', load, input => { input.sandbox.module.exports.activate(input.context); input.sandbox.module.exports.deactivate(); }, 200),
-    bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.appearanceStatus(input.context), 500),
-    bench('外观状态面板生成（模拟 Webview）', () => runtime, input => { input.sandbox.showAppearanceStatus(input.context); input.context.subscriptions.length = 0; }, 200),
-    bench('主题名称解析（每样本 1000 次，取单次均值）', () => runtime, input => { for (let i = 0; i < 1000; i++) input.sandbox.parseTheme('AdwCode 青色 浅色 · 彩色状态栏'); }, 100),
+    bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
+    bench('外观状态面板生成（模拟 Webview）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),
+    bench('主题名称解析（每样本 1000 次，取单次均值）', () => runtime, input => { for (let i = 0; i < 1000; i++) input.sandbox.解析主题('AdwCode 青色 浅色 · 彩色状态栏'); }, 100),
   ];
   for (const result of results) {
     if (result.name.includes('1000')) {

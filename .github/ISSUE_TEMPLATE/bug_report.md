@@ -15,7 +15,7 @@ labels: ["bug"]
 2.
 3.
 
-## `python3.14t src/build.py --check` 输出
+## `python3.14t src/生成主题.py --check` 输出
 
 <!-- 请粘贴完整输出；它检查产物注册、颜色格式、键覆盖、对比度与产品图标。 -->
 

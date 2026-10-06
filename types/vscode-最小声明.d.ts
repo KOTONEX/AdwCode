@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 //
-// VS Code 扩展 API 的最小类型面：只声明 extension/extension.js 用到的成员。
-// 官方 @types/vscode 不在本仓库依赖中；本文件由 `meson compile -C builddir typecheck` 的 tsc 与
+// VS Code 扩展 API 的最小类型面：只声明 extension/扩展.js 用到的成员。
+// 官方 @types/vscode 不在本仓库依赖中；本文件由 `meson compile -C builddir 类型检查` 的 tsc 与
 // 编辑器共同消费，真实签名见 VS Code 安装目录的
 // resources/app/out/vscode-dts/vscode.d.ts。
 

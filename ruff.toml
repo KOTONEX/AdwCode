@@ -10,7 +10,7 @@ extend-exclude = ["builddir", ".tools", ".kilo/worktrees"]
 select = ["E4", "E7", "E9", "F", "I"]
 
 [lint.isort]
-known-first-party = ["build", "check_css", "mapping", "package", "palette", "tokens", "update_defaults"]
+known-first-party = ["生成主题", "检查样式", "界面映射", "打包扩展", "调色板", "语法映射", "更新默认数据"]
 
 [format]
 quote-style = "double"

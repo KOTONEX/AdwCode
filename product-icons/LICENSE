@@ -1,12 +1,12 @@
 SPDX-License-Identifier: AGPL-3.0-or-later OR CC-BY-SA-4.0+
 SPDX-FileCopyrightText: 2026 AdwCode contributors
 
-此声明仅适用于本项目自有的 symbolic/*.svg、adwcode-symbols.ttf，
+此声明仅适用于本项目自有的 symbolic/*.svg、adwcode-符号.ttf，
 以及 adwcode.json 映射中的自有内容。使用者可任选一种许可。
 
 AGPL-3.0 全文见 ../LICENSE，CC BY-SA 4.0 全文见 ../assets/CC-BY-SA-4.0.txt。
 署名为 AdwCode contributors，来源：https://github.com/KOTONEX/AdwCode。
 
 scalable/、imported/、rendered/ 及其上游派生字体不在此授权范围内。
-它们保留上游许可，详见 README.md、sources.json 与 ../docs/01-第三方许可证.md。
-生成脚本属于自有代码，采用 ../LICENSING.md 规定的代码双重许可。
+它们保留上游许可，详见 README.md、来源.json 与 ../docs/01-第三方许可证.md。
+生成脚本属于自有代码，采用 ../许可声明.md 规定的代码双重许可。

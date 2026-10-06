@@ -39,7 +39,7 @@
   本项目选择 LGPL 分支；署名为 GNOME Project。
 
 三个来源的完整提交号、上游路径、原文件 SHA-256、码点与产品图标映射记录在
-[sources.json](sources.json)。`imported/` 中保存未经修改的原始 SVG、来源许可与
+[来源.json](来源.json)。`imported/` 中保存未经修改的原始 SVG、来源许可与
 贡献者说明；颜色统一、坐标变换、曲线转换与字体封装由生成脚本完成。
 `source_priority` 记录选材顺序，`enabled: false` 标记备用字体，不参与运行时加载。
 字体移除画布外的导出残留，将官方描边展开为轮廓；可见复杂特效仍会导致生成失败。
@@ -51,7 +51,7 @@ Adwaita 通常将轮廓边缘内缩 0.18 个 SVG 像素，Builder 为 0.12；终
 语言符号等细节只内缩 0.06 至 0.10。原本已较细的成对布局字形保留原样。
 典型 2px 线条调整后约为 1.64px 或 1.76px，接近工作台的文字与细边框。
 
-`weight_inset` 参数记录在 `sources.json` 中，单个字形可覆盖所属字体的默认值。
+`weight_inset` 参数记录在 `来源.json` 中，单个字形可覆盖所属字体的默认值。
 它使用 16 × 16 SVG 画布中的像素单位，不是屏幕像素；实际显示随 VS Code 尺寸
 缩放。字体仍是 Regular 静态字形，改变 CSS 的 `font-weight` 不会完成这种调整。
 内缩扩大孔洞而保留中心线；生成器会拒绝字形消失或面积损失过大的参数。
@@ -62,7 +62,7 @@ Adwaita 通常将轮廓边缘内缩 0.18 个 SVG 像素，Builder 为 0.12；终
 
 未覆盖的产品图标继续使用 VS Code 默认 Codicons；不同的断点验证状态没有强行
 合并为同一符号。汉堡菜单保持原生位置。本项目原有的 `symbolic/`、
-`adwcode-symbols.ttf` 为 AGPL-3.0-or-later 或 CC BY-SA 4.0 双重许可的自有字形，保留作为备用源资产，
+`adwcode-符号.ttf` 为 AGPL-3.0-or-later 或 CC BY-SA 4.0 双重许可的自有字形，保留作为备用源资产，
 当前主题不再引用该字体。
 
 ## 再生成
@@ -75,10 +75,10 @@ Builder、MoreWaita 或系统图标主题，也不需要在构建时访问网络
 ```sh
 uv venv --python 3.14 /tmp/adwcode-icons
 uv pip install --python /tmp/adwcode-icons/bin/python fonttools skia-pathops
-/tmp/adwcode-icons/bin/python product-icons/build_imported.py
+/tmp/adwcode-icons/bin/python product-icons/生成导入字形.py
 ```
 
-`build_imported.py` 根据来源记录校验 SVG 哈希，为不同许可证分别生成字体，
+`生成导入字形.py` 根据来源记录校验 SVG 哈希，为不同许可证分别生成字体，
 将署名与许可写入字体名称表，并导出 `rendered/` 中的陈列轮廓。
 字体使用固定时间戳；备用字体也可再生成。
 同一份输入应得到相同的字体。
@@ -92,10 +92,10 @@ nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
   --output_file product-icons/adwaita-icons.ttf product-icons/scalable/*.svg
 ```
 
-备用自有字体通过 `build_symbols.py` 再生成，同样仅依赖 fontTools。
+备用自有字体通过 `生成自有字形.py` 再生成，同样仅依赖 fontTools。
 可选资产工具的 C 扩展可能重新启用 GIL；它们不属于 Meson 的自由线程开发检查。
 最终扩展直接读取随附的 TTF，不加载 Python 或字体生成依赖。
 许可证登记见 [第三方许可证](../docs/01-第三方许可证.md)。
 
 自有 SVG、字体及映射的授权范围见 [自有字形许可](LICENSE)，生成脚本采用
-[项目代码双重许可](../LICENSING.md)。第三方字体、导出轮廓与缩略图保留来源许可。
+[项目代码双重许可](../许可声明.md)。第三方字体、导出轮廓与缩略图保留来源许可。

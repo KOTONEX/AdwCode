@@ -20,7 +20,7 @@ https://creativecommons.org/licenses/by-sa/4.0/legalcode
 
 AGPL-3.0 的完整条款见项目根目录的 LICENSE；使用者也可选择后续版本。
 
-制作方式及来源记录见 README.md、design-notes.md 和 sources.json。
+制作方式及来源记录见 README.md、设计说明.md 和 来源.json。
 此声明不授予第三方商标权利；项目代码与其他资产各自的许可证另行适用。
 
-CC BY-SA 的后续版本授权由本项目另行提供，含义与范围见 ../LICENSING.md。
+CC BY-SA 的后续版本授权由本项目另行提供，含义与范围见 ../许可声明.md。

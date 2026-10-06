@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
-// 仅连接 ui.py 创建的独立进程；CSS 注入只修改该窗口的 DOM。
+// 仅连接 工作台基准.py 创建的独立进程；CSS 注入只修改该窗口的 DOM。
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -13,14 +13,14 @@ const selectorsOnly = process.argv[6] === "True";
 const root = path.resolve(__dirname, '..');
 const ownProcess = fs.readFileSync(`/proc/${state.pid}/cmdline`, 'utf8');
 assert.ok(ownProcess.includes(state.profile) && ownProcess.includes(state.directory), '只能连接本次启动的测试进程');
-const css = ['gnome-look.css', 'controls-close-only.css', 'gnome-fonts.css'].map(name => fs.readFileSync(path.join(root, 'extras', name), 'utf8')).join('\n');
-const windowState = fs.readFileSync(path.join(root, 'extras/window-state.js'), 'utf8');
+const css = ['GNOME外观.css', '仅关闭窗口控件.css', 'GNOME字体.css'].map(name => fs.readFileSync(path.join(root, 'extras', name), 'utf8')).join('\n');
+const windowState = fs.readFileSync(path.join(root, 'extras/窗口状态.js'), 'utf8');
 const withoutInactive = css.replace(/[^{}]*adwcode-window-inactive[^{}]*\{[^{}]*\}/g, '');
 assert.ok(!withoutInactive.includes('.adwcode-window-inactive'));
 const variants = [{ name: 'native', enabled: false, css }, { name: 'full', enabled: true, css }];
-if (state.referenceCss) variants.push({ name: 'reference', enabled: true, css: fs.readFileSync(state.referenceCss, 'utf8') + '\n' + ['controls-close-only.css', 'gnome-fonts.css'].map(name => fs.readFileSync(path.join(root, 'extras', name), 'utf8')).join('\n') });
+if (state.referenceCss) variants.push({ name: 'reference', enabled: true, css: fs.readFileSync(state.referenceCss, 'utf8') + '\n' + ['仅关闭窗口控件.css', 'GNOME字体.css'].map(name => fs.readFileSync(path.join(root, 'extras', name), 'utf8')).join('\n') });
 if (selectorsOnly) variants.push({ name: 'without-inactive-selectors', enabled: true, css: withoutInactive });
-const themes = ['light', 'dark'].map(mode => JSON.parse(fs.readFileSync(path.join(root, 'themes', `adwcode-${mode}.json`), 'utf8')));
+const themes = ['light', 'dark'].map(mode => JSON.parse(fs.readFileSync(path.join(root, 'themes', `adwcode-${mode === "light" ? "浅色" : "深色"}.json`), 'utf8')));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function main() {
   let browser;
@@ -171,7 +171,7 @@ async function main() {
     await page.locator('#adwcode-performance-lifecycle').evaluate(element => element.remove());
     for (let mode = 0; mode < themes.length; mode++) {
       if (mode === 1) {
-        // 仅更新 ui.py 创建的临时用户设置；由 VS Code 原生主题服务响应。
+        // 仅更新 工作台基准.py 创建的临时用户设置；由 VS Code 原生主题服务响应。
         const settingsPath = path.join(state.profile, 'User/settings.json');
         const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
         settings['workbench.colorTheme'] = themes[mode].name;

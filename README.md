@@ -8,7 +8,7 @@
 （GNOME 51），语法高亮对齐 **GNOME Builder** 的 GtkSourceView 方案，强调色可以
 跟随 GNOME 系统设置。
 
-自有代码与资产采用可任选其一的双重许可，范围见 [许可声明](LICENSING.md)；第三方组件与数据登记在
+自有代码与资产采用可任选其一的双重许可，范围见 [许可声明](许可声明.md)；第三方组件与数据登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)，许可证声明见文末
 [「许可证」](#许可证)。
 
@@ -20,11 +20,11 @@
   7% / 12% 的悬停与激活填充。
 - **界面颜色覆盖** —— 对照随附的 VS Code 颜色注册表与内置主题校验颜色键，
   覆盖聊天、智能体、笔记本、行内编辑、测试、合并编辑器与内联提示等界面。
-  具体覆盖情况可运行 `meson compile -C builddir check` 查看。
+  具体覆盖情况可运行 `meson compile -C builddir 校验` 查看。
 - **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 支持 GNOME 全部九种强调色（blue、teal、green、yellow、orange、
-  red、pink、purple、slate）。默认构建 blue，并读取当前系统强调色；可用 `--accents all` 生成其余颜色，
+  red、pink、purple、slate）。默认构建 blue，并读取当前系统强调色；可用 `--强调色 全部` 生成其余颜色，
   或让扩展跟随 `org.gnome.desktop.interface accent-color`。
 - **变体** —— 默认语法高亮（使用 VS Code 自带的 TextMate 规则）与
   彩色状态栏变体，以及高对比度主题。
@@ -67,11 +67,11 @@ code --install-extension AdwCode-<版本>.vsix
 ```
 
 也可以从源码构建（仓库中不包含 VSIX，构建产物会被 `.gitignore` 忽略；
-`src/package.py` 会打印生成的文件名）：
+`src/打包扩展.py` 会打印生成的文件名）：
 
 ```sh
-python3.14t src/build.py            # blue + 当前系统强调色
-python3.14t src/package.py          # 生成 AdwCode-<版本>.vsix
+python3.14t src/生成主题.py            # blue + 当前系统强调色
+python3.14t src/打包扩展.py          # 生成 AdwCode-<版本>.vsix
 code --install-extension AdwCode-<版本>.vsix
 ```
 
@@ -99,7 +99,7 @@ GNOME 扩展
 
 ### GNOME 外观（CSS）
 
-颜色无法改变几何，因此 `extras/gnome-look.css`（通过同一个 Custom CSS 加载器
+颜色无法改变几何，因此 `extras/GNOME外观.css`（通过同一个 Custom CSS 加载器
 生效）为工作台提供 Adwaita 形状：
 
 - 定义 VS Code 1.140 引用却从未声明的设计令牌（`--vscode-cornerRadius-*`、
@@ -114,19 +114,19 @@ GNOME 扩展
 
 执行 **AdwCode: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
 **AdwCode: 生成仅关闭按钮的窗口控件 CSS**）。完整安装包含三个 CSS 文件及
-`window-state.js`：脚本将原生标题栏状态同步到导航容器，保留非活动窗口的弱化效果，
+`窗口状态.js`：脚本将原生标题栏状态同步到导航容器，保留非活动窗口的弱化效果，
 减少全工作台样式重算。检测到加载器时，安装命令将本次组件的已知源码和副本引用统一为单份安装副本，
 保留其他加载项；状态面板会提示重复引用或重复注入。
 
 开发时可在设置中开启
-`adwcode.autoReload`：改动 `extras/*.css`、`extras/*.js`、`themes/*.json` 或扩展代码后，
+`adwcode.自动重载`：改动 `extras/*.css`、`extras/*.js`、`themes/*.json` 或扩展代码后，
 会自动重新应用 Custom CSS 并重载窗口。VS Code 升级后补丁会被
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
 
-`python3.14t src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
+`python3.14t src/检查样式.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
 是否仍然存在（原生 JavaScript 类名在 bundle 中搜索，自有状态类核对附加脚本），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
-未找到样式表时，校验会失败；可通过 `--css /路径/workbench.desktop.main.css`
+未找到样式表时，校验会失败；可通过 `--样式表 /路径/workbench.desktop.main.css`
 指定当前安装的构建。此检查不能替代实际界面验收。
 
 ### 一键应用设置
@@ -138,7 +138,7 @@ AdwCode 主题，采用 AdwCode 产品图标、GNOME 代码字体、原生窗口
 当前 VS Code 未提供的配置会在预览中列明并跳过。
 命令用于日常外观，不写入 Python、ty、Meson 或格式化等项目开发配置。
 
-推荐设置将用户级 `adwcode.autoReload` 设为关闭，也不会执行窗口重载。
+推荐设置将用户级 `adwcode.自动重载` 设为关闭，也不会执行窗口重载。
 标题栏等设置需要重新加载时，请保存工作并结束扩展会话后手动重载。
 工作区可以覆盖用户设置，命令会提示仍然开启自动重载的情况；源码仓库默认在
 工作区也关闭此项。如需在本仓库开启，应在工作区明确修改。
@@ -175,7 +175,7 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 - VS Code 的自绘控件始终绘制最小化、最大化/还原与关闭三个按钮（固定 46px 宽、
   容器 138px），颜色主题与产品图标主题都无法隐藏。若要在自绘控件上保持 GNOME
   布局，执行 **AdwCode: 生成仅关闭按钮的窗口控件 CSS**：它会写入
-  `~/.config/adwcode/controls-close-only.css`，并在检测到
+  `~/.config/adwcode/仅关闭窗口控件.css`，并在检测到
   [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css)
   时自动加入 `vscode_custom_css.imports`；否则把设置片段复制到剪贴板。先执行一次
   **Enable Custom CSS and JS**（该扩展需要 VS Code 安装目录的写权限）再重载窗口。
@@ -183,13 +183,13 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 ## 强调色
 
 ```sh
-python3.14t src/build.py --accents all          # 全部九种强调色（26 个主题变体）
-python3.14t src/build.py --accents blue,teal    # 指定子集
-python3.14t src/build.py --no-system            # 仅 blue
+python3.14t src/生成主题.py --强调色 全部          # 全部九种强调色（26 个主题变体）
+python3.14t src/生成主题.py --强调色 blue,teal    # 指定子集
+python3.14t src/生成主题.py --不读取系统            # 仅 blue
 ```
 
 随附扩展会监听 GNOME 强调色偏好并切换所选 AdwCode 主题到对应变体
-（`adwcode.autoAccent`，默认 `true`；只会改动以 `AdwCode` 开头的主题）。
+（`adwcode.自动强调色`，默认 `true`；只会改动以 `AdwCode` 开头的主题）。
 也可通过命令 **AdwCode: 立即同步强调色** 手动应用。
 扩展为无构建步骤、无依赖的纯 JavaScript。
 
@@ -204,19 +204,19 @@ AdwCode/
 ├── README.md                    本文件
 ├── package.json                 扩展清单，版本号唯一事实源
 ├── src/                         构建管线与可导入模块
-│   ├── build.py                 生成主题并同步 package.json
-│   ├── check_css.py             对照已安装的 VS Code 检查 extras/*.css
-│   ├── mapping.py               VS Code 颜色键到 Adwaita 角色的映射
-│   ├── package.py               打包 VSIX
-│   ├── palette.py               libadwaita 颜色角色与合成工具
-│   ├── release_notes.py         从 Git 标签与提交标题自动生成日志和发布说明
-│   ├── tokens.py                GtkSourceView 样式名到 TextMate 作用域的映射
-│   ├── update_defaults.py       刷新 VS Code 默认主题数据与键表
+│   ├── 生成主题.py                 生成主题并同步 package.json
+│   ├── 检查样式.py             对照已安装的 VS Code 检查 extras/*.css
+│   ├── 界面映射.py               VS Code 颜色键到 Adwaita 角色的映射
+│   ├── 打包扩展.py               打包 VSIX
+│   ├── 调色板.py               libadwaita 颜色角色与合成工具
+│   ├── 生成变更日志.py         从 Git 标签与提交标题自动生成日志和发布说明
+│   ├── 语法映射.py                GtkSourceView 样式名到 TextMate 作用域的映射
+│   ├── 更新默认数据.py       刷新 VS Code 默认主题数据与键表
 │   ├── gtksourceview_xml/       随附的 GtkSourceView 方案（LGPL-2.1+）
 │   └── vscode_defaults/         解析后的 VS Code 默认 token 颜色（MIT）与键表
 ├── benchmarks/                  按需性能基准与独立工作台验证
 ├── tests/                       离线单元测试
-│   └── test_adwcode.py          颜色运算、调色板、语法、主题、CSS
+│   └── test_主题.py          颜色运算、调色板、语法、主题、CSS
 ├── themes/                      生成的主题 JSON（自动生成，请勿手工编辑；已提交）
 ├── product-icons/               产品图标主题（Adwaita 符号字形与字体）
 ├── extras/                      通过 Custom CSS 加载的样式表与窗口状态脚本
@@ -246,11 +246,11 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 
 升级会覆盖注入的自定义 CSS：重新执行 **AdwCode: 安装 GNOME 外观（CSS）**，
 或让加载器执行 **Reload Custom CSS and JS**，随后运行
-`python3.14t src/check_css.py` 初筛类名与设计令牌，再检查实际界面的结构和外观。
+`python3.14t src/检查样式.py` 初筛类名与设计令牌，再检查实际界面的结构和外观。
 
 ### 强调色不同步
 
-检查 `adwcode.autoAccent` 是否为 `true`（同步 AdwCode 当前主题及普通明暗首选主题），
+检查 `adwcode.自动强调色` 是否为 `true`（同步 AdwCode 当前主题及普通明暗首选主题），
 或执行命令 **AdwCode: 立即同步强调色**。
 
 ### 自定义窗口控制图标不出现
@@ -266,14 +266,15 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 - [架构与实现状态](docs/03-架构与实现状态.md)：源数据、外观安装链路与功能边界。
 - [开发、验证与发布](docs/04-开发验证与发布.md)：检查、手动预览和发布步骤。
 - [贡献规范](CONTRIBUTING.md)：提交格式与贡献要求。
+- [中文接口迁移](docs/08-中文接口迁移.md)：设置键、命令与脚本更名后的升级步骤。
 
 需要 Python 3.9+（CI 与本地开发使用 3.14 自由线程版本）：
 
 ```sh
-python3.14t src/build.py --check             # 产物注册、颜色格式、键覆盖与对比度
-python3.14t src/check_css.py                 # 自定义 CSS 与已安装 VS Code 的比对
-python3.14t src/build.py --watch             # 给主题加 _watch，编辑 JSON 即时生效
-python3.14t src/update_defaults.py           # 刷新 VS Code 默认主题数据与键表
+python3.14t src/生成主题.py --校验             # 产物注册、颜色格式、键覆盖与对比度
+python3.14t src/检查样式.py                 # 自定义 CSS 与已安装 VS Code 的比对
+python3.14t src/生成主题.py --监视             # 给主题加 _watch，编辑 JSON 即时生效
+python3.14t src/更新默认数据.py           # 刷新 VS Code 默认主题数据与键表
 python3.14t -m unittest discover -s tests -p 'test_*.py'   # 颜色运算、调色板、语法、主题、CSS
 ```
 
@@ -288,19 +289,19 @@ meson setup builddir
 meson test -C builddir --print-errorlogs
 ```
 
-生成主题使用 `meson compile -C builddir themes`，打包使用
-`meson compile -C builddir package`。Meson 不编译扩展 JavaScript；Python 脚本仍可
+生成主题使用 `meson compile -C builddir 主题`，打包使用
+`meson compile -C builddir 打包`。Meson 不编译扩展 JavaScript；Python 脚本仍可
 单独运行。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 变更日志从 Git 提交标题和版本标签自动生成，无需维护手写文件。运行
-`meson compile -C builddir changelog` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
-VSIX。当前版本的说明可通过 `meson compile -C builddir release-notes` 预览。
+`meson compile -C builddir 变更日志` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
+VSIX。当前版本的说明可通过 `meson compile -C builddir 发布说明` 预览。
 未提交修改不进入日志；已发布记录见
-[GitHub Releases](https://github.com/KOTONEX/AdwCode/releases)，完整规则见
+[GitHub 发布页](https://github.com/KOTONEX/AdwCode/releases)，完整规则见
 [自动变更日志](docs/04-开发验证与发布.md#自动变更日志)。
 
 全部 Python 文件使用 Ruff 0.16.9 检查和格式化，含图标生成器与性能基准。
-运行 `meson compile -C builddir format` 应用格式化，`lint` 目标同时执行
+运行 `meson compile -C builddir 格式化` 应用格式化，`lint` 目标同时执行
 `ruff check .`、`ruff format --check .`、ty、tsc 和 JavaScript 语法检查。
 Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 检查器提供。
 
@@ -316,18 +317,18 @@ Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 
 
 ### 界面与代码字体
 
-安装 GNOME 外观时，扩展读取 GNOME 的 `font-name`，生成 `gnome-fonts.css`；
-`adwcode.uiFontFamily` 留空时使用系统字体，填写时只指定一个界面字体族。
+安装 GNOME 外观时，扩展读取 GNOME 的 `font-name`，生成 `GNOME字体.css`；
+`adwcode.界面字体` 留空时使用系统字体，填写时只指定一个界面字体族。
 找不到字体时依次回退到 Adwaita Sans、Cantarell 和系统无衬线字体。
 直接加载源 CSS 时也使用这条回退链，字体大小仍由 VS Code 的界面缩放管理。
 
 界面字体不改动编辑器或终端的字体。“应用推荐设置”单独读取 GNOME 的
 `monospace-font-name` 设置代码字体；无法读取时回退到 Adwaita Mono、monospace。
-更改系统字体或 `adwcode.uiFontFamily` 后重新安装外观，待保存工作后手动加载。
+更改系统字体或 `adwcode.界面字体` 后重新安装外观，待保存工作后手动加载。
 
 ## 许可证
 
 自有代码采用 **AGPL-3.0-or-later 或木兰公共许可证第 2 版或其后续版本**，自有资产采用
 **AGPL-3.0-or-later 或 CC BY-SA 4.0 或其后续版本**，使用者可任选其一。全文与具体范围见
-[许可声明](LICENSING.md)。第三方及其衍生内容保留原许可，登记在
+[许可声明](许可声明.md)。第三方及其衍生内容保留原许可，登记在
 [第三方许可证](docs/01-第三方许可证.md)。本项目与 GNOME 基金会无隶属关系。

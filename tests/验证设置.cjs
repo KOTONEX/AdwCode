@@ -5,18 +5,18 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const values = new Map([['editor.fontFamily','原有代码字体'], ['adwcode.autoReload',true], ['workbench.productIconTheme','原有产品图标']]);
+const values = new Map([['editor.fontFamily','原有代码字体'], ['adwcode.自动重载',true], ['workbench.productIconTheme','原有产品图标']]);
 const messages = [];
 let backup, failAt, errors=0, writes=0, unavailable, workspaceReload, monoFont;
 const vscode = {
   ConfigurationTarget: {Global:1},
   workspace: {getConfiguration(section){return {
-    get(name,fallback){if(section+'.'+name==='adwcode.autoReload'&&workspaceReload!==undefined)return workspaceReload;return values.has(section+'.'+name)?values.get(section+'.'+name):fallback},
+    get(name,fallback){if(section+'.'+name==='adwcode.自动重载'&&workspaceReload!==undefined)return workspaceReload;return values.has(section+'.'+name)?values.get(section+'.'+name):fallback},
     inspect(name){return {defaultValue:section+'.'+name===unavailable?undefined:null,globalValue:values.get(section+'.'+name)}},
     async update(name,value){
       assert.ok(backup, '配置写入之前必须保留备份');
       writes++;
-      if (writes===1) assert.equal(section+'.'+name,'adwcode.autoReload');
+      if (writes===1) assert.equal(section+'.'+name,'adwcode.自动重载');
       if (section+'.'+name===failAt) throw Error('模拟写入失败');
       if(value===undefined)values.delete(section+'.'+name);else values.set(section+'.'+name,value);
     },
@@ -31,18 +31,18 @@ const sandbox={module:{exports:{}},process:{platform:'linux'},setTimeout,clearTi
   return require(name);
 }};
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js'),'utf8'),sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/扩展.js'),'utf8'),sandbox);
 (async()=>{
   failAt='editor.minimap.enabled';
-  await sandbox.applyRecommendedSettings(context);
+  await sandbox.应用推荐设置(context);
   assert.equal(errors,1);
-  assert.equal(values.get('adwcode.autoReload'),false);
-  assert.equal(backup['adwcode.autoReload'].value,true);
+  assert.equal(values.get('adwcode.自动重载'),false);
+  assert.equal(backup['adwcode.自动重载'].value,true);
   assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
   assert.ok(!backup['editor.guides.indentation']);
   failAt=undefined;
-  await sandbox.applyRecommendedSettings(context);
-  await sandbox.applyRecommendedSettings(context);
+  await sandbox.应用推荐设置(context);
+  await sandbox.应用推荐设置(context);
   // 推荐主题必须在扩展中注册；操作者的工作区偏好可以独立覆盖推荐值。
   const contributes=JSON.parse(fs.readFileSync(path.join(__dirname,'../package.json'),'utf8')).contributes;
   for (const key of ['workbench.preferredLightColorTheme','workbench.preferredDarkColorTheme','workbench.preferredHighContrastLightColorTheme','workbench.preferredHighContrastColorTheme']) {
@@ -56,16 +56,16 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   assert.ok(!backup['mesonbuild.buildFolder']);
   assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
   failAt='editor.minimap.enabled';
-  await sandbox.revertRecommendedSettings(context);
+  await sandbox.恢复推荐设置(context);
   assert.equal(errors,2);
   assert.equal(values.get('editor.fontFamily'),'原有代码字体');
   assert.ok(!backup['editor.fontFamily']);
   assert.ok(backup['editor.minimap.enabled']);
   failAt=undefined;
-  await sandbox.revertRecommendedSettings(context);
+  await sandbox.恢复推荐设置(context);
   assert.equal(backup,undefined);
   assert.equal(values.get('editor.fontFamily'),'原有代码字体');
-  assert.equal(values.get('adwcode.autoReload'),true);
+  assert.equal(values.get('adwcode.自动重载'),true);
   assert.equal(values.get('workbench.productIconTheme'),'原有产品图标');
   assert.ok(!values.has('editor.minimap.enabled'));
   assert.ok(!messages.some(message=>message.options==='重载窗口'||message.actions.includes('重载窗口')));
@@ -74,20 +74,20 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/extension.js')
   values.set(unavailable,'旧版保留值');
   workspaceReload=true;
   monoFont="'等距更纱黑体 SC 11'";
-  await sandbox.applyRecommendedSettings(context);
+  await sandbox.应用推荐设置(context);
   assert.equal(values.get('editor.fontFamily'),'"等距更纱黑体 SC", "Adwaita Mono", monospace');
   assert.equal(values.get(unavailable),'旧版保留值');
   assert.ok(!backup[unavailable]);
   assert.ok(messages.some(message=>message.message.includes('已跳过：window.controlsStyle')));
   assert.ok(messages.some(message=>message.message.includes('工作区仍开启')));
-  await sandbox.revertRecommendedSettings(context);
+  await sandbox.恢复推荐设置(context);
   workspaceReload=undefined;
   let release;
   vscode.window.showInformationMessage=()=>new Promise(resolve=>{release=resolve});
-  const first=sandbox.applyRecommendedSettings(context);
+  const first=sandbox.应用推荐设置(context);
   await new Promise(resolve=>setImmediate(resolve));
   const before=writes;
-  await sandbox.applyRecommendedSettings(context);
+  await sandbox.应用推荐设置(context);
   assert.equal(writes,before);
   release(undefined);
   await first;

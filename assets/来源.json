@@ -9,7 +9,7 @@
       "notice": "LICENSE",
       "method": "内置 imagegen 文字生成与自有图像编辑；PNG 为发布用位图原件。",
       "inputs": "仅使用文字描述与本项目自有图像；未提供第三方徽标或图像。",
-      "design": "design-notes.md",
+      "design": "设计说明.md",
       "width": 1254,
       "height": 1254,
       "sha256": "98ddaf31a5e1f0a11a6e27f8e5413ec50fbd4125d874cb00e28634d4460bf51d"

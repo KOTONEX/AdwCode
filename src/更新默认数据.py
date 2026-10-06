@@ -5,7 +5,7 @@
 
 - dark.json / light.json：内置 “2026 Dark” / “2026 Light” 主题解析后的 `tokenColors`
   （MIT），供 “default syntax highlighting” 变体使用。
-- builtin_keys.json：内置主题定义的全部颜色键并集，作为 `build.py --check`
+- builtin_keys.json：内置主题定义的全部颜色键并集，作为 `生成主题.py --check`
   的覆盖度基准。
 - registry_keys.json：VS Code “Theme Color” 参考文档中记录的全部颜色 id，
   用于发现映射表中的拼写错误。
@@ -43,7 +43,7 @@ ALL_THEMES: list[str] = [
 _cache: dict[str, dict[str, Any]] = {}
 
 
-def strip_jsonc(text: str) -> str:
+def 清理JSON注释(text: str) -> str:
     out = []
     i, n, in_string, escaped = 0, len(text), False, False
     while i < n:
@@ -95,38 +95,38 @@ def strip_jsonc(text: str) -> str:
     return "".join(result)
 
 
-def fetch(name: str) -> dict[str, Any]:
+def 获取默认主题(name: str) -> dict[str, Any]:
     if name not in _cache:
         data = urllib.request.urlopen(f"{RAW}/{name}.json", timeout=30).read().decode()
-        _cache[name] = json.loads(strip_jsonc(data))
+        _cache[name] = json.loads(清理JSON注释(data))
     return _cache[name]
 
 
-def resolve_token_colors(name: str, seen: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+def 解析默认语法颜色(name: str, seen: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
     if name in seen:
         raise ValueError(f"主题 include 循环：{name}")
     seen = seen | {name}
-    theme = fetch(name)
-    tokens: list[dict[str, Any]] = []
+    theme = 获取默认主题(name)
+    语法映射: list[dict[str, Any]] = []
     include = theme.get("include")
     if include:
-        tokens += resolve_token_colors(Path(include).stem, seen)
-    tokens += theme.get("tokenColors", [])
-    return tokens
+        语法映射 += 解析默认语法颜色(Path(include).stem, seen)
+    语法映射 += theme.get("tokenColors", [])
+    return 语法映射
 
 
-def main() -> None:
+def 入口() -> None:
     # 所有下载和解析成功后再写文件，避免中途失败留下混合版本的数据。
     prepared: dict[str, str] = {}
     messages: list[str] = []
     for mode, name in VARIANTS.items():
-        tokens = resolve_token_colors(name)
-        prepared[f"{mode}.json"] = json.dumps({"tokenColors": tokens}, indent=2) + "\n"
-        messages.append(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
+        语法映射 = 解析默认语法颜色(name)
+        prepared[f"{mode}.json"] = json.dumps({"tokenColors": 语法映射}, indent=2) + "\n"
+        messages.append(f"{mode}: 从 {name} 提取 {len(语法映射)} 条语法规则")
 
     keys: set[str] = set()
     for name in ALL_THEMES:
-        keys |= set(fetch(name).get("colors", {}))
+        keys |= set(获取默认主题(name).get("colors", {}))
     prepared["builtin_keys.json"] = json.dumps(sorted(keys), indent=2) + "\n"
     messages.append(f"内置颜色键： {len(keys)}")
 
@@ -148,4 +148,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    入口()
