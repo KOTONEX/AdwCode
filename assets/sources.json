@@ -1,15 +1,18 @@
 {
-  "sources": [
+  "originals": [
     {
-      "name": "libadwaita",
-      "file": "upstream/libadwaita.svg",
-      "upstream": "https://gitlab.gnome.org/GNOME/libadwaita",
-      "revision": "19098711c1218eea561077889d8fa23457ba0f24",
-      "upstream_path": "doc/libadwaita.svg",
-      "license": "LGPL-2.1-or-later",
-      "attribution": "The GNOME Project",
-      "notice": "upstream/COPYING-libadwaita",
-      "sha256": "d4d7e6294241e21c4646e607189a7a3d8c942e74c58cba714237ba6eaf9e852c"
+      "file": "adwcode.png",
+      "name": "AdwCode 原创编辑器图标",
+      "created": "2026-10-06",
+      "license": "AGPL-3.0-or-later",
+      "attribution": "AdwCode contributors",
+      "notice": "../LICENSE",
+      "method": "内置 imagegen 文字生成与自有图像编辑；PNG 为发布用位图原件。",
+      "inputs": "仅使用文字描述与本项目自有图像；未提供第三方徽标或图像。",
+      "design": "design-notes.md",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "98ddaf31a5e1f0a11a6e27f8e5413ec50fbd4125d874cb00e28634d4460bf51d"
     }
   ]
 }

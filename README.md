@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/adwcode.png" alt="AdwCode 编辑器图标" width="128" height="128">
+</p>
+
 # AdwCode —— 跟随 GNOME 的 VS Code 主题
 
 跟随 GNOME 桌面的 Visual Studio Code 主题：调色板直接取自 **libadwaita 1.10**
