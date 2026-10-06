@@ -74,7 +74,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
   它们会到处多出描边（VS Code 的 CSS 以 `unset` / `transparent` 作为回退）。
 - 新增颜色键必须存在于 `src/vscode_defaults/registry_keys.json`，或在
-  `build.LEGACY_KEYS` 中，否则 `--check` 会失败。
+  `build.补充颜色键` 中，否则 `--check` 会失败。
 - 扩展为无构建步骤、无依赖的纯 JavaScript；JS 类型检查由 `// @ts-check` +
   `types/` 手写最小类型面提供，不引入 `@types` 依赖。
 - `themes/` 是生成产物，不要手工编辑。

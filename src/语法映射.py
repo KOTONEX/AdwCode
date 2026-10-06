@@ -159,22 +159,6 @@ MAP: dict[str, list[str]] = {
         "source.tsx storage.type",
         "source.rust storage.type",
     ],
-    # 为旧版 GtkSourceView 方案保留的别名。
-    "def:keyword": [
-        "keyword",
-        "keyword.operator.new",
-        "keyword.operator.logical.python",
-        "source.js keyword.operator.expression",
-        "source.ts keyword.operator.expression",
-        "storage.modifier",
-        "storage.type.class",
-        "storage.type.function",
-        "entity.name.tag.yaml",
-        "source.js storage.type",
-        "source.ts storage.type",
-        "source.tsx storage.type",
-        "source.rust storage.type",
-    ],
     "def:number": [
         "constant.numeric",
     ],

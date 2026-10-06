@@ -252,11 +252,9 @@ def 加载颜色键表() -> tuple[set[str] | None, set[str] | None]:
     return registry, builtin
 
 
-#: 有效但未列入官方文档的键（由 VS Code 自身注册，或为已弃用别名）。
-LEGACY_KEYS: set[str] = {
+#: 有效但未列入随附注册表的键；不包含已弃用的兼容别名。
+补充颜色键: set[str] = {
     "contrastActiveBorder",
-    "editorIndentGuide.background",
-    "editorIndentGuide.activeBackground",
     "editorHoverWidget.highlightForeground",
     "editorSuggestWidget.selectedBackground",
     "editorWidget.shadow",
@@ -409,7 +407,7 @@ def 校验() -> int:
             failed_themes += 1
     print(f"对比度：{len(paths) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
 
-    allowed = registry | builtin | LEGACY_KEYS
+    allowed = registry | builtin | 补充颜色键
     unknown = sorted(our_keys - allowed)
     missing = sorted(builtin - our_keys)
     print(

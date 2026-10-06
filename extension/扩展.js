@@ -80,8 +80,8 @@ const CSS_FILES = {
   "窗口状态.js": "adwcode.windowState",
 };
 
-// 旧文件名只用于移除失效加载引用，不作为可调用的兼容入口。
-const RETIRED_CSS_FILES = ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css", "window-state.js", "gnome-menu.js"];
+// 仅用于清理旧版引用，不提供旧文件名的功能入口。
+const 旧加载文件 = ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css", "window-state.js", "gnome-menu.js"];
 
 /**
  * “AdwCode: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
@@ -171,7 +171,7 @@ function 识别加载文件(context, value) {
     if (uri.scheme !== "file") return undefined;
     const file = path.resolve(uri.fsPath);
     const name = path.basename(file);
-    if (![...Object.keys(CSS_FILES), ...RETIRED_CSS_FILES].includes(name)) return undefined;
+    if (![...Object.keys(CSS_FILES), ...旧加载文件].includes(name)) return undefined;
     return [CSS_DIR, path.join(context.extensionPath, "extras")].some((folder) =>
       file === path.resolve(folder, name)) ? name : undefined;
   } catch {
@@ -189,7 +189,7 @@ function 合并加载引用(context, imports, names) {
   const added = new Set();
   for (const value of imports) {
     const name = 识别加载文件(context, value);
-    if (name && RETIRED_CSS_FILES.includes(name)) continue;
+    if (name && 旧加载文件.includes(name)) continue;
     if (name && names.includes(name)) {
       if (!added.has(name)) {
         merged.push(vscode.Uri.file(path.join(CSS_DIR, name)).toString());

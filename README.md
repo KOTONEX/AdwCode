@@ -59,6 +59,10 @@
 
 ## 安装
 
+**升级直接安装新 VSIX 即可，无需卸载旧版。**
+自有接口在 3.0.0 中更名，不再提供旧名称入口，详见
+[中文接口迁移](docs/08-中文接口迁移.md#300-直接安装新-vsix)。
+
 从 [Releases](https://github.com/KOTONEX/AdwCode/releases) 下载由 CI 自动构建的
 `AdwCode-<版本>.vsix`（把 `<版本>` 换成实际版本号，文件名以 Releases 页面上的附件为准），然后安装：
 

@@ -110,8 +110,13 @@ assert.ok(listenerDisposed);
 console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
 
 // 合并只处理本次安装的项目文件；保留其他来源、无效 URI 及原有顺序。
-const mixed = ["file:///other/custom.css", "file:///repo/extras/GNOME外观.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/extras/gnome-menu.js", "file:///repo/extras/GNOME字体.css"];
-mixed.push("file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/window-state.js");
+const mixed = ["file:///other/custom.css", "file:///repo/extras/GNOME外观.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/extras/GNOME字体.css"];
+
+// 清理已知目录中的旧引用；同名的其他用户文件必须保留。
+mixed.push("file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/window-state.js", "file:///repo/extras/gnome-menu.js");
+assert.equal(sandbox.识别加载文件(context, "file:///other/gnome-look.css"), undefined);
+const unrelated = sandbox.合并加载引用(context, ["file:///other/gnome-look.css"], []);
+assert.deepEqual(Array.from(unrelated), ["file:///other/gnome-look.css"]);
 const merged = sandbox.合并加载引用(context, mixed, ["GNOME外观.css", "仅关闭窗口控件.css"]);
 assert.deepEqual(Array.from(merged), ["file:///other/custom.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/extras/GNOME字体.css", "file:///user/.config/adwcode/仅关闭窗口控件.css"]);
 assert.deepEqual(Array.from(sandbox.合并加载引用(context, merged, ["GNOME外观.css", "仅关闭窗口控件.css"])), Array.from(merged));

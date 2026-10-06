@@ -149,7 +149,7 @@ class TokensTest(unittest.TestCase):
                 解析颜色(value)
 
     def test_current_scheme_uses_def_statement(self) -> None:
-        # 当前 GtkSourceView 已将 def:keyword 更名；别名必须继续被容忍
+        # 当前 GtkSourceView 已将 def:keyword 更名，不保留旧方案别名
         for mode in ("dark", "light"):
             self.assertIn("def:statement", 语法映射.加载样式方案(mode)["styles"])
             self.assertNotIn("def:keyword", 语法映射.加载样式方案(mode)["styles"])
@@ -191,12 +191,12 @@ class ThemeTest(unittest.TestCase):
         self.assertEqual(len(labels), len(set(labels)))
 
     def test_colors_are_registered(self) -> None:
-        from 生成主题 import LEGACY_KEYS
+        from 生成主题 import 补充颜色键
 
         builtin = set(
             json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text(encoding="utf-8"))
         )
-        known = set(REGISTRY) | builtin | LEGACY_KEYS
+        known = set(REGISTRY) | builtin | 补充颜色键
         for theme in self.themes():
             for key in theme["colors"]:
                 self.assertIn(key, known, f"{theme['name']}: {key}")
