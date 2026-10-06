@@ -25,6 +25,9 @@ pub mod 主题生成;
 #[path = "变更日志.rs"]
 pub mod 变更日志;
 
+#[path = "打包.rs"]
+pub mod 打包;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
