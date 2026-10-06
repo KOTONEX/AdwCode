@@ -483,7 +483,7 @@ class ExtensionStatusTest(unittest.TestCase):
     def test_offline_status_panel(self) -> None:
         node = shutil.which("node")
         if node is None:
-            self.skipTest("未安装 Node.js，跳过扩展状态面板测试")
+            self.skipTest("未安装 Node.js，跳过扩展状态输出测试")
         result = subprocess.run(
             [node, str(ROOT / "测试" / "验证状态.cjs")],
             capture_output=True,

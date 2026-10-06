@@ -233,76 +233,66 @@ function 外观安装状态(context) {
   });
 }
 
-/** @param {string} value @returns {string} */
-function 转义HTML(value) {
-  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+/** @type {import("vscode").OutputChannel | undefined} */
+let 外观状态输出通道;
+
+/**
+ * 状态输出通道按需创建，登记到 subscriptions 统一释放；释放后允许重新创建。
+ * @param {import("vscode").ExtensionContext} context
+ * @returns {import("vscode").OutputChannel}
+ */
+function 外观状态通道(context) {
+  if (外观状态输出通道 === undefined) {
+    const channel = vscode.window.createOutputChannel("AdwCode 外观状态");
+    外观状态输出通道 = channel;
+    context.subscriptions.push({ dispose: () => { 外观状态输出通道 = undefined; channel.dispose(); } });
+  }
+  return 外观状态输出通道;
 }
 
-/** @param {import("vscode").ExtensionContext} context @returns {void} */
+/** 只读取安装状态并写入输出通道；再次执行命令即刷新。
+ * @param {import("vscode").ExtensionContext} context @returns {void}
+ */
 function 显示外观安装状态(context) {
-  const panel = vscode.window.createWebviewPanel("adwcode.查看外观安装状态", "AdwCode 外观状态", vscode.ViewColumn.One, { enableScripts: true });
-  let disposed = false;
-  const render = (refreshed = false) => {
-    const rows = 外观安装状态(context);
-    const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
-    const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.importCount === 1 && row.patched === "磁盘补丁已更新");
-    const nonce = Math.random().toString(36).slice(2);
-    const labels = /** @type {Record<string, string>} */ ({
-      "GNOME外观.css": "工作台外观", "仅关闭窗口控件.css": "窗口按钮", "GNOME字体.css": "界面字体", "窗口状态.js": "窗口状态",
-    });
-    panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-      <style>
-        * { box-sizing: border-box; }
-        body { max-width: 800px; margin: 0 auto; padding: 24px 16px; color: var(--vscode-foreground); background: var(--vscode-panel-background); font-family: ${界面字体栈()}; line-height: 1.6; }
-        header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
-        h1 { font-size: 24px; line-height: 1.3; margin: 0; } h2 { font-size: 16px; margin: 24px 0 8px; }
-        h3 { font-size: 15px; margin: 0 0 4px; } p { margin: 8px 0; }
-        .muted, dt { color: var(--vscode-descriptionForeground); }
-        .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-editorGroup-border, transparent); border-radius: 15px; padding: 16px; margin: 8px 0; }
-        .summary { border-inline-start: 3px solid var(--vscode-focusBorder); }
-        .files { border-radius: 15px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-editorGroup-border, transparent); }
-        article { padding: 16px; } article + article { border-top: 1px solid var(--vscode-editorGroup-border); }
-        code { overflow-wrap: anywhere; } dl { margin: 8px 0 0; } .row { display: grid; grid-template-columns: minmax(96px, 1fr) minmax(0, 2fr); gap: 8px; padding: 4px 0; }
-        dd { margin: 0; overflow-wrap: anywhere; } ol { padding-inline-start: 24px; } li + li { margin-top: 8px; }
-        button { font: inherit; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-button-secondaryBorder, transparent); border-radius: 9px; padding: 6px 14px; cursor: pointer; }
-        button:hover { background: var(--vscode-button-secondaryHoverBackground); }
-        button:active { background: var(--vscode-toolbar-activeBackground); }
-        button:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
-        .vscode-high-contrast .card, .vscode-high-contrast .files, .vscode-high-contrast-light .card, .vscode-high-contrast-light .files { border-color: var(--vscode-contrastBorder); }
-        @media (max-width: 360px) { .row { grid-template-columns: 1fr; gap: 0; } }
-      </style></head><body>
-      <header><h1>外观状态</h1><button id="refresh">刷新状态</button></header>
-      <p class="muted">只检查安装文件与磁盘补丁，不修改配置或重载窗口。</p>
-      <p role="status" aria-live="polite">${refreshed ? "状态已刷新。" : ""}</p>
-      <section aria-labelledby="summary"><h2 id="summary">安装准备</h2><div class="card summary">
-      <h3>${ready ? "文件与补丁均已就绪" : "外观文件需要检查"}</h3>
-      <dl><div class="row"><dt>加载器</dt><dd>Custom CSS and JS Loader：${loader ? "已安装" : "未安装"}</dd></div>
-      <div class="row"><dt>当前窗口</dt><dd>无法直接确认是否已加载。磁盘补丁状态与窗口显示分别检查。</dd></div></dl></div></section>
-      <section aria-labelledby="files"><h2 id="files">外观组件</h2><div class="files">
-      ${rows.map((row) => `<article><h3>${labels[row.name] || 转义HTML(row.name)}</h3><code class="muted">${转义HTML(row.name)}</code><dl>
-      <div class="row"><dt>安装副本</dt><dd>${row.copied}</dd></div>
-      <div class="row"><dt>加载器配置</dt><dd>${row.importCount > 1 ? `重复引用（${row.importCount} 项），请重新安装外观` : row.imported ? "已加入" : "未加入"}</dd></div>
-      <div class="row"><dt>磁盘补丁</dt><dd>${row.patched}</dd></div></dl></article>`).join("")}
-      </div></section>
-      <section aria-labelledby="next"><h2 id="next">下一步</h2><div class="card"><ol>
-      ${!loader ? '<li>安装 Custom CSS and JS Loader。</li>' : ""}
-      <li>副本或加载配置需要更新时，执行“AdwCode: 安装 GNOME 外观（CSS）”。</li>
-      <li>磁盘补丁需要更新时，首次执行加载器的“Enable Custom CSS and JS”；已启用时执行“Reload Custom CSS and JS”。</li>
-      <li>保存工作后手动重载窗口，再检查实际外观。重载可能中断扩展会话或调试任务。</li>
-      </ol><p class="muted">此面板不会自动执行这些操作。</p></div></section>
-      <script nonce="${nonce}">const api = acquireVsCodeApi(); const button = document.getElementById('refresh'); button.addEventListener('click', () => api.postMessage('refresh')); ${refreshed ? "button.focus();" : ""}</script>
-      </body></html>`;
-  };
-  const listener = panel.webview.onDidReceiveMessage(async (message) => {
-    if (message === "refresh") {
-      await 读取系统字体();
-      if (!disposed) render(true);
-    }
+  const rows = 外观安装状态(context);
+  const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
+  const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.importCount === 1 && row.patched === "磁盘补丁已更新");
+  const labels = /** @type {Record<string, string>} */ ({
+    "GNOME外观.css": "工作台外观", "仅关闭窗口控件.css": "窗口按钮", "GNOME字体.css": "界面字体", "窗口状态.js": "窗口状态",
   });
-  panel.onDidDispose(() => { disposed = true; listener.dispose(); });
-  render();
+  const lines = [
+    "外观状态",
+    "========",
+    "只检查安装文件与磁盘补丁，不修改配置或重载窗口。再次执行“AdwCode: 查看外观安装状态”即刷新。",
+    "",
+    `安装准备：${ready ? "文件与补丁均已就绪" : "外观文件需要检查"}`,
+    `- 加载器（Custom CSS and JS Loader）：${loader ? "已安装" : "未安装"}`,
+    "- 当前窗口：无法直接确认是否已加载；磁盘补丁状态与窗口显示分别检查。",
+    "",
+    "外观组件：",
+  ];
+  for (const row of rows) {
+    lines.push(
+      `[${labels[row.name] || row.name}] ${row.name}`,
+      `- 安装副本：${row.copied}`,
+      `- 加载器配置：${row.importCount > 1 ? `重复引用（${row.importCount} 项），请重新安装外观` : row.imported ? "已加入" : "未加入"}`,
+      `- 磁盘补丁：${row.patched}`,
+    );
+  }
+  let step = 0;
+  lines.push("", "下一步：");
+  if (!loader) lines.push(`${++step}. 安装 Custom CSS and JS Loader。`);
+  lines.push(
+    `${++step}. 副本或加载配置需要更新时，执行“AdwCode: 安装 GNOME 外观（CSS）”。`,
+    `${++step}. 磁盘补丁需要更新时，首次执行加载器的“Enable Custom CSS and JS”；已启用时执行“Reload Custom CSS and JS”。`,
+    `${++step}. 保存工作后手动重载窗口，再检查实际外观。重载可能中断扩展会话或调试任务。`,
+    "",
+    "此输出只读取状态，不会自动执行这些操作。",
+    "",
+  );
+  const channel = 外观状态通道(context);
+  channel.replace(lines.join("\n"));
+  channel.show();
 }
 
 /**

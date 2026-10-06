@@ -20,9 +20,9 @@ let processes = 0;
 let commands = 0;
 const disposable = () => ({ dispose() {} });
 function load() {
-  const panel = { webview: { html: '', onDidReceiveMessage: disposable }, onDidDispose: disposable };
+  const channel = { replace() {}, show() {}, dispose() {} };
   const vscode = {
-    env: { appRoot }, ViewColumn: { One: 1 },
+    env: { appRoot },
     extensions: { getExtension() { return {}; } },
     Uri: { parse(value) { const url = new URL(value); return { scheme: url.protocol.slice(0, -1), fsPath: decodeURIComponent(url.pathname) }; } },
     workspace: {
@@ -31,7 +31,7 @@ function load() {
         async update() { writes++; throw Error('禁止配置写入'); },
       }; },
     },
-    window: { createWebviewPanel() { return panel; } },
+    window: { createOutputChannel() { return channel; } },
     commands: { registerCommand: disposable, async executeCommand() { commands++; throw Error('禁止命令执行'); } },
   };
   const sandbox = { module: { exports: {} }, process: { platform: 'linux' },
@@ -44,7 +44,7 @@ function load() {
   };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
-  return { sandbox, panel, context: { extensionPath: root, subscriptions: [] } };
+  return { sandbox, channel, context: { extensionPath: root, subscriptions: [] } };
 }
 function summarize(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -77,7 +77,7 @@ try {
     bench('脚本加载（含 VM 创建）', () => undefined, () => load(), 200),
     bench('扩展激活', load, input => { input.sandbox.module.exports.activate(input.context); }, 200),
     bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
-    bench('外观状态面板生成（模拟 Webview）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),
+    bench('外观状态输出生成（模拟输出通道）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),
   ];
   for (const result of results) {
     if (result.name.includes('1000')) {

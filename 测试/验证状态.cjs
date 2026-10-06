@@ -8,18 +8,13 @@ const path = require("node:path");
 async function main() {
 const files = new Map();
 let imports = [];
-let receive;
-let disposed;
-let listenerDisposed = false;
-const panel = {
-  webview: {
-    html: "",
-    onDidReceiveMessage(callback) {
-      receive = callback;
-      return { dispose() { listenerDisposed = true; } };
-    },
-  },
-  onDidDispose(callback) { disposed = callback; },
+let output = "";
+let shown = 0;
+let channelDisposed = false;
+const channel = {
+  replace(text) { output = text; },
+  show() { shown++; },
+  dispose() { channelDisposed = true; },
 };
 const vscode = {
   env: { appRoot: "/app" },
@@ -32,8 +27,7 @@ const vscode = {
   },
   workspace: { getConfiguration: () => ({ get: (key, fallback) => key === "imports" ? imports : fallback }) },
   extensions: { getExtension: () => ({}) },
-  ViewColumn: { One: 1 },
-  window: { createWebviewPanel: () => panel },
+  window: { createOutputChannel: () => channel },
 };
 const sandbox = {
   require(name) {
@@ -54,7 +48,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../扩展/扩展.js"), "utf8"), sandbox);
-const context = { extensionPath: "/repo" };
+const context = { extensionPath: "/repo", subscriptions: [] };
 let rows = sandbox.外观安装状态(context);
 assert.equal(rows[0].copied, "源文件不可读");
 assert.equal(rows[0].patched, "无法读取");
@@ -84,28 +78,32 @@ assert.ok(sandbox.外观安装状态(context).every((row) => row.imported));
 imports.push("file:///user/.config/adwcode/GNOME外观.css");
 assert.equal(sandbox.外观安装状态(context)[0].importCount, 2);
 sandbox.显示外观安装状态(context);
-assert.ok(panel.webview.html.includes("重复引用（2 项）"));
-assert.ok(!panel.webview.html.includes("文件与补丁均已就绪"));
+assert.ok(output.includes("重复引用（2 项）"));
+assert.ok(!output.includes("文件与补丁均已就绪"));
+assert.equal(shown, 1);
 files.set(html, patch.replace("<!-- !! VSCODE-CUSTOM-CSS-END !! -->", "<style>内容：GNOME外观.css</style><!-- !! VSCODE-CUSTOM-CSS-END !! -->"));
 assert.equal(sandbox.外观安装状态(context)[0].patched, "重复注入，补丁待更新");
 files.set(html, patch);
 imports.pop();
 sandbox.显示外观安装状态(context);
-assert.ok(panel.webview.html.includes("文件与补丁均已就绪"));
+assert.ok(output.includes("文件与补丁均已就绪"));
 files.set("/repo/附加外观/GNOME外观.css", "新样式");
-await receive("refresh");
-assert.ok(panel.webview.html.includes("副本待更新"));
-assert.ok(panel.webview.html.includes("状态已刷新。"));
-assert.ok(panel.webview.html.includes("button.focus();"));
-assert.ok(!panel.webview.html.includes("<table>"));
-assert.ok(panel.webview.html.includes("未注入当前版本"));
+sandbox.显示外观安装状态(context);
+assert.ok(output.includes("副本待更新"));
+assert.ok(output.includes("未注入当前版本"));
+assert.ok(!output.includes("<"));
+assert.equal(shown, 3);
 imports = [];
 rows = sandbox.外观安装状态(context);
 assert.ok(rows.every((row) => !row.imported));
-disposed();
-assert.ok(listenerDisposed);
+// 输出通道只创建一次并交给 subscriptions 释放；释放后可重新创建。
+assert.equal(context.subscriptions.length, 1);
+context.subscriptions[0].dispose();
+assert.ok(channelDisposed);
+sandbox.显示外观安装状态(context);
+assert.equal(context.subscriptions.length, 2);
 // 模拟对象未提供写文件、配置更新或执行命令 API；调用它们会直接失败。
-console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
+console.log("外观状态：缺失、同步、过期、未配置和输出刷新测试通过");
 
 // 合并只处理本次安装的项目文件；保留其他来源、无效 URI 及原有顺序。
 const mixed = ["file:///other/custom.css", "file:///repo/附加外观/GNOME外观.css", "file:///user/.config/adwcode/GNOME外观.css", "不是有效的 URI", "file:///other/GNOME外观.css", "file:///repo/附加外观/GNOME字体.css"];

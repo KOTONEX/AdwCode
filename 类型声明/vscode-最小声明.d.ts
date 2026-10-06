@@ -62,8 +62,14 @@ declare module "vscode" {
         function getConfiguration(section?: string): WorkspaceConfiguration;
     }
 
+    export interface OutputChannel {
+        replace(value: string): void;
+        show(preserveFocus?: boolean): void;
+        dispose(): unknown;
+    }
+
     export namespace window {
-        function createWebviewPanel(viewType: string, title: string, column: ViewColumn, options: { enableScripts?: boolean }): WebviewPanel;
+        function createOutputChannel(name: string): OutputChannel;
         function showInformationMessage(
             message: string,
             ...items: string[]
@@ -81,15 +87,6 @@ declare module "vscode" {
             message: string,
             ...items: string[]
         ): Thenable<string | undefined>;
-    }
-
-    export enum ViewColumn { One = 1 }
-    export interface WebviewPanel {
-        readonly webview: {
-            html: string;
-            onDidReceiveMessage(listener: (message: unknown) => unknown): Disposable;
-        };
-        onDidDispose(listener: () => unknown): Disposable;
     }
 
     export namespace commands {
