@@ -467,7 +467,7 @@ class ExtensionStatusTest(unittest.TestCase):
                 with patch.object(打包扩展, "ROOT", folder), self.assertRaises(ValueError):
                     打包扩展.入口(changelog)
 
-    def test_recommended_settings_recovery(self) -> None:
+    def test_manifest_declarations(self) -> None:
         node = shutil.which("node")
         if node is None:
             self.skipTest("未安装 Node.js")
@@ -480,7 +480,7 @@ class ExtensionStatusTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_offline_status_panel(self) -> None:
+    def test_offline_status_output(self) -> None:
         node = shutil.which("node")
         if node is None:
             self.skipTest("未安装 Node.js，跳过扩展状态输出测试")

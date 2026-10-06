@@ -7,13 +7,6 @@
 // @ts-check
 /** @typedef {"unknown" | "not-enabled" | "enabled" | "stale"} CssPatchState */
 
-/**
- * globalState 中记录的单项设置。
- * @typedef {object} SettingRecord
- * @property {boolean} wasSet
- * @property {unknown} value
- */
-
 const vscode = /** @type {typeof import("vscode")} */ (require("vscode"));
 const { execFile } = /** @type {typeof import("child_process")} */ (require("child_process"));
 const fs = /** @type {typeof import("fs")} */ (require("fs"));
@@ -36,37 +29,6 @@ const CSS_FILES = {
 
 // 仅用于清理旧版引用，不提供旧文件名的功能入口。
 const 旧加载文件 = ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css", "window-state.js", "gnome-menu.js"];
-
-/**
- * “AdwCode: 应用推荐设置” 写入的 GNOME Builder 风格默认值。
- * @type {Record<string, string | boolean | number | null>}
- */
-const RECOMMENDED_SETTINGS = {
-  "editor.fontFamily": "Adwaita Mono, monospace",
-  "window.autoDetectColorScheme": true,
-  "window.autoDetectHighContrast": true,
-  "workbench.preferredLightColorTheme": "AdwCode 浅色 · 彩色状态栏",
-  "workbench.preferredDarkColorTheme": "AdwCode 深色",
-  "workbench.preferredHighContrastLightColorTheme": "AdwCode 浅色 高对比度",
-  "workbench.preferredHighContrastColorTheme": "AdwCode 深色 高对比度",
-  "workbench.productIconTheme": "adwcode",
-  "editor.renderLineHighlight": "none",
-  "editor.minimap.enabled": false,
-  "editor.guides.indentation": true,
-  "editor.stickyScroll.enabled": false,
-  "editor.smoothScrolling": true,
-  "breadcrumbs.enabled": false,
-  "scm.diffDecorations": "none",
-  "window.commandCenter": true,
-  "window.menuBarVisibility": "compact",
-  "window.titleBarStyle": "custom",
-  "window.controlsStyle": "native",
-  "window.density.editorTabHeight": "compact",
-  "workbench.tree.indent": 12,
-  "workbench.editor.tabSizing": "shrink",
-  "workbench.list.smoothScrolling": true,
-  "workbench.iconTheme": null,
-};
 
 /** @type {{ ui?: string, mono?: string }} */
 let systemFonts = {};
@@ -377,132 +339,11 @@ async function 安装样式(context, names) {
   }
 }
 
-let settingsRunning = false;
-
-/**
- * @param {import("vscode").ExtensionContext} context
- * @returns {Promise<void>}
- */
-async function 应用推荐设置(context) {
-  if (settingsRunning) return;
-  settingsRunning = true;
-  try {
-    await 读取系统字体();
-    const candidates = Object.entries({ ...RECOMMENDED_SETTINGS,
-      "editor.fontFamily": systemFonts.mono ? `${引用字体名称(systemFonts.mono)}, "Adwaita Mono", monospace` : RECOMMENDED_SETTINGS["editor.fontFamily"],
-    });
-    /** @type {string[]} */
-    const unavailable = [];
-    const entries = candidates.filter(([key]) => {
-      const [section, name] = 拆分设置键(key);
-      const inspected = vscode.workspace.getConfiguration(section).inspect(name);
-      // 旧配置中可能留有未注册的用户键，只把有默认定义的推荐项视为可用。
-      if (!inspected || inspected.defaultValue === undefined) {
-        unavailable.push(key);
-        return false;
-      }
-      return true;
-    });
-    const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
-    const apply = "应用";
-    const choice = await vscode.window.showInformationMessage(
-      `AdwCode 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格。\n` +
-        `工作区设置可能覆盖这些用户值。\n\n${preview}` +
-        (unavailable.length ? `\n\n当前 VS Code 未提供以下设置，已跳过：${unavailable.join("、")}` : ""),
-      { modal: true },
-      apply
-    );
-    if (choice !== apply) {
-      return;
-    }
-
-    // globalState 以 JSON 序列化，undefined 会被丢弃，因此显式记录"原先是否设置过"
-    /** @type {Record<string, SettingRecord>} */
-    const previous = /** @type {Record<string, SettingRecord>} */ (context.globalState.get("adwcode.previousSettings") || {});
-    for (const [key, value] of entries) {
-      const [section, name] = 拆分设置键(key);
-      const config = vscode.workspace.getConfiguration(section);
-      const inspected = config.inspect(name);
-      const oldValue = inspected ? inspected.globalValue : undefined;
-      if (!Object.prototype.hasOwnProperty.call(previous, key)) {
-        previous[key] = { wasSet: oldValue !== undefined, value: oldValue === undefined ? null : oldValue };
-      }
-      // 每次写配置前持久化原值，部分失败或重复应用不能丢失首次备份。
-      await context.globalState.update("adwcode.previousSettings", { ...previous });
-      await config.update(name, value, vscode.ConfigurationTarget.Global);
-    }
-
-    await vscode.window.showInformationMessage(
-      "AdwCode：推荐设置已应用。" +
-        "标题栏和窗口控件等配置可能需要重载；" +
-        "请保存工作并结束扩展会话后手动重载窗口。"
-    );
-  } catch (error) {
-    vscode.window.showErrorMessage(`AdwCode：推荐设置未全部应用，已保留原值供恢复：${/** @type {Error} */ (error).message}`);
-  } finally {
-    settingsRunning = false;
-  }
-}
-
-/**
- * @param {import("vscode").ExtensionContext} context
- * @returns {Promise<void>}
- */
-async function 恢复推荐设置(context) {
-  if (settingsRunning) return;
-  settingsRunning = true;
-  try {
-    /** @type {Record<string, SettingRecord> | undefined} */
-    const previous = context.globalState.get("adwcode.previousSettings");
-    if (!previous) {
-      vscode.window.showInformationMessage("AdwCode：没有可恢复的设置。");
-      return;
-    }
-    for (const [key, record] of Object.entries(previous)) {
-      const [section, name] = 拆分设置键(key);
-      const inspected = vscode.workspace.getConfiguration(section).inspect(name);
-      // 设置已被移除时 inspect 不再返回默认值；删除残留记录，避免 update 对未注册键失败。
-      if (!inspected || inspected.defaultValue === undefined) {
-        delete previous[key];
-        await context.globalState.update("adwcode.previousSettings", { ...previous });
-        continue;
-      }
-      const target = record && record.wasSet ? record.value : undefined;
-      await vscode.workspace.getConfiguration(section).update(
-        name,
-        target,
-        vscode.ConfigurationTarget.Global
-      );
-      delete previous[key];
-      await context.globalState.update("adwcode.previousSettings", { ...previous });
-    }
-    await context.globalState.update("adwcode.previousSettings", undefined);
-    vscode.window.showInformationMessage("AdwCode：已恢复原有设置。");
-  } catch (error) {
-    vscode.window.showErrorMessage(`AdwCode：设置未全部恢复，剩余记录已保留，可再次执行恢复：${/** @type {Error} */ (error).message}`);
-  } finally {
-    settingsRunning = false;
-  }
-}
-
-/**
- * @param {string} key
- * @returns {[string, string]}
- */
-function 拆分设置键(key) {
-  const index = key.indexOf(".");
-  return [key.slice(0, index), key.slice(index + 1)];
-}
-
 /**
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
  */
 function activate(context) {
-  if (process.platform !== "linux") {
-    return;
-  }
-
   context.subscriptions.push(
     vscode.commands.registerCommand("adwcode.查看外观安装状态", async () => { await 读取系统字体(); 显示外观安装状态(context); }),
     vscode.commands.registerCommand("adwcode.安装GNOME外观", () =>
@@ -510,12 +351,6 @@ function activate(context) {
     ),
     vscode.commands.registerCommand("adwcode.安装仅关闭窗口控件", () =>
       安装样式(context, ["仅关闭窗口控件.css"])
-    ),
-    vscode.commands.registerCommand("adwcode.应用推荐设置", () =>
-      应用推荐设置(context)
-    ),
-    vscode.commands.registerCommand("adwcode.恢复推荐设置", () =>
-      恢复推荐设置(context)
     ),
   );
 }

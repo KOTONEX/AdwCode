@@ -3,12 +3,22 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
     "vscode": "^1.100.0"
   },
+  "capabilities": {
+    "virtualWorkspaces": false,
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "安装外观需要写入本机用户配置目录并调用本机命令。"
+    }
+  },
+  "extensionKind": [
+    "ui"
+  ],
   "categories": [
     "Themes"
   ],
@@ -44,7 +54,29 @@
   },
   "contributes": {
     "configurationDefaults": {
-      "window.menuBarVisibility": "compact"
+      "window.menuBarVisibility": "compact",
+      "editor.fontFamily": "Adwaita Mono, monospace",
+      "window.autoDetectColorScheme": true,
+      "window.autoDetectHighContrast": true,
+      "workbench.preferredLightColorTheme": "AdwCode 浅色 · 彩色状态栏",
+      "workbench.preferredDarkColorTheme": "AdwCode 深色",
+      "workbench.preferredHighContrastLightColorTheme": "AdwCode 浅色 高对比度",
+      "workbench.preferredHighContrastColorTheme": "AdwCode 深色 高对比度",
+      "workbench.productIconTheme": "adwcode",
+      "editor.renderLineHighlight": "none",
+      "editor.minimap.enabled": false,
+      "editor.guides.indentation": true,
+      "editor.stickyScroll.enabled": false,
+      "editor.smoothScrolling": true,
+      "breadcrumbs.enabled": false,
+      "scm.diffDecorations": "none",
+      "window.commandCenter": true,
+      "window.titleBarStyle": "custom",
+      "window.controlsStyle": "native",
+      "window.density.editorTabHeight": "compact",
+      "workbench.tree.indent": 12,
+      "workbench.editor.tabSizing": "shrink",
+      "workbench.list.smoothScrolling": true
     },
     "themes": [
       {
@@ -99,28 +131,37 @@
       {
         "command": "adwcode.查看外观安装状态",
         "title": "查看外观安装状态",
-        "category": "AdwCode"
+        "category": "AdwCode",
+        "enablement": "isLinux"
       },
       {
         "command": "adwcode.安装仅关闭窗口控件",
         "title": "生成仅关闭按钮的窗口控件 CSS",
-        "category": "AdwCode"
+        "category": "AdwCode",
+        "enablement": "isLinux"
       },
       {
         "command": "adwcode.安装GNOME外观",
         "title": "安装 GNOME 外观（CSS）",
-        "category": "AdwCode"
-      },
-      {
-        "command": "adwcode.应用推荐设置",
-        "title": "应用推荐设置",
-        "category": "AdwCode"
-      },
-      {
-        "command": "adwcode.恢复推荐设置",
-        "title": "恢复推荐设置",
-        "category": "AdwCode"
+        "category": "AdwCode",
+        "enablement": "isLinux"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "adwcode.查看外观安装状态",
+          "when": "isLinux"
+        },
+        {
+          "command": "adwcode.安装仅关闭窗口控件",
+          "when": "isLinux"
+        },
+        {
+          "command": "adwcode.安装GNOME外观",
+          "when": "isLinux"
+        }
+      ]
+    }
   }
 }

@@ -1,99 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
-// 使用内存配置与命令模拟，验证重复应用和部分失败，不访问工作窗口。
+// 校验 package.json 的声明式默认设置、命令可用性与工作区能力，不加载扩展。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const vm = require('node:vm');
 const path = require('node:path');
-const values = new Map([['editor.fontFamily','原有代码字体'], ['workbench.productIconTheme','原有产品图标']]);
-const messages = [];
-let backup, failAt, errors=0, writes=0, unavailable, monoFont;
-const vscode = {
-  ConfigurationTarget: {Global:1},
-  workspace: {getConfiguration(section){return {
-    get(name,fallback){return values.has(section+'.'+name)?values.get(section+'.'+name):fallback},
-    inspect(name){return {defaultValue:section+'.'+name===unavailable?undefined:null,globalValue:values.get(section+'.'+name)}},
-    async update(name,value){
-      assert.ok(backup, '配置写入之前必须保留备份');
-      writes++;
-      if (writes===1) assert.equal(section+'.'+name,'editor.fontFamily');
-      if (section+'.'+name===failAt) throw Error('模拟写入失败');
-      if (value!==undefined && section+'.'+name===unavailable) throw Error('模拟未注册配置');
-      if(value===undefined)values.delete(section+'.'+name);else values.set(section+'.'+name,value);
-    },
-  }}},
-  window:{async showInformationMessage(message,options,...actions){messages.push({message,options,actions});return options?.modal?'应用':'重载窗口'},showErrorMessage(){errors++}},
-  commands:{async executeCommand(){throw Error('不应执行真实窗口命令')}},
-};
-const context={globalState:{get(){return backup?JSON.parse(JSON.stringify(backup)):undefined},async update(_key,value){backup=value?JSON.parse(JSON.stringify(value)):undefined}}};
-const sandbox={module:{exports:{}},process:{platform:'linux'},require(name){
-  if(name==='vscode')return vscode;
-  if(name==='child_process')return {execFile(_file,args,_options,callback){callback(monoFont?null:Error('无 GNOME 设置'), args.includes('monospace-font-name')?monoFont||'':"'界面字体 11'")}};
-  return require(name);
-}};
-vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../扩展/扩展.js'),'utf8'),sandbox);
-(async()=>{
-  failAt='editor.minimap.enabled';
-  await sandbox.应用推荐设置(context);
-  assert.equal(errors,1);
-  assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
-  assert.ok(!backup['editor.guides.indentation']);
-  failAt=undefined;
-  await sandbox.应用推荐设置(context);
-  await sandbox.应用推荐设置(context);
-  // 推荐主题必须在扩展中注册；操作者的工作区偏好可以独立覆盖推荐值。
-  const contributes=JSON.parse(fs.readFileSync(path.join(__dirname,'../package.json'),'utf8')).contributes;
-  for (const key of ['workbench.preferredLightColorTheme','workbench.preferredDarkColorTheme','workbench.preferredHighContrastLightColorTheme','workbench.preferredHighContrastColorTheme']) {
-    assert.ok(contributes.themes.some(theme=>theme.label===values.get(key)),key);
-  }
-  assert.ok(contributes.productIconThemes.some(theme=>theme.id===values.get('workbench.productIconTheme')));
-  assert.equal(values.get('window.titleBarStyle'),'custom');
-  assert.equal(values.get('window.controlsStyle'),'native');
-  assert.equal(values.get('window.menuBarVisibility'),'compact');
-  assert.ok(!backup['python.defaultInterpreterPath']);
-  assert.ok(!backup['mesonbuild.buildFolder']);
-  assert.equal(backup['editor.fontFamily'].value,'原有代码字体');
-  failAt='editor.minimap.enabled';
-  await sandbox.恢复推荐设置(context);
-  assert.equal(errors,2);
-  assert.equal(values.get('editor.fontFamily'),'原有代码字体');
-  assert.ok(!backup['editor.fontFamily']);
-  assert.ok(backup['editor.minimap.enabled']);
-  failAt=undefined;
-  await sandbox.恢复推荐设置(context);
-  assert.equal(backup,undefined);
-  assert.equal(values.get('editor.fontFamily'),'原有代码字体');
-  assert.equal(values.get('workbench.productIconTheme'),'原有产品图标');
-  assert.ok(!values.has('editor.minimap.enabled'));
-  assert.ok(!messages.some(message=>message.options==='重载窗口'||message.actions.includes('重载窗口')));
-  // 较旧的 VS Code 不提供某项时，预览和备份应跳过。
-  unavailable='window.controlsStyle';
-  values.set(unavailable,'旧版保留值');
-  monoFont="'等距更纱黑体 SC 11'";
-  await sandbox.应用推荐设置(context);
-  assert.equal(values.get('editor.fontFamily'),'"等距更纱黑体 SC", "Adwaita Mono", monospace');
-  assert.equal(values.get(unavailable),'旧版保留值');
-  assert.ok(!backup[unavailable]);
-  assert.ok(messages.some(message=>message.message.includes('已跳过：window.controlsStyle')));
-  await sandbox.恢复推荐设置(context);
-  // 已移除的设置会留在旧备份中；恢复应清理记录，而不是以未注册键反复失败。
-  unavailable='adwcode.自动重载';
-  backup={'adwcode.自动重载':{wasSet:true,value:false}};
-  await sandbox.恢复推荐设置(context);
-  assert.equal(errors,2);
-  assert.equal(backup,undefined);
-  assert.ok(!values.has('adwcode.自动重载'));
-  unavailable=undefined;
-  let release;
-  vscode.window.showInformationMessage=()=>new Promise(resolve=>{release=resolve});
-  const first=sandbox.应用推荐设置(context);
-  await new Promise(resolve=>setImmediate(resolve));
-  const before=writes;
-  await sandbox.应用推荐设置(context);
-  assert.equal(writes,before);
-  release(undefined);
-  await first;
-  assert.equal(backup,undefined);
-  console.log('推荐设置：外观对齐、字体、兼容、重复应用、恢复、移除键清理、并发与取消测试通过');
-})().catch(error=>{console.error(error);process.exitCode=1});
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+const contributes = manifest.contributes;
+const defaults = contributes.configurationDefaults;
+const commands = contributes.commands.map((entry) => entry.command);
+const palette = contributes.menus.commandPalette;
+
+// 默认值必须引用已注册的主题与产品图标；界面字体仍是可配置项。
+const themeLabels = new Set(contributes.themes.map((theme) => theme.label));
+for (const key of ['workbench.preferredLightColorTheme','workbench.preferredDarkColorTheme','workbench.preferredHighContrastLightColorTheme','workbench.preferredHighContrastColorTheme']) {
+  assert.ok(themeLabels.has(defaults[key]), key);
+}
+assert.ok(contributes.productIconThemes.some((theme) => theme.id === defaults['workbench.productIconTheme']));
+assert.equal(defaults['window.menuBarVisibility'],'compact');
+assert.equal(defaults['editor.fontFamily'],'Adwaita Mono, monospace');
+assert.ok(!('workbench.iconTheme' in defaults), '不能用默认值清空用户图标主题');
+assert.equal(contributes.configuration.properties['adwcode.界面字体'].default,'');
+
+// 写入用户设置的命令已移除，其余命令与命令面板入口只在 Linux 提供。
+const expected = ['adwcode.查看外观安装状态','adwcode.安装GNOME外观','adwcode.安装仅关闭窗口控件'];
+assert.ok(!commands.includes('adwcode.应用推荐设置'));
+assert.ok(!commands.includes('adwcode.恢复推荐设置'));
+assert.deepEqual([...commands].sort(), [...expected].sort());
+for (const entry of contributes.commands) {
+  assert.equal(entry.enablement,'isLinux',entry.command);
+}
+assert.deepEqual(palette.map((entry) => entry.command).sort(), [...expected].sort());
+for (const entry of palette) {
+  assert.equal(entry.when,'isLinux',entry.command);
+}
+
+// 扩展只在本机 UI 侧运行，不进入虚拟工作区与受限模式。
+assert.equal(manifest.capabilities.virtualWorkspaces,false);
+assert.equal(manifest.capabilities.untrustedWorkspaces.supported,false);
+assert.deepEqual(manifest.extensionKind,['ui']);
+console.log('清单：默认设置、命令与能力声明测试通过');
