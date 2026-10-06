@@ -14,6 +14,7 @@
 use std::collections::BTreeMap;
 
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use quick_xml::events::Event;
 
 use crate::有序映射::有序映射;
@@ -25,7 +26,7 @@ use crate::错误::{工具错误, 结果};
 pub struct 样式信息 {
     pub foreground: Option<String>,
     pub background: Option<String>,
-    pub fontStyle: String,
+    pub font_style: String,
 }
 
 /// 解析后的 GtkSourceView 方案。
@@ -322,7 +323,7 @@ pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样
                         .map_err(|错误| 工具错误::新(format!("XML 属性解析失败：{错误}")))?;
                     let 键 = String::from_utf8_lossy(属性项.key.as_ref()).to_string();
                     let 值 = 属性项
-                        .decode_and_unescape_value(reader.decoder())
+                        .decoded_and_normalized_value(XmlVersion::default(), reader.decoder())
                         .map_err(|错误| 工具错误::新(format!("XML 属性解码失败：{错误}")))?
                         .to_string();
                     属性.insert(键, 值);
@@ -350,7 +351,7 @@ pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样
         具名颜色: &BTreeMap<String, Option<String>>,
         文件名: &str,
     ) -> 结果<Option<String>> {
-        if let Some(参数) = 解析RGBA(值) {
+        if let Some(参数) = 解析rgba(值) {
             let (r, g, b, a) = 参数;
             return Ok(Some(转为十六进制(r, g, b, a)));
         }
@@ -391,7 +392,7 @@ pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样
             样式信息 {
                 foreground: 前景,
                 background: 背景,
-                fontStyle: 字体样式.join(" "),
+                font_style: 字体样式.join(" "),
             },
         );
     }
@@ -402,7 +403,7 @@ pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样
 }
 
 /// 匹配 `#rgba(1, 2, 3, 0.5)`；不匹配返回 `None`。
-fn 解析RGBA(值: &str) -> Option<(f64, f64, f64, f64)> {
+fn 解析rgba(值: &str) -> Option<(f64, f64, f64, f64)> {
     let 剩余 = 值.strip_prefix("#rgba(")?;
     let 内部 = 剩余.strip_suffix(')')?;
     let 部分: Vec<&str> = 内部.split(',').map(str::trim).collect();
@@ -450,7 +451,7 @@ pub fn 语法颜色(根目录: &std::path::Path, mode: &str) -> 结果<Vec<语�
             continue;
         };
         let mut settings = 有序映射::新();
-        settings.放("fontStyle", 样式.fontStyle.clone());
+        settings.放("fontStyle", 样式.font_style.clone());
         if let Some(前景) = &样式.foreground {
             settings.放("foreground", 前景.clone());
         }
