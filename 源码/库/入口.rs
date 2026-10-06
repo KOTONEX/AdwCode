@@ -13,6 +13,9 @@ pub mod 有序映射;
 #[path = "调色板.rs"]
 pub mod 调色板;
 
+#[path = "语法映射.rs"]
+pub mod 语法映射;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
