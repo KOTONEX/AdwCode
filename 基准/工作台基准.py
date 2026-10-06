@@ -56,7 +56,7 @@ def 入口() -> None:
     code_cli = args.code or Path(shutil.which("code") or "")
     code = code_cli.resolve().parent.parent / "code"
     node = shutil.which("node")
-    if not code.is_file() or not node or not args.playwright.is_dir():
+    if not code.is_file() or node is None or not args.playwright.is_dir():
         parser.error("需要本机 Linux VS Code、Node.js 与独立安装的 playwright")
     args.output = args.output.resolve()
     args.output.parent.mkdir(parents=True, exist_ok=True)

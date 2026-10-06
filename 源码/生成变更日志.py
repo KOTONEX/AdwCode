@@ -86,7 +86,7 @@ def 版本节点(root: Path) -> tuple[str, list[发布节点]]:
 
 def 提交列表(root: Path, end: str, start: str | None = None) -> list[提交记录]:
     """读取版本范围内的非合并提交，包括合入主线的分支提交。"""
-    revision_range = f"{start}..{end}" if start else end
+    revision_range = f"{start}..{end}" if start is not None else end
     fields = 执行Git(
         root,
         "log",

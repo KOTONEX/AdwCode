@@ -383,9 +383,9 @@ def 语法颜色(mode: str) -> list[语法规则]:
                 print(f"警告：样式 {style_name!r} 不在方案中（{mode}）")
             continue
         settings: dict[str, str] = {"fontStyle": style["fontStyle"]}
-        if style["foreground"]:
+        if style["foreground"] is not None:
             settings["foreground"] = style["foreground"]
-        if style["background"]:
+        if style["background"] is not None:
             settings["background"] = style["background"]
         rules.append({"scope": list(scopes), "settings": settings})
     return rules

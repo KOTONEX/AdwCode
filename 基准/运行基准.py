@@ -194,7 +194,7 @@ def 入口() -> None:
             )
         assert before == fingerprint(), "基准意外改动了源码或主题"
         node = shutil.which("node")
-        if not node:
+        if node is None:
             raise RuntimeError("扩展基准需要 Node.js")
         extension = subprocess.run(
             [node, "--expose-gc", str(ROOT / "基准/扩展基准.cjs"), str(clone)],
