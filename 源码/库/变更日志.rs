@@ -459,3 +459,204 @@ mod 测试 {
         assert!(文本.contains("## [3.3.0] - "));
     }
 }
+
+/// 在临时 Git 仓库验证版本范围、发布校验与日志分发。
+#[cfg(test)]
+mod 仓库测试 {
+    use super::*;
+    use std::path::PathBuf;
+    use std::process::Command;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static 序号: AtomicU64 = AtomicU64::new(0);
+
+    struct 测试仓库 {
+        目录: PathBuf,
+    }
+
+    impl 测试仓库 {
+        fn 新建(名称: &str) -> Self {
+            let 编号 = 序号.fetch_add(1, Ordering::SeqCst);
+            let 目录 =
+                std::env::temp_dir().join(format!("adwcode-{名称}-{}-{编号}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&目录);
+            std::fs::create_dir_all(&目录).expect("创建临时仓库");
+            let 仓库 = Self { 目录 };
+            仓库.git(&["init", "--quiet"]);
+            std::fs::write(
+                仓库.目录.join("package.json"),
+                r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","displayName":"AdwCode","description":"测试归档","engines":{"vscode":"^1.100.0"},"repository":{"url":"https://github.com/example/AdwCode.git"}}"#,
+            )
+            .expect("写入清单");
+            仓库.git(&["add", "package.json"]);
+            仓库.提交("初始化: 测试项目");
+            仓库
+        }
+
+        fn git(&self, 参数: &[&str]) -> String {
+            let 输出 = Command::new("git")
+                .args([
+                    "-c",
+                    "init.defaultBranch=main",
+                    "-c",
+                    "user.name=测试",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "-c",
+                    "tag.gpgsign=false",
+                    "-C",
+                ])
+                .arg(&self.目录)
+                .args(参数)
+                .output()
+                .expect("运行 Git");
+            assert!(
+                输出.status.success(),
+                "git {参数:?} 失败：{}",
+                String::from_utf8_lossy(&输出.stderr)
+            );
+            String::from_utf8_lossy(&输出.stdout).trim().to_string()
+        }
+
+        fn 提交(&self, 标题: &str) -> String {
+            self.git(&["commit", "--allow-empty", "--quiet", "-m", 标题]);
+            self.git(&["rev-parse", "HEAD"])
+        }
+    }
+
+    impl Drop for 测试仓库 {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.目录);
+        }
+    }
+
+    #[test]
+    fn 版本范围与未发布提交() {
+        let 仓库 = 测试仓库::新建("范围");
+        仓库.git(&["tag", "v1.0.0"]);
+        仓库.提交("新增: 文件页签");
+        仓库.提交("修复: 对齐图标");
+        仓库.git(&["tag", "-a", "v1.1.0", "-m", "测试版本"]);
+        仓库.提交("文档: 补充许可");
+        std::fs::write(仓库.目录.join("CHANGELOG.md"), "不要读取手写内容").unwrap();
+        let 日志 = 生成变更日志(&仓库.目录).expect("生成日志");
+        let (未发布, 已发布) = 日志.split_once("## [1.1.0]").expect("已发布段落");
+        assert!(未发布.contains("补充许可"));
+        assert!(!未发布.contains("文件页签"));
+        let (当前, 初始) = 已发布.split_once("## [1.0.0]").expect("初始段落");
+        assert!(当前.contains("### 新增"));
+        assert!(当前.contains("文件页签"));
+        assert!(当前.contains("对齐图标"));
+        assert!(!当前.contains("补充许可"));
+        assert!(初始.contains("测试项目"));
+        assert!(!日志.contains("不要读取手写内容"));
+        assert_eq!(日志, 生成变更日志(&仓库.目录).expect("重复生成一致"));
+    }
+
+    #[test]
+    fn 初始发布与未分类标题转义() {
+        let 仓库 = 测试仓库::新建("转义");
+        仓库.提交("旧格式提交 <script> [链接]");
+        仓库.git(&["tag", "v1.1.0"]);
+        let 说明 = 生成发布说明(&仓库.目录, "1.1.0", Some("v1.1.0")).expect("发布说明");
+        assert!(说明.contains("### 初始化"));
+        assert!(说明.contains("### 其他"));
+        assert!(说明.contains(r"旧格式提交 \<script\> \[链接\]"));
+        assert!(!说明.contains("未打标签预览"));
+    }
+
+    #[test]
+    fn 分支标签被忽略但分支提交保留() {
+        let 仓库 = 测试仓库::新建("分支");
+        仓库.git(&["tag", "v1.0.0"]);
+        仓库.git(&["checkout", "--quiet", "-b", "feature"]);
+        仓库.提交("新增: 分支功能");
+        仓库.git(&["tag", "v9.0.0"]);
+        仓库.git(&["checkout", "--quiet", "main"]);
+        仓库.提交("修复: 主线问题");
+        仓库.git(&[
+            "merge",
+            "--no-ff",
+            "--quiet",
+            "feature",
+            "-m",
+            "合并开发分支",
+        ]);
+        仓库.git(&["tag", "checkpoint"]);
+        仓库.git(&["tag", "v1.1.0"]);
+        let 日志 = 生成变更日志(&仓库.目录).expect("生成日志");
+        assert!(日志.contains("分支功能"));
+        assert!(日志.contains("主线问题"));
+        assert!(!日志.contains("合并开发分支"));
+        assert!(!日志.contains("## [9.0.0]"));
+        let 说明 = 生成发布说明(&仓库.目录, "1.1.0", Some("v1.1.0")).expect("发布说明");
+        assert!(说明.contains("/compare/v1.0.0...v1.1.0"));
+        assert!(!说明.contains("checkpoint"));
+    }
+
+    #[test]
+    fn 发布标签校验与重写后的head() {
+        let 仓库 = 测试仓库::新建("校验");
+        仓库.git(&["tag", "v1.0.0"]);
+        仓库.提交("新增: 当前功能");
+        仓库.git(&["tag", "v1.1.0"]);
+        for (版本, 标签) in [
+            ("1.1.0", "v1.0.0"),
+            ("1.0.0", "v1.0.0"),
+            ("1.2.0", "v1.2.0"),
+        ] {
+            assert!(
+                生成发布说明(&仓库.目录, 版本, Some(标签)).is_err(),
+                "{版本}/{标签} 应被拒绝"
+            );
+        }
+        仓库.git(&[
+            "commit",
+            "--amend",
+            "--allow-empty",
+            "--quiet",
+            "-m",
+            "新增: 覆盖本地功能",
+        ]);
+        let 日志 = 生成变更日志(&仓库.目录).expect("生成日志");
+        assert!(!日志.contains("## [1.1.0]"));
+        let 预览 = 生成发布说明(&仓库.目录, "1.1.0", None).expect("预览");
+        assert!(预览.contains("未打标签预览"));
+        assert!(预览.contains("覆盖本地功能"));
+        let 错误 = 生成发布说明(&仓库.目录, "1.1.0", Some("v1.1.0")).unwrap_err();
+        assert!(错误.消息.contains("当前 HEAD"), "{}", 错误.消息);
+    }
+
+    #[test]
+    fn 重复标签被拒绝() {
+        let 仓库 = 测试仓库::新建("重复");
+        仓库.git(&["tag", "v1.0.0"]);
+        仓库.git(&["tag", "v1.1.0"]);
+        let 错误 = 生成变更日志(&仓库.目录).unwrap_err();
+        assert!(错误.消息.contains("多个版本标签"), "{}", 错误.消息);
+    }
+
+    #[test]
+    fn 预发布版本与非法版本号() {
+        let 仓库 = 测试仓库::新建("预发布");
+        仓库.git(&["tag", "v1.0.0"]);
+        仓库.git(&["branch", "v1.0.0"]);
+        仓库.提交("新增: 预发布功能");
+        仓库.git(&["tag", "v1.1.0-rc.1+build.2"]);
+        let 日志 = 生成变更日志(&仓库.目录).expect("生成日志");
+        assert!(日志.contains("## [1.0.0]"));
+        assert!(日志.contains("## [1.1.0-rc.1+build.2]"));
+        let 说明 = 生成发布说明(
+            &仓库.目录,
+            "1.1.0-rc.1+build.2",
+            Some("v1.1.0-rc.1+build.2"),
+        )
+        .expect("发布说明");
+        assert!(说明.contains("预发布功能"));
+        for 版本 in ["01.1.0", "1.1.0-01", "1.1.0-rc_1", "1.1.0-rc..1", "1.1.0+"] {
+            assert!(生成发布说明(&仓库.目录, 版本, None).is_err(), "{版本}");
+        }
+    }
+}
