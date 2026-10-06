@@ -12,6 +12,9 @@ publish = false
 
 [workspace]
 
+[dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }
+
 [lib]
 path = "源码/库/入口.rs"
 

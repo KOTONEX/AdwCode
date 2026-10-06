@@ -7,6 +7,12 @@
 #[path = "错误.rs"]
 pub mod 错误;
 
+#[path = "有序映射.rs"]
+pub mod 有序映射;
+
+#[path = "调色板.rs"]
+pub mod 调色板;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
