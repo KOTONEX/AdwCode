@@ -755,6 +755,7 @@ let reloadWatchers = [];
 /** @type {ReturnType<typeof setTimeout> | undefined} */
 let reloadTimer;
 let reloadRunning = false;
+let reloadGeneration = 0;
 
 /**
  * 重新应用 Custom CSS 并重载窗口（开发时让样式/主题/代码改动立即生效）。
@@ -762,13 +763,15 @@ let reloadRunning = false;
  * @returns {Promise<void>}
  */
 async function reloadWithStyles(context) {
-  const allowed = () => extensionContext === context && vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
+  const generation = reloadGeneration;
+  const allowed = () => extensionContext === context && generation === reloadGeneration && vscode.workspace.getConfiguration("adwcode").get("autoReload", false);
   if (!allowed()) return;
   await readSystemFonts();
   if (!allowed()) return;
   try {
     // 加载器读取安装目录中的副本，只同步用户已安装的样式。
     for (const name of Object.keys(CSS_FILES)) {
+      if (!allowed()) return;
       const target = path.join(CSS_DIR, name);
       if (fs.existsSync(target)) {
         await fs.promises.writeFile(target, cssSource(context, name), "utf8");
@@ -779,6 +782,8 @@ async function reloadWithStyles(context) {
     vscode.window.showErrorMessage(`AdwCode：无法同步 CSS 文件：${message}`);
     return;
   }
+  // 文件写入会让出执行权；停用或关闭设置后不能继续修改工作台补丁。
+  if (!allowed()) return;
   try {
     // Custom CSS and JS Loader 会把 imports 中的样式重新内联进 workbench.html
     await vscode.commands.executeCommand("extension.updateCustomCSS");
@@ -838,6 +843,8 @@ function startReloadWatchers(context) {
 
 /** @returns {void} */
 function stopReloadWatchers() {
+  // 即使随后重新开启，也不能恢复上一次已经取消的异步更新。
+  reloadGeneration++;
   for (const watcher of reloadWatchers) {
     watcher.dispose();
   }

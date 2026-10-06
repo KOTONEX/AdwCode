@@ -270,7 +270,7 @@ def to_hex(r: float, g: float, b: float, alpha: float = 1.0) -> str:
 
 
 def rgba(color: str, alpha: float) -> str:
-    """给颜色强制设置一个 alpha 值。"""
+    """在颜色原有的透明度上乘以 ``alpha``。"""
     r, g, b, base_alpha = parse_color(color)
     return to_hex(r, g, b, alpha * base_alpha)
 
@@ -427,11 +427,12 @@ class Palette:
         # 官方文档表格中九种强调色的前景色均为 #ffffff。
         c["accent_fg"] = "#ffffff"
         c["accent_standalone"] = accent_standalone_dark if dark else accent_standalone_light
+        # mix 的权重属于第一个颜色；悬停及按下仍以强调色为主体。
         c["accent_hover"] = (
-            mix(accent_bg, "#ffffff", 0.15) if dark else mix(accent_bg, "#000000", 0.12)
+            mix(accent_bg, "#ffffff", 0.85) if dark else mix(accent_bg, "#000000", 0.88)
         )
         c["accent_active"] = (
-            mix(accent_bg, "#ffffff", 0.25) if dark else mix(accent_bg, "#000000", 0.20)
+            mix(accent_bg, "#ffffff", 0.75) if dark else mix(accent_bg, "#000000", 0.80)
         )
         for name, bg in (("view", view), ("window", window), ("sidebar", sidebar)):
             c[f"accent_soft_{name}"] = over(rgba(accent_bg, 0.25), bg)

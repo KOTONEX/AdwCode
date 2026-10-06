@@ -84,8 +84,8 @@ def selectors_and_declarations(text: str) -> tuple[str, str]:
 def check(css_path: Path | None, verbose: bool = False) -> int:
     vscode_css, vscode_js = find_vscode_assets(css_path)
     if vscode_css is None:
-        print("check_css：未找到 VS Code 样式表，请使用 --css PATH 指定路径")
-        return 0
+        print("未执行 CSS 校验：未找到 VS Code 样式表，请使用 --css PATH 指定有效路径")
+        return 1
     vscode_text = vscode_css.read_text(encoding="utf-8", errors="ignore")
     vscode_classes = set(CLASS_RE.findall(selectors_and_declarations(vscode_text)[0]))
     vscode_vars = set(VAR_DEF_RE.findall(vscode_text)) | theme_variables()

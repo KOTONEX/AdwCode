@@ -116,21 +116,19 @@ def resolve_token_colors(name: str, seen: frozenset[str] = frozenset()) -> list[
 
 
 def main() -> None:
-    OUT.mkdir(exist_ok=True)
+    # 所有下载和解析成功后再写文件，避免中途失败留下混合版本的数据。
+    prepared: dict[str, str] = {}
+    messages: list[str] = []
     for mode, name in VARIANTS.items():
         tokens = resolve_token_colors(name)
-        (OUT / f"{mode}.json").write_text(
-            json.dumps({"tokenColors": tokens}, indent=2) + "\n", encoding="utf-8"
-        )
-        print(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
+        prepared[f"{mode}.json"] = json.dumps({"tokenColors": tokens}, indent=2) + "\n"
+        messages.append(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
 
     keys: set[str] = set()
     for name in ALL_THEMES:
         keys |= set(fetch(name).get("colors", {}))
-    (OUT / "builtin_keys.json").write_text(
-        json.dumps(sorted(keys), indent=2) + "\n", encoding="utf-8"
-    )
-    print(f"内置颜色键： {len(keys)}")
+    prepared["builtin_keys.json"] = json.dumps(sorted(keys), indent=2) + "\n"
+    messages.append(f"内置颜色键： {len(keys)}")
 
     markdown = urllib.request.urlopen(DOCS, timeout=60).read().decode()
     registry = set(re.findall(r"`([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)`", markdown))
@@ -140,10 +138,13 @@ def main() -> None:
         for item in registry
         if not item.startswith(("workbench.", "editor.token", "configuration.", "vscode."))
     }
-    (OUT / "registry_keys.json").write_text(
-        json.dumps(sorted(registry), indent=2) + "\n", encoding="utf-8"
-    )
-    print(f"注册表颜色键： {len(registry)}")
+    prepared["registry_keys.json"] = json.dumps(sorted(registry), indent=2) + "\n"
+    messages.append(f"注册表颜色键： {len(registry)}")
+    OUT.mkdir(exist_ok=True)
+    for filename, content in prepared.items():
+        (OUT / filename).write_text(content, encoding="utf-8")
+    for message in messages:
+        print(message)
 
 
 if __name__ == "__main__":

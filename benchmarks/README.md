@@ -5,7 +5,8 @@
 
 ## 命令行与扩展逻辑
 
-需要 Python 3.14 自由线程版本、Node.js 和 GNOME 的 `gsettings`：
+需要 Python 3.14 自由线程版本、Node.js、GNOME 的 `gsettings` 和可自动定位的
+本机 VS Code 样式表。找不到样式表时基准会失败，不把跳过校验记为成功样本：
 
 ```sh
 meson setup --reconfigure builddir

@@ -22,12 +22,12 @@
 - **强调色** —— 支持 GNOME 全部九种强调色（blue、teal、green、yellow、orange、
   red、pink、purple、slate）。默认构建 blue，并读取当前系统强调色；可用 `--accents all` 生成其余颜色，
   或让扩展跟随 `org.gnome.desktop.interface accent-color`。
-- **变体** —— 默认语法高亮（使用 VS Code 自带的语法颜色）与
+- **变体** —— 默认语法高亮（使用 VS Code 自带的 TextMate 规则）与
   彩色状态栏变体，以及高对比度主题。
 - **产品图标主题** —— GNOME 风格的侧栏、调试、版本控制、补全与文件操作符号；
   窗口控制字形在 `window.controlsStyle` 为 `custom` 时生效。
 - **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：9px 的按钮/输入框/
-  列表行/编辑标签页、15px 的弹出层与快速输入、6px 小控件、Adwaita 阴影、
+  编辑标签页、15px 的弹出层与快速输入、6px 的紧凑列表行与小控件、Adwaita 阴影、
   内缩细滚动条滑块。
 - **推荐设置** —— 一条命令配置系统明暗主题、产品图标、GNOME 代码字体与
   Builder 风格布局，自动重载保持关闭。
@@ -39,9 +39,11 @@
 | --- | --- |
 | `AdwCode 深色` / `AdwCode 浅色` | Builder 语法，标准状态栏 |
 | `AdwCode 深色 · 彩色状态栏` / `AdwCode 浅色 · 彩色状态栏` | 状态栏填充强调色 |
-| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带语法颜色 |
+| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带 TextMate 规则 |
 | `AdwCode <强调色> 深色` / `AdwCode <强调色> 浅色` | 非蓝色强调色，按需生成 |
 | `AdwCode 深色 高对比度` / `AdwCode 浅色 高对比度` | libadwaita 高对比度参数 |
+
+默认语法高亮变体只替换 TextMate 规则；界面配色和语义高亮仍沿用 AdwCode。
 
 产品图标主题 `AdwCode` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
 补全和常用操作。四个窗口控制字形（`chrome-close`、`chrome-maximize`、
@@ -100,7 +102,7 @@ GNOME 扩展
   `--vscode-spacing-*`、`--vscode-shadow-*`），一次性修正约 250 条规则
   （快速输入、建议列表、对话框、下拉框、通知、面板标题……）；
 - 补充 AdwTabBar 风格的圆角标签页（9px）、内缩菜单项、圆角标题栏按钮、
-  内缩圆角列表行、9px 按钮/输入框、标题栏胶囊搜索框以及内缩细滚动条滑块；
+  圆角列表行、9px 按钮/输入框、标题栏胶囊搜索框以及内缩细滚动条滑块；
 - 统一侧栏、面板、通知与编辑器工具栏按钮，以及设置行、查找选项、复选框和
   对话框外观；键盘焦点环在容易裁切的区域使用内侧描边；
 - 默认使用 `window.menuBarVisibility: compact` 折叠菜单，汉堡按钮保持
@@ -120,6 +122,8 @@ GNOME 扩展
 `python3.14t src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
 是否仍然存在（原生 JavaScript 类名在 bundle 中搜索，自有状态类核对附加脚本），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
+未找到样式表时，校验会失败；可通过 `--css /路径/workbench.desktop.main.css`
+指定当前安装的构建。此检查不能替代实际界面验收。
 
 ### 一键应用设置
 
@@ -175,7 +179,7 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 ## 强调色
 
 ```sh
-python3.14t src/build.py --accents all          # 全部九种强调色（18+ 个主题）
+python3.14t src/build.py --accents all          # 全部九种强调色（26 个主题变体）
 python3.14t src/build.py --accents blue,teal    # 指定子集
 python3.14t src/build.py --no-system            # 仅 blue
 ```
@@ -202,6 +206,7 @@ AdwCode/
 │   ├── mapping.py               VS Code 颜色键到 Adwaita 角色的映射
 │   ├── package.py               打包 VSIX
 │   ├── palette.py               libadwaita 颜色角色与合成工具
+│   ├── release_notes.py         从版本更新日志提取发布说明
 │   ├── tokens.py                GtkSourceView 样式名到 TextMate 作用域的映射
 │   ├── update_defaults.py       刷新 VS Code 默认主题数据与键表
 │   ├── gtksourceview_xml/       随附的 GtkSourceView 方案（LGPL-2.1+）
@@ -290,7 +295,7 @@ Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 
 
 `--check` 检查主题和产品图标的注册及文件完整性，要求界面、TextMate 和语义颜色
 使用六位或八位十六进制写法。未知颜色键会导致失败，未覆盖的内置键会被列出；
-对比度检查覆盖全部已生成主题。
+对比度检查覆盖全部已生成主题；缺少随附的颜色键表时直接失败。
 
 产品图标优先使用 Adwaita 官方字形，再由 GNOME Builder 补充调试、补全和
 版本控制符号；MoreWaita 仅作为缺项的备用来源。布局状态对保留 Adwaita 派生字形。

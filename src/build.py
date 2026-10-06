@@ -272,6 +272,9 @@ LEGACY_KEYS: set[str] = {
 def check() -> int:
     failures: int = 0
     registry, builtin = load_known_keys()
+    if registry is None or builtin is None:
+        print("失败：缺少 VS Code 颜色键表，请运行 update_defaults.py 刷新数据")
+        return 1
     paths = sorted(THEMES.glob("*.json"))
     if not paths:
         print("失败：没有可校验的主题，请先构建主题")
@@ -403,26 +406,23 @@ def check() -> int:
             failed_themes += 1
     print(f"对比度：{len(paths) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
 
-    if registry is None or builtin is None:
-        print("提示：运行 update_defaults.py 刷新 VS Code 颜色键表")
-    else:
-        allowed = registry | builtin | LEGACY_KEYS
-        unknown = sorted(our_keys - allowed)
-        missing = sorted(builtin - our_keys)
-        print(
-            f"\n颜色键：已定义 {len(our_keys)} 个 | 未覆盖内置键 {len(missing)} 个 | 未知键 {len(unknown)} 个"
-        )
-        if unknown:
-            print("未知颜色键（可能存在拼写错误）：")
-            for key in unknown:
-                print(f"  {key}")
-            failures += 1
-        if missing:
-            print("未覆盖的颜色键（VS Code 将使用默认主题）：")
-            for key in missing[:60]:
-                print(f"  {key}")
-            if len(missing) > 60:
-                print(f"  ……另有 {len(missing) - 60} 个")
+    allowed = registry | builtin | LEGACY_KEYS
+    unknown = sorted(our_keys - allowed)
+    missing = sorted(builtin - our_keys)
+    print(
+        f"\n颜色键：已定义 {len(our_keys)} 个 | 未覆盖内置键 {len(missing)} 个 | 未知键 {len(unknown)} 个"
+    )
+    if unknown:
+        print("未知颜色键（可能存在拼写错误）：")
+        for key in unknown:
+            print(f"  {key}")
+        failures += 1
+    if missing:
+        print("未覆盖的颜色键（VS Code 将使用默认主题）：")
+        for key in missing[:60]:
+            print(f"  {key}")
+        if len(missing) > 60:
+            print(f"  ……另有 {len(missing) - 60} 个")
 
     print(f"\n主题数量：{len(labels)}")
     return 1 if failures else 0

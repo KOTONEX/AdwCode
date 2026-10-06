@@ -66,6 +66,7 @@ class ColorMathTest(unittest.TestCase):
 
     def test_mix_and_over(self) -> None:
         self.assertEqual(mix("#ffffff", "#000000", 0.5), "#808080")
+        self.assertEqual(mix("#ffffff", "#000000", 0.25), "#404040")
         self.assertEqual(over("#ffffff80", "#000000"), "#808080")
         self.assertEqual(over("#ffffff", "#000000"), "#ffffff")
         self.assertEqual(rgba("#3584e4", 0.5), "#3584e480")
@@ -76,6 +77,16 @@ class ColorMathTest(unittest.TestCase):
 
 
 class PaletteTest(unittest.TestCase):
+    def test_accent_interaction_contrast(self) -> None:
+        from build import contrast
+
+        for mode in ("dark", "light"):
+            for accent in ACCENT_NAMES:
+                palette = Palette(mode, accent=accent)
+                for role in ("accent_hover", "accent_active"):
+                    with self.subTest(mode=mode, accent=accent, role=role):
+                        self.assertGreaterEqual(contrast(palette["accent_fg"], palette[role]), 2.0)
+
     def test_all_roles_parse(self) -> None:
         for mode in ("dark", "light"):
             for accent in ACCENT_NAMES:
@@ -145,6 +156,28 @@ class TokensTest(unittest.TestCase):
 
 
 class ThemeTest(unittest.TestCase):
+    def test_colorful_status_bar_hover_foregrounds(self) -> None:
+        from build import build_theme, contrast
+
+        for mode in ("dark", "light"):
+            colors = build_theme(mode, "blue", "colorful")["colors"]
+            self.assertEqual(
+                colors["statusBarItem.hoverForeground"], colors["statusBar.foreground"]
+            )
+            self.assertGreaterEqual(
+                contrast(
+                    colors["statusBarItem.hoverForeground"], colors["statusBarItem.hoverBackground"]
+                ),
+                2.5,
+            )
+            self.assertGreaterEqual(
+                contrast(
+                    colors["statusBarItem.warningHoverForeground"],
+                    colors["statusBarItem.warningHoverBackground"],
+                ),
+                4.5,
+            )
+
     def themes(self) -> list[dict[str, Any]]:
         return [
             json.loads(path.read_text(encoding="utf-8")) for path in sorted(THEMES.glob("*.json"))
@@ -228,6 +261,17 @@ class ThemeTest(unittest.TestCase):
 
 
 class GeneratorSafetyTest(unittest.TestCase):
+    def test_missing_key_tables_fail(self) -> None:
+        import build
+
+        for known in ((None, None), (None, set()), (set(), None)):
+            with (
+                self.subTest(known=known),
+                patch.object(build, "load_known_keys", return_value=known),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(build.check(), 1)
+
     def test_check_rejects_missing_assets_and_non_hex_colors(self) -> None:
         import build
 
@@ -305,6 +349,27 @@ class GeneratorSafetyTest(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "include 循环"):
                 update_defaults.resolve_token_colors("a")
+
+    def test_defaults_download_failure_preserves_existing_data(self) -> None:
+        import update_defaults
+
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            files = ("dark.json", "light.json", "builtin_keys.json", "registry_keys.json")
+            for name in files:
+                (folder / name).write_text("原有数据", encoding="utf-8")
+            with (
+                patch.object(update_defaults, "OUT", folder),
+                patch.object(update_defaults, "fetch", return_value={"tokenColors": []}),
+                patch.object(
+                    update_defaults.urllib.request, "urlopen", side_effect=OSError("下载失败")
+                ),
+                redirect_stdout(io.StringIO()),
+                self.assertRaises(OSError),
+            ):
+                update_defaults.main()
+            for name in files:
+                self.assertEqual((folder / name).read_text(encoding="utf-8"), "原有数据")
 
     def test_accents_deduplicated(self) -> None:
         from build import resolve_accents
@@ -451,6 +516,12 @@ class ExtensionStatusTest(unittest.TestCase):
 
 
 class CssTest(unittest.TestCase):
+    def test_missing_vscode_css_fails(self) -> None:
+        import check_css
+
+        with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()):
+            self.assertEqual(check_css.check(Path(directory) / "missing.css"), 1)
+
     def test_css_files_parse(self) -> None:
         import check_css
 

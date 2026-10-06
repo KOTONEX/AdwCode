@@ -211,6 +211,33 @@ await (async () => {
   enabled = true;
   await sandbox.reloadWithStyles(context);
   assert.equal(reloads, 1);
+  // 在异步复制期间关闭或停用，不能继续调用加载器或重载。
+  for (const action of ["disable", "deactivate", "re-enable"]) {
+    enabled = true;
+    vm.runInContext("extensionContext = testContext", sandbox);
+    let loaderCalls = 0;
+    sandbox.mockFs.promises.writeFile = async (target, data) => {
+      files.set(target, data);
+      if (action === "disable") enabled = false;
+      else if (action === "deactivate") sandbox.deactivate();
+      else {
+        enabled = false;
+        sandbox.stopReloadWatchers();
+        enabled = true;
+      }
+      await Promise.resolve();
+    };
+    vscode.commands.executeCommand = async command => {
+      if (command === "extension.updateCustomCSS") loaderCalls++;
+      if (command === "workbench.action.reloadWindow") reloads++;
+    };
+    await sandbox.reloadWithStyles(context);
+    assert.equal(loaderCalls, 0, action);
+    assert.equal(reloads, 1, action);
+  }
+  enabled = true;
+  vm.runInContext("extensionContext = testContext", sandbox);
+  sandbox.mockFs.promises.writeFile = async (target, data) => { files.set(target, data); };
   let callback;
   let cleared = false;
   sandbox.setTimeout = (fn) => { callback = fn; return 123; };
