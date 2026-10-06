@@ -28,6 +28,9 @@ pub mod 变更日志;
 #[path = "打包.rs"]
 pub mod 打包;
 
+#[path = "检查样式.rs"]
+pub mod 检查样式;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
