@@ -58,4 +58,6 @@ declare module "os" {
 
 declare module "path" {
     export function join(...parts: string[]): string;
+    export function resolve(...parts: string[]): string;
+    export function basename(path: string): string;
 }

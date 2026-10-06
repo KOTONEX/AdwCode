@@ -82,6 +82,16 @@ imports = rows.map((row) => `file:///repo/extras/${row.name}`);
 assert.ok(sandbox.appearanceStatus(context).every((row) => row.imported));
 imports.push("不是有效的 URI");
 assert.ok(sandbox.appearanceStatus(context).every((row) => row.imported));
+// 源文件和副本同时引用时，不能宣称安装已经就绪。
+imports.push("file:///user/.config/adwcode/gnome-look.css");
+assert.equal(sandbox.appearanceStatus(context)[0].importCount, 2);
+sandbox.showAppearanceStatus(context);
+assert.ok(panel.webview.html.includes("重复引用（2 项）"));
+assert.ok(!panel.webview.html.includes("文件与补丁均已就绪"));
+files.set(html, patch.replace("<!-- !! VSCODE-CUSTOM-CSS-END !! -->", "<style>内容：gnome-look.css</style><!-- !! VSCODE-CUSTOM-CSS-END !! -->"));
+assert.equal(sandbox.appearanceStatus(context)[0].patched, "重复注入，补丁待更新");
+files.set(html, patch);
+imports.pop();
 sandbox.showAppearanceStatus(context);
 assert.ok(panel.webview.html.includes("文件与补丁均已就绪"));
 files.set("/repo/extras/gnome-look.css", "新样式");
@@ -98,6 +108,35 @@ disposed();
 assert.ok(listenerDisposed);
 // 模拟对象未提供写文件、配置更新或执行命令 API；调用它们会直接失败。
 console.log("外观状态：缺失、同步、过期、未配置和刷新测试通过");
+
+// 合并只处理本次安装的项目文件；保留其他来源、无效 URI 及原有顺序。
+const mixed = ["file:///other/custom.css", "file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/gnome-look.css", "不是有效的 URI", "file:///other/gnome-look.css", "file:///repo/extras/gnome-menu.js", "file:///repo/extras/gnome-fonts.css"];
+const merged = sandbox.mergeCssImports(context, mixed, ["gnome-look.css", "controls-close-only.css"]);
+assert.deepEqual(Array.from(merged), ["file:///other/custom.css", "file:///user/.config/adwcode/gnome-look.css", "不是有效的 URI", "file:///other/gnome-look.css", "file:///repo/extras/gnome-fonts.css", "file:///user/.config/adwcode/controls-close-only.css"]);
+assert.deepEqual(Array.from(sandbox.mergeCssImports(context, merged, ["gnome-look.css", "controls-close-only.css"])), Array.from(merged));
+assert.equal(sandbox.cssImportName({ extensionPath: "/项目" }, "file:///" + encodeURIComponent("项目") + "/extras/gnome-look.css"), "gnome-look.css");
+assert.equal(sandbox.cssImportName(context, "https://example.org/gnome-look.css"), undefined);
+
+// 安装命令应调用去重逻辑；拒绝补丁按钮时不执行任何外部命令。
+let updates = 0;
+imports = ["file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/gnome-look.css"];
+vscode.ConfigurationTarget = { Global: 1 };
+vscode.workspace.getConfiguration = () => ({
+  get: (key, fallback) => key === "imports" ? imports : fallback,
+  async update(key, value, target) { assert.equal(key, "imports"); assert.equal(target, 1); imports = value; updates++; },
+});
+sandbox.mockFs.promises = {
+  async mkdir() {},
+  async writeFile(target, data) { files.set(target, data); },
+};
+vscode.window.showInformationMessage = async () => undefined;
+vscode.commands = { async executeCommand() { throw Error("禁止真实命令"); } };
+await sandbox.installCss(context, ["gnome-look.css"]);
+assert.equal(updates, 1);
+assert.deepEqual(Array.from(imports), ["file:///user/.config/adwcode/gnome-look.css"]);
+await sandbox.installCss(context, ["gnome-look.css"]);
+assert.equal(updates, 1);
+console.log("CSS 安装：源码与副本去重、用户加载项保留和重复安装测试通过");
 
 assert.equal(sandbox.pangoFamily("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");
 assert.equal(sandbox.pangoFamily("'Adwaita Sans Bold Italic 10.5'"), "Adwaita Sans");

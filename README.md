@@ -106,13 +106,18 @@ GNOME 扩展
   VS Code 原生的活动栏位置；把设置改回 `classic` 或 `visible` 即可恢复完整菜单栏。
 
 执行 **AdwCode: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
-**AdwCode: 生成仅关闭按钮的窗口控件 CSS**）。开发时可在设置中开启
+**AdwCode: 生成仅关闭按钮的窗口控件 CSS**）。完整安装包含三个 CSS 文件及
+`window-state.js`：脚本将原生标题栏状态同步到导航容器，保留非活动窗口的弱化效果，
+减少全工作台样式重算。检测到加载器时，安装命令将本次组件的已知源码和副本引用统一为单份安装副本，
+保留其他加载项；状态面板会提示重复引用或重复注入。
+
+开发时可在设置中开启
 `adwcode.autoReload`：改动 `extras/*.css`、`extras/*.js`、`themes/*.json` 或扩展代码后，
 会自动重新应用 Custom CSS 并重载窗口。VS Code 升级后补丁会被
 覆盖：重新执行加载器的 **Reload Custom CSS and JS**，或再跑一次命令。
 
 `python3.14t src/check_css.py` 会校验 `extras/` 中每个类选择器在已安装的 VS Code 里
-是否仍然存在（由 JavaScript 创建的类名会在 bundle 中搜索），以及样式引用的每个
+是否仍然存在（原生 JavaScript 类名在 bundle 中搜索，自有状态类核对附加脚本），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
 
 ### 一键应用设置
@@ -200,7 +205,7 @@ AdwCode/
 │   └── test_adwcode.py          颜色运算、调色板、语法、主题、CSS
 ├── themes/                      生成的主题 JSON（自动生成，请勿手工编辑；已提交）
 ├── product-icons/               产品图标主题（Adwaita 符号字形与字体）
-├── extras/                      通过 Custom CSS 加载的样式表
+├── extras/                      通过 Custom CSS 加载的样式表与窗口状态脚本
 ├── extension/                   强调色同步扩展
 ├── docs/                        深入文档与第三方许可证登记
 └── .github/                     CI、发布工作流与议题 / PR 模板

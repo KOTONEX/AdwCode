@@ -54,7 +54,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `src/vscode_defaults/` —— 随附的 VS Code 默认数据与键表（MIT）
 - `themes/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
 - `assets/` —— 扩展图标 SVG 与 PNG，再生成方式见 `assets/README.md`
-- `product-icons/`、`extras/`、`extension/`
+- `product-icons/`、`extras/`、`extension/`；`extras/window-state.js` 只同步窗口状态
 - `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
 - `benchmarks/` —— Linux 性能基准，运行方式见其 README，测量结果见
   [性能测试](docs/07-性能测试.md)
@@ -72,11 +72,14 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - 扩展为无构建步骤、无依赖的纯 JavaScript；JS 类型检查由 `// @ts-check` +
   `types/` 手写最小类型面提供，不引入 `@types` 依赖。
 - `themes/` 是生成产物，不要手工编辑。
-- `extras/*.css` 通过「Custom CSS and JS Loader」扩展生效。VS Code 1.140 在约
-  250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*` 却从未定义它们，
+- `extras/*.css` 和 `extras/window-state.js` 通过「Custom CSS and JS Loader」扩展生效。
+  非活动状态由脚本同步到导航容器，不恢复工作台祖先上的 `:has()` 规则；
+  安装命令把已知源码与副本引用统一为一份副本，保留其他用户加载项。
+  VS Code 1.140 在约 250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*`
+  却从未定义它们，
   因此 `gnome-look.css` 自行定义这些令牌以提供 Adwaita 几何。VS Code 升级后请
   运行 `check_css.py`：它会校验每个类选择器仍存在于已安装的构建中（由
-  JavaScript 创建的类名会在 bundle 中搜索）。
+  JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
   `.github/workflows/release.yml`。
 - 不以“类名存在”或“磁盘补丁已更新”宣称当前窗口外观已验证。
@@ -88,7 +91,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 
 - 静态检查：`meson compile -C builddir lint`
 - 类型检查：`meson compile -C builddir typecheck`（ty 检查 `src/`、`tests/`、`benchmarks/`；tsc 检查
-  `extension/extension.js`，缺少 ty、tsc 或 Node.js 时失败）
+  `extension/extension.js`、`extras/*.js`，缺少 ty、tsc 或 Node.js 时失败）
 - 校验（键覆盖、未知键、对比度、产品图标）：`meson compile -C builddir check`
 - 完整检查（静态、类型、主题与离线单元测试）：`meson test -C builddir --print-errorlogs`
 - 构建主题并同步 `package.json`：`meson compile -C builddir themes`（等价于 `python3.14t src/build.py`）

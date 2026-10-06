@@ -71,13 +71,14 @@ const CUSTOM_CSS_EXTENSION = "be5invis.vscode-custom-css";
 const CSS_DIR = path.join(os.homedir(), ".config", "adwcode");
 
 /**
- * extras/ 中的 CSS 文件，以及各自在补丁 HTML 中的识别标记。
+ * extras/ 中的外观样式与状态脚本，以及各自在补丁 HTML 中的识别标记。
  * @type {Record<string, string>}
  */
 const CSS_FILES = {
   "gnome-look.css": "--vscode-cornerRadius-small",
   "controls-close-only.css": "window-max-restore",
   "gnome-fonts.css": "--adwcode-ui-font",
+  "window-state.js": "adwcode.windowState",
 };
 
 /**
@@ -148,7 +149,7 @@ function uiFontStack() {
   return (family ? `${quotedFont(family)}, ` : "") + '"Adwaita Sans", "Cantarell", system-ui, sans-serif';
 }
 
-/** 生成字体适配文件；其他样式原样读取，状态检查也使用同一份预期内容。
+/** 生成字体适配文件；其他外观文件原样读取，状态检查也使用同一份预期内容。
  * @param {import("vscode").ExtensionContext} context
  * @param {string} name @returns {string}
  */
@@ -156,6 +157,53 @@ function cssSource(context, name) {
   const source = fs.readFileSync(path.join(context.extensionPath, "extras", name), "utf8");
   if (name !== "gnome-fonts.css") return source;
   return source + `\n:root, .monaco-workbench { --adwcode-ui-font: ${uiFontStack()}; }\n`;
+}
+
+/** 只识别本扩展源目录及安装目录，保留其他位置的用户文件。
+ * @param {import("vscode").ExtensionContext} context
+ * @param {string} value @returns {string | undefined}
+ */
+function cssImportName(context, value) {
+  try {
+    const uri = vscode.Uri.parse(value);
+    if (uri.scheme !== "file") return undefined;
+    const file = path.resolve(uri.fsPath);
+    const name = path.basename(file);
+    if (![...Object.keys(CSS_FILES), "gnome-menu.js"].includes(name)) return undefined;
+    return [CSS_DIR, path.join(context.extensionPath, "extras")].some((folder) =>
+      file === path.resolve(folder, name)) ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** 将本次安装的组件统一为单份副本引用，保持其他加载项及其顺序。
+ * @param {import("vscode").ExtensionContext} context
+ * @param {string[]} imports
+ * @param {string[]} names @returns {string[]}
+ */
+function mergeCssImports(context, imports, names) {
+  const merged = [];
+  const added = new Set();
+  for (const value of imports) {
+    const name = cssImportName(context, value);
+    if (name === "gnome-menu.js") continue;
+    if (name && names.includes(name)) {
+      if (!added.has(name)) {
+        merged.push(vscode.Uri.file(path.join(CSS_DIR, name)).toString());
+        added.add(name);
+      }
+    } else {
+      merged.push(value);
+    }
+  }
+  for (const name of names) {
+    if (!added.has(name)) {
+      merged.push(vscode.Uri.file(path.join(CSS_DIR, name)).toString());
+      added.add(name);
+    }
+  }
+  return merged;
 }
 
 /** @type {import("vscode").ExtensionContext | undefined} */
@@ -378,7 +426,7 @@ function cssPatchState(markers) {
 /**
  * 只读取安装状态；磁盘补丁与当前窗口的加载状态分别报告。
  * @param {import("vscode").ExtensionContext} context
- * @returns {{name: string, copied: string, imported: boolean, patched: string}[]}
+ * @returns {{name: string, copied: string, imported: boolean, importCount: number, patched: string}[]}
  */
 function appearanceStatus(context) {
   const imports = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
@@ -398,20 +446,16 @@ function appearanceStatus(context) {
     try { installed = fs.readFileSync(target, "utf8"); } catch { /* 单独报告 */ }
     const injected = source === undefined ? undefined :
       (name.endsWith(".js") ? `<script>${source}</script>` : `<style>${source}</style>`);
+    const importCount = imports.filter((value) => cssImportName(context, value) === name).length;
+    const patchCount = [...(patch || "").matchAll(/<(?:style|script)>([\s\S]*?)<\/(?:style|script)>/g)]
+      .filter((match) => match[1].includes(CSS_FILES[name]) || match[0] === injected).length;
     return {
       name,
       copied: source === undefined ? "源文件不可读" : installed === undefined ? "未安装或不可读" :
         installed === source ? "已同步" : "副本待更新",
-      imported: imports.some((value) => {
-        try {
-          const uri = vscode.Uri.parse(value);
-          return uri.scheme === "file" &&
-            (uri.fsPath === target || uri.fsPath === path.join(context.extensionPath, "extras", name));
-        } catch {
-          return false;
-        }
-      }),
-      patched: html === undefined ? "无法读取" : injected !== undefined && patch?.includes(injected) ?
+      imported: importCount > 0,
+      importCount,
+      patched: html === undefined ? "无法读取" : patchCount > 1 ? "重复注入，补丁待更新" : injected !== undefined && patch?.includes(injected) ?
         "磁盘补丁已更新" : "未注入当前版本",
     };
   });
@@ -429,10 +473,10 @@ function showAppearanceStatus(context) {
   const render = (refreshed = false) => {
     const rows = appearanceStatus(context);
     const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
-    const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.imported && row.patched === "磁盘补丁已更新");
+    const ready = Boolean(loader) && rows.every((row) => row.copied === "已同步" && row.importCount === 1 && row.patched === "磁盘补丁已更新");
     const nonce = Math.random().toString(36).slice(2);
     const labels = /** @type {Record<string, string>} */ ({
-      "gnome-look.css": "工作台外观", "controls-close-only.css": "窗口按钮", "gnome-fonts.css": "界面字体",
+      "gnome-look.css": "工作台外观", "controls-close-only.css": "窗口按钮", "gnome-fonts.css": "界面字体", "window-state.js": "窗口状态",
     });
     panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -467,7 +511,7 @@ function showAppearanceStatus(context) {
       <section aria-labelledby="files"><h2 id="files">外观组件</h2><div class="files">
       ${rows.map((row) => `<article><h3>${labels[row.name] || escapeHtml(row.name)}</h3><code class="muted">${escapeHtml(row.name)}</code><dl>
       <div class="row"><dt>安装副本</dt><dd>${row.copied}</dd></div>
-      <div class="row"><dt>加载器配置</dt><dd>${row.imported ? "已加入" : "未加入"}</dd></div>
+      <div class="row"><dt>加载器配置</dt><dd>${row.importCount > 1 ? `重复引用（${row.importCount} 项），请重新安装外观` : row.imported ? "已加入" : "未加入"}</dd></div>
       <div class="row"><dt>磁盘补丁</dt><dd>${row.patched}</dd></div></dl></article>`).join("")}
       </div></section>
       <section aria-labelledby="next"><h2 id="next">下一步</h2><div class="card"><ol>
@@ -507,7 +551,7 @@ async function installCss(context, names) {
     }
   } catch (error) {
     const message = /** @type {Error} */ (error).message;
-    vscode.window.showErrorMessage(`AdwCode：无法写入 CSS 文件：${message}`);
+    vscode.window.showErrorMessage(`AdwCode：无法写入外观文件：${message}`);
     return;
   }
 
@@ -520,15 +564,7 @@ async function installCss(context, names) {
     const config = vscode.workspace.getConfiguration("vscode_custom_css");
     /** @type {string[]} */
     const imports = config.get("imports", []);
-    // 移除旧版菜单位置脚本，保留其他扩展和用户的加载项。
-    const retiredMenus = [CSS_DIR, path.join(context.extensionPath, "extras")].map((folder) =>
-      vscode.Uri.file(path.join(folder, "gnome-menu.js")).toString());
-    const merged = imports.filter((uri) => !retiredMenus.includes(uri));
-    for (const uri of uris) {
-      if (!merged.includes(uri)) {
-        merged.push(uri);
-      }
-    }
+    const merged = mergeCssImports(context, imports, names);
     if (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index])) {
       await config.update("imports", merged, vscode.ConfigurationTarget.Global);
     }
@@ -556,7 +592,7 @@ async function installCss(context, names) {
   await vscode.env.clipboard.writeText(
     `"vscode_custom_css.imports": [\n${uris.map((uri) => `  "${uri}"`).join(",\n")}\n]`
   );
-  const open = "打开 CSS 目录";
+  const open = "打开外观目录";
   const choice = await vscode.window.showInformationMessage(
     `AdwCode：已写入 ${installed.join("、")}，并把 vscode_custom_css.imports 片段复制到剪贴板。` +
       `请安装 “Custom CSS and JS Loader”，把片段粘贴到设置中，执行 “Enable Custom CSS and JS” 后重载窗口。`,
@@ -807,7 +843,7 @@ function activate(context) {
     vscode.commands.registerCommand("adwcode.appearanceStatus", async () => { await readSystemFonts(); showAppearanceStatus(context); }),
     vscode.commands.registerCommand("adwcode.syncAccent", () => syncAccent(true)),
     vscode.commands.registerCommand("adwcode.installGnomeLook", () =>
-      installCss(context, ["gnome-look.css", "controls-close-only.css", "gnome-fonts.css"])
+      installCss(context, Object.keys(CSS_FILES))
     ),
     vscode.commands.registerCommand("adwcode.closeOnlyControls", () =>
       installCss(context, ["controls-close-only.css"])

@@ -24,9 +24,13 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=6, help="每个场景每种样式的样本数")
     parser.add_argument("--output", type=Path, default=ROOT / "builddir/performance-ui.json")
     parser.add_argument("--selectors-only", action="store_true", help="仅对比非活动状态选择器的开销")
+    parser.add_argument("--reference-css", type=Path, help="额外比较修改前的外观 CSS")
+    parser.add_argument("--scenario", choices=["all", "scroll"], default="all", help="单独复核滚动或运行全部场景")
     args = parser.parse_args()
     if args.runs < 4:
         parser.error("--runs 至少为 4")
+    if args.selectors_only and args.scenario != "all":
+        parser.error("--selectors-only 不能与单独滚动场景同时使用")
     code_cli = args.code or Path(shutil.which("code") or "")
     code = code_cli.resolve().parent.parent / "code"
     node = shutil.which("node")
@@ -72,7 +76,7 @@ def main() -> None:
                 "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
                 str(fixture), str(fixture / "sample.py"),
             ], env=env, stdout=log, stderr=log, start_new_session=True)
-            state = {"directory": str(folder), "port": port, "pid": process.pid, "profile": str(profile), "fixture": str(fixture)}
+            state = {"directory": str(folder), "port": port, "pid": process.pid, "profile": str(profile), "fixture": str(fixture), "referenceCss": str(args.reference_css.resolve()) if args.reference_css else None, "scenario": args.scenario}
             session = folder / "session.json"
             session.write_text(json.dumps(state), encoding="utf-8")
             try:

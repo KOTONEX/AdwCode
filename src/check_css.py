@@ -5,7 +5,8 @@
 
 VS Code 更名类名或移除设计令牌时，CSS 补丁就会失效。本脚本解析项目样式表并校验：
 
-- 每个类选择器仍存在于 VS Code 编译后的 CSS 中；
+- 原生类选择器仍存在于 VS Code 编译后的 CSS 或 JavaScript 中；
+  项目状态类由附加脚本的显式 classList 创建操作定义；
 - 样式引用的每个 ``var(--vscode-*)`` 要么由 VS Code 定义、属于主题色注册表，
   要么由项目的令牌块定义。
 
@@ -96,18 +97,22 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
             re.findall(r'["\'`]([a-zA-Z][\w-]*)["\'`]', js_text)
         )
 
+    # 附加脚本创建的状态类不属于 VS Code；只认可显式的 classList 创建操作。
+    project_classes: set[str] = set()
+    for script in EXTRAS.glob("*.js"):
+        project_classes.update(re.findall(r'classList\.(?:add|toggle)\(\s*["\']([\w-]+)["\']', script.read_text(encoding="utf-8")))
     failures = 0
     for sheet in sorted(EXTRAS.glob("*.css")):
         selectors, declarations = selectors_and_declarations(sheet.read_text(encoding="utf-8"))
         classes = set(CLASS_RE.findall(selectors))
-        missing = sorted(classes - vscode_classes)
+        missing = sorted(classes - vscode_classes - project_classes)
         if missing:
             failures += 1
             print(f"失败 {sheet.name}：{len(missing)} 个类名未出现在 {vscode_css.name} 中")
             for name in missing:
                 print(f"       .{name}")
         else:
-            print(f"通过 {sheet.name}：{len(classes)} 个类名仍存在于 VS Code 中")
+            print(f"通过 {sheet.name}：{len(classes)} 个类名由 VS Code 或项目脚本定义")
 
         our_vars = set(VAR_DEF_RE.findall(sheet.read_text(encoding="utf-8")))
         referenced = set(VAR_REF_RE.findall(declarations))

@@ -47,6 +47,21 @@ python3.14t benchmarks/ui.py \
 安装目录中已经注入的项目样式先从测试窗口的 DOM 中移除，随后注入当前源码；
 这一步只影响测试窗口。场景包括非活动状态切换、实际编辑器滚动和 1000 个
 非虚拟侧栏行的压力测试，每个场景每种样式预热 1 次并采样 6 次。
+窗口状态脚本在各组均启用；每次状态切换后等待一个微任务，保证观察器已经同步，
+不会把尚未应用的样式当成优化结果。界面断言检查正文、高对比度保护、新增导航、
+重复注入、启动等待和观察器释放；有参考 CSS 时还对照实际计算样式。
+
+修改前后的配对比较可保存原样式并传入参考文件：
+
+```sh
+git show c36fdb5:extras/gnome-look.css > builddir/gnome-look-before.css
+python3.14t benchmarks/ui.py \
+  --playwright /tmp/adwcode-performance-tools/node_modules/playwright-core \
+  --reference-css builddir/gnome-look-before.css \
+  --output builddir/performance-fixed-ui.json
+```
+
+追加 `--scenario scroll --runs 8` 可单独复核滚动，输出到另一个结果文件。
 
 如需确认非活动样式这一组规则的开销：
 

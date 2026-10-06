@@ -66,10 +66,10 @@ function bench(name, prepare, invoke, count) {
 try {
   const runtime = load();
   let content = '<!-- !! VSCODE-CUSTOM-CSS-START !! -->';
-  for (const name of ['gnome-look.css', 'controls-close-only.css', 'gnome-fonts.css']) {
+  for (const name of vm.runInContext('Object.keys(CSS_FILES)', runtime.sandbox)) {
     const css = runtime.sandbox.cssSource(runtime.context, name);
     fs.writeFileSync(path.join(cssDir, name), css);
-    content += `<style>${css}</style>`;
+    content += name.endsWith('.js') ? `<script>${css}</script>` : `<style>${css}</style>`;
   }
   content += '<!-- !! VSCODE-CUSTOM-CSS-END !! -->';
   fs.writeFileSync(html, '<!--' + 'x'.repeat(128 * 1024) + '-->' + content);
