@@ -262,26 +262,50 @@ LEGACY_KEYS: set[str] = {
 def check() -> int:
     failures: int = 0
     registry, builtin = load_known_keys()
+    paths = sorted(THEMES.glob("*.json"))
+    if not paths:
+        print("失败：没有可校验的主题，请先构建主题")
+        return 1
+    manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    entries = cast(list[ThemeEntry], manifest.get("contributes", {}).get("themes", []))
+    registered = {(ROOT / entry["path"]).resolve(): entry for entry in entries}
+    if len(registered) != len(entries) or set(registered) != {path.resolve() for path in paths}:
+        print("失败：主题文件与 package.json 注册列表不一致，存在缺失、重复或未注册文件")
+        failures += 1
+
+    def valid_color(value: object) -> bool:
+        return isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?", value) is not None
+
     our_keys: set[str] = set()
     labels: list[str] = []
-    for path in sorted(THEMES.glob("*.json")):
+    for path in paths:
         theme = json.loads(path.read_text(encoding="utf-8"))
+        entry = registered.get(path.resolve())
+        if theme["type"] not in ("dark", "light"):
+            print(f"失败 {path.name}：未知主题类型 {theme['type']}")
+            failures += 1
+        if entry and (entry["label"] != theme["name"] or
+                      entry["uiTheme"] not in (("vs-dark", "hc-black") if theme["type"] == "dark" else ("vs", "hc-light"))):
+            print(f"失败 {path.name}：主题标签或明暗类型与注册信息不一致")
+            failures += 1
         labels.append(theme["name"])
         our_keys |= set(theme["colors"])
 
         for key, value in theme["colors"].items():
-            try:
-                parse_color(value)
-            except ValueError as error:
-                print(f"失败 {path.name}: {key} 的颜色无效: {error}")
+            if not valid_color(value):
+                print(f"失败 {path.name}: {key} 必须使用六位或八位十六进制颜色")
                 failures += 1
         for rule in theme["tokenColors"]:
             if not rule.get("scope") or not rule.get("settings"):
                 print(f"失败 {path.name}: 语法规则不完整 {rule}")
                 failures += 1
+            for key in ("foreground", "background"):
+                if key in rule.get("settings", {}) and not valid_color(rule["settings"][key]):
+                    print(f"失败 {path.name}: 语法规则 {key} 必须使用六位或八位十六进制颜色")
+                    failures += 1
         for name, value in theme.get("semanticTokenColors", {}).items():
-            if value is None:
-                print(f"失败 {path.name}: 语义标记 {name} 未定义颜色")
+            if not valid_color(value):
+                print(f"失败 {path.name}: 语义标记 {name} 必须使用六位或八位十六进制颜色")
                 failures += 1
     if len(labels) != len(set(labels)):
         print("失败 主题名称重复")
@@ -289,6 +313,10 @@ def check() -> int:
 
     # 产品图标主题
     icons_path = ROOT / "product-icons" / "adwcode.json"
+    icon_entries = manifest.get("contributes", {}).get("productIconThemes", [])
+    if not any(entry.get("id") == "adwcode" and (ROOT / entry["path"]).resolve() == icons_path.resolve() for entry in icon_entries):
+        print("失败：package.json 未正确注册 AdwCode 产品图标主题")
+        failures += 1
     if icons_path.exists():
         icons = json.loads(icons_path.read_text(encoding="utf-8"))
         fonts = icons.get("fonts", [])
@@ -297,9 +325,13 @@ def check() -> int:
             print("失败 product-icons/adwcode.json: 缺少 fonts 或 iconDefinitions")
             failures += 1
         for font in fonts:
-            for source in font.get("src", []):
+            sources = font.get("src", [])
+            if not sources:
+                print(f"失败 product-icons：字体 {font.get('id')} 缺少来源文件")
+                failures += 1
+            for source in sources:
                 target = (icons_path.parent / source["path"]).resolve()
-                if not target.exists():
+                if not target.is_file():
                     print(f"失败 product-icons：缺少 {source['path']}")
                     failures += 1
         font_ids = {font["id"] for font in fonts}
@@ -316,6 +348,9 @@ def check() -> int:
                 print(f"失败 product-icons: {icon} 的字形码点无效")
                 failures += 1
         print(f"产品图标：{len(definitions)} 个图标映射，{len(fonts)} 个字体")
+    else:
+        print("失败：缺少 product-icons/adwcode.json")
+        failures += 1
 
     # 对每个生成的主题做对比度检查（含强调色、变体、高对比度）。
     checks: list[tuple[str, str, float]] = [
@@ -326,11 +361,14 @@ def check() -> int:
         ("descriptionForeground", "editor.background", 2.5),
     ]
     failed_themes: int = 0
-    for path in sorted(THEMES.glob("*.json")):
+    for path in paths:
         theme = json.loads(path.read_text(encoding="utf-8"))
         colors = theme["colors"]
         problems: list[str] = []
         for fg_key, bg_key, minimum in checks:
+            if not valid_color(colors.get(fg_key)) or not valid_color(colors.get(bg_key)):
+                problems.append(f"{fg_key}/{bg_key} 缺少有效颜色")
+                continue
             ratio = contrast(colors[fg_key], colors[bg_key])
             if ratio < minimum:
                 problems.append(f"{fg_key}/{bg_key} {ratio:.2f} < {minimum}")
@@ -341,7 +379,7 @@ def check() -> int:
             failures += 1
         if problems:
             failed_themes += 1
-    print(f"对比度：{len(list(THEMES.glob('*.json'))) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
+    print(f"对比度：{len(paths) - failed_themes} 个主题通过，{failed_themes} 个主题存在问题")
 
     if registry is None or builtin is None:
         print("提示：运行 update_defaults.py 刷新 VS Code 颜色键表")

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import shutil
@@ -18,6 +19,7 @@ import unittest
 import tempfile
 import zipfile
 from unittest.mock import patch
+from contextlib import redirect_stdout
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, cast
@@ -208,6 +210,50 @@ class ThemeTest(unittest.TestCase):
 
 
 class GeneratorSafetyTest(unittest.TestCase):
+    def test_check_rejects_missing_assets_and_non_hex_colors(self) -> None:
+        import build
+        for case in ("empty", "theme", "icons", "icon_registration", "font_source", "font_directory", "label", "type", "ui_color", "token_color", "semantic_color"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory)
+                shutil.copytree(THEMES, folder / "themes")
+                shutil.copytree(ROOT / "product-icons", folder / "product-icons")
+                shutil.copy2(ROOT / "package.json", folder / "package.json")
+                paths = sorted((folder / "themes").glob("*.json"))
+                if case == "empty":
+                    for path in paths:
+                        path.unlink()
+                elif case == "theme":
+                    paths[0].unlink()
+                elif case == "icons":
+                    (folder / "product-icons/adwcode.json").unlink()
+                elif case == "icon_registration":
+                    manifest_path = folder / "package.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest["contributes"]["productIconThemes"][0]["path"] = "./product-icons/missing.json"
+                    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                elif case in ("font_source", "font_directory"):
+                    icon_path = folder / "product-icons/adwcode.json"
+                    icons = json.loads(icon_path.read_text(encoding="utf-8"))
+                    icons["fonts"][0]["src"] = [] if case == "font_source" else [{"path": "."}]
+                    icon_path.write_text(json.dumps(icons), encoding="utf-8")
+                else:
+                    if case == "type":
+                        paths[0] = next(path for path in paths if "light" in path.name)
+                    theme = json.loads(paths[0].read_text(encoding="utf-8"))
+                    if case == "label":
+                        theme["name"] = "未注册的主题标签"
+                    elif case == "type":
+                        theme["type"] = "未知类型"
+                    elif case == "ui_color":
+                        theme["colors"]["badge.background"] = "rgb(0 0 0 / 50%)"
+                    elif case == "token_color":
+                        theme["tokenColors"][0]["settings"]["foreground"] = "rgb(0 0 0)"
+                    else:
+                        theme["semanticTokenColors"]["class"] = "rgb(0 0 0)"
+                    paths[0].write_text(json.dumps(theme), encoding="utf-8")
+                with patch.object(build, "ROOT", folder), patch.object(build, "THEMES", folder / "themes"), redirect_stdout(io.StringIO()):
+                    self.assertEqual(build.check(), 1)
+
     def test_jsonc_preserves_string_contents(self) -> None:
         from update_defaults import strip_jsonc
         data = json.loads(strip_jsonc('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
@@ -238,6 +284,13 @@ class GeneratorSafetyTest(unittest.TestCase):
 
 
 class ExtensionStatusTest(unittest.TestCase):
+    def test_accent_read_races(self) -> None:
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("未安装 Node.js")
+        result = subprocess.run([node, str(ROOT / "tests/test_extension_accent.cjs")], capture_output=True, text=True, timeout=10, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_missing_development_tools_fail(self) -> None:
         result = subprocess.run(
             [sys.executable, str(SRC / "dev.py"), "typecheck"],

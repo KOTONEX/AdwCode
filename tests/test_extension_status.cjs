@@ -119,10 +119,12 @@ assert.equal(sandbox.cssImportName(context, "https://example.org/gnome-look.css"
 
 // 安装命令应调用去重逻辑；拒绝补丁按钮时不执行任何外部命令。
 let updates = 0;
+let workspaceImports;
 imports = ["file:///repo/extras/gnome-look.css", "file:///user/.config/adwcode/gnome-look.css"];
 vscode.ConfigurationTarget = { Global: 1 };
 vscode.workspace.getConfiguration = () => ({
-  get: (key, fallback) => key === "imports" ? imports : fallback,
+  get: (key, fallback) => key === "imports" ? workspaceImports || imports : fallback,
+  inspect: () => ({ defaultValue: [], globalValue: imports, workspaceValue: workspaceImports }),
   async update(key, value, target) { assert.equal(key, "imports"); assert.equal(target, 1); imports = value; updates++; },
 });
 sandbox.mockFs.promises = {
@@ -136,6 +138,24 @@ assert.equal(updates, 1);
 assert.deepEqual(Array.from(imports), ["file:///user/.config/adwcode/gnome-look.css"]);
 await sandbox.installCss(context, ["gnome-look.css"]);
 assert.equal(updates, 1);
+// 工作区覆盖不能被复制到用户设置；不向错误的有效加载项发送补丁命令。
+imports = ["file:///other/user.css"];
+workspaceImports = ["file:///other/workspace.css"];
+let warnings = [];
+vscode.window.showWarningMessage = async message => { warnings.push(message); };
+await sandbox.installCss(context, ["gnome-look.css"]);
+assert.deepEqual(Array.from(imports), ["file:///other/user.css", "file:///user/.config/adwcode/gnome-look.css"]);
+assert.deepEqual(workspaceImports, ["file:///other/workspace.css"]);
+assert.ok(warnings.some(message => message.includes("工作区")));
+workspaceImports = undefined;
+// 未安装加载器时，剪贴板片段必须能直接组成合法 JSON。
+let copied;
+const getExtension = vscode.extensions.getExtension;
+vscode.extensions.getExtension = () => undefined;
+vscode.env.clipboard = { async writeText(text) { copied = text; } };
+await sandbox.installCss(context, ["gnome-look.css"]);
+assert.deepEqual(JSON.parse("{" + copied + "}")["vscode_custom_css.imports"], ["file:///user/.config/adwcode/gnome-look.css"]);
+vscode.extensions.getExtension = getExtension;
 console.log("CSS 安装：源码与副本去重、用户加载项保留和重复安装测试通过");
 
 assert.equal(sandbox.pangoFamily("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");

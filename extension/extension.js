@@ -210,6 +210,7 @@ function mergeCssImports(context, imports, names) {
 let extensionContext;
 /** @type {import("child_process").ChildProcess | undefined} */
 let accentMonitor;
+let accentSyncSequence = 0;
 
 /**
  * @param {unknown} name
@@ -294,6 +295,9 @@ function readSystemAccent() {
  * @returns {Promise<void>}
  */
 async function syncAccent(announce = false) {
+  const context = extensionContext;
+  const sequence = ++accentSyncSequence;
+  if (!context) return;
   const config = vscode.workspace.getConfiguration("adwcode");
   const autoAccent = /** @type {boolean} */ (config.get("autoAccent", true));
   if (autoAccent === false) {
@@ -315,6 +319,11 @@ async function syncAccent(announce = false) {
   startAccentMonitor();
 
   const accent = await readSystemAccent();
+  if (extensionContext !== context || sequence !== accentSyncSequence) return;
+  if (!vscode.workspace.getConfiguration("adwcode").get("autoAccent", true)) {
+    stopAccentMonitor();
+    return;
+  }
   if (!accent) {
     if (announce) {
       vscode.window.showWarningMessage("AdwCode：无法获取 GNOME 强调色。");
@@ -322,7 +331,11 @@ async function syncAccent(announce = false) {
     return;
   }
 
+  const currentWorkbench = vscode.workspace.getConfiguration("workbench");
   const available = availableThemes();
+  let supported = false;
+  let candidateFound = false;
+  let workspaceOverride = false;
   /** @type {Array<Thenable<void>>} */
   const updates = [];
   /** @type {Array<[unknown, ThemeKind | undefined, string]>} */
@@ -332,24 +345,34 @@ async function syncAccent(announce = false) {
     [preferredLight, "light", "preferredLightColorTheme"],
   ];
   for (const [name, kind, setter] of candidates) {
+    // 读取系统设置期间，操作者可能已经切换主题；不要覆盖更新后的值。
+    if (currentWorkbench.get(setter) !== name) continue;
     const parsed = parseTheme(name);
     if (!parsed) {
       continue;
     }
+    candidateFound = true;
     const label = labelFor(accent, kind || parsed.kind, parsed.suffix, available);
+    supported ||= parseTheme(label)?.accent === accent;
     if (label && label !== name) {
-      updates.push(workbench.update(setter, label, vscode.ConfigurationTarget.Global));
+      const inspected = currentWorkbench.inspect(setter);
+      if (inspected?.workspaceValue !== undefined || inspected?.workspaceFolderValue !== undefined) {
+        workspaceOverride = true;
+        continue;
+      }
+      updates.push(currentWorkbench.update(setter, label, vscode.ConfigurationTarget.Global));
     }
   }
 
-  if (updates.length > 0) {
-    await Promise.all(updates);
-    if (announce) {
-      vscode.window.showInformationMessage(`AdwCode：已切换到${ACCENT_LABELS[accent]}强调色。`);
-    }
-  } else if (announce) {
+  if (updates.length > 0) await Promise.all(updates);
+  if (announce && workspaceOverride) {
+    vscode.window.showWarningMessage("AdwCode：已保留工作区覆盖的主题配置；请手动调整工作区中的主题值。" +
+      (updates.length ? "其他用户级主题已同步。" : "用户级原值未被覆盖。"));
+  } else if (announce && updates.length > 0) {
+    vscode.window.showInformationMessage(`AdwCode：已切换到${ACCENT_LABELS[accent]}强调色。`);
+  } else if (announce && candidateFound && !workspaceOverride) {
     vscode.window.showInformationMessage(
-      `AdwCode：未安装${ACCENT_LABELS[accent]}强调色变体。`
+      supported ? "AdwCode：主题已与系统强调色一致。" : `AdwCode：未安装${ACCENT_LABELS[accent]}强调色变体。`
     );
   }
 }
@@ -562,11 +585,23 @@ async function installCss(context, names) {
 
   if (loader) {
     const config = vscode.workspace.getConfiguration("vscode_custom_css");
-    /** @type {string[]} */
-    const imports = config.get("imports", []);
+    const inspected = config.inspect("imports");
+    const imports = /** @type {string[]} */ (inspected?.globalValue ?? inspected?.defaultValue ?? []);
     const merged = mergeCssImports(context, imports, names);
     if (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index])) {
       await config.update("imports", merged, vscode.ConfigurationTarget.Global);
+    }
+    const activeConfig = vscode.workspace.getConfiguration("vscode_custom_css");
+    const activeScope = activeConfig.inspect("imports");
+    const effective = activeConfig.get("imports", /** @type {string[]} */ ([]));
+    const normalized = mergeCssImports(context, effective, names);
+    if ((activeScope?.workspaceValue !== undefined || activeScope?.workspaceFolderValue !== undefined) &&
+        (normalized.length !== effective.length || normalized.some((value, index) => value !== effective[index]))) {
+      await vscode.window.showWarningMessage(
+        "AdwCode：外观副本与用户级加载配置已更新，但工作区覆盖了 vscode_custom_css.imports。" +
+        "请在工作区中移除该覆盖或手动统一组件引用，再执行加载器命令。工作区配置保持原值。"
+      );
+      return;
     }
     const [action, command, message] =
       state === "not-enabled"
@@ -590,7 +625,7 @@ async function installCss(context, names) {
   }
 
   await vscode.env.clipboard.writeText(
-    `"vscode_custom_css.imports": [\n${uris.map((uri) => `  "${uri}"`).join(",\n")}\n]`
+    `"vscode_custom_css.imports": ${JSON.stringify(uris, null, 2)}`
   );
   const open = "打开外观目录";
   const choice = await vscode.window.showInformationMessage(
