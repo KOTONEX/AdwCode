@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """用 fontTools 将自有 SVG 字形生成为单色产品图标字体，仅再生成时需要依赖。"""
+
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -29,7 +30,16 @@ for glyph in glyphs.values():
 builder.setupHorizontalMetrics({name: (1024, getattr(glyphs[name], "xMin", 0)) for name in order})
 builder.setupHorizontalHeader(ascent=896, descent=-128)
 builder.setupCharacterMap({int(source.stem, 16): name for source, name in zip(sources, order[1:])})
-builder.setupNameTable({"familyName": "AdwCode Symbols", "styleName": "Regular", "uniqueFontIdentifier": "AdwCodeSymbols-Regular", "fullName": "AdwCode Symbols", "psName": "AdwCodeSymbols-Regular", "version": "Version 1.0"})
+builder.setupNameTable(
+    {
+        "familyName": "AdwCode Symbols",
+        "styleName": "Regular",
+        "uniqueFontIdentifier": "AdwCodeSymbols-Regular",
+        "fullName": "AdwCode Symbols",
+        "psName": "AdwCodeSymbols-Regular",
+        "version": "Version 1.0",
+    }
+)
 builder.setupOS2(sTypoAscender=896, sTypoDescender=-128, usWinAscent=896, usWinDescent=128)
 builder.setupPost()
 # 固定时间戳，使同一份源资产生成的字体可复现。

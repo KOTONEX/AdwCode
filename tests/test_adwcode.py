@@ -11,28 +11,30 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import re
 import shutil
 import subprocess
 import sys
-import unittest
 import tempfile
-import zipfile
-from unittest.mock import patch
-from contextlib import redirect_stdout
+import unittest
 import xml.etree.ElementTree as ET
+import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import patch
 
-ROOT = Path(__file__).parent.parent
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import tokens
 from palette import ACCENT_NAMES, Palette, mix, over, parse_color, rgba, to_hex
 
+ROOT = Path(__file__).parent.parent
+SRC = ROOT / "src"
 THEMES = ROOT / "themes"
-REGISTRY = cast(list[str], json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text(encoding="utf-8")))
+REGISTRY = cast(
+    list[str],
+    json.loads((SRC / "vscode_defaults" / "registry_keys.json").read_text(encoding="utf-8")),
+)
 
 
 class ColorMathTest(unittest.TestCase):
@@ -47,7 +49,14 @@ class ColorMathTest(unittest.TestCase):
         self.assertEqual(parse_color("rgb(10 20 30)"), (10, 20, 30, 1.0))
 
     def test_invalid_colors_rejected(self) -> None:
-        for color in ("#12345", "#123456789", "#ggg", "rgb(256 0 0)", "rgb(0 0 0 / 101%)", "rgb(0 0 0 / 1.1)"):
+        for color in (
+            "#12345",
+            "#123456789",
+            "#ggg",
+            "rgb(256 0 0)",
+            "rgb(0 0 0 / 101%)",
+            "rgb(0 0 0 / 1.1)",
+        ):
             with self.subTest(color=color), self.assertRaises(ValueError):
                 parse_color(color)
 
@@ -84,13 +93,13 @@ class PaletteTest(unittest.TestCase):
     def test_high_contrast_borders(self) -> None:
         normal = Palette("dark")
         high = Palette("dark", high_contrast=True)
-        self.assertGreater(
-            parse_color(high["border"])[3], parse_color(normal["border"])[3]
-        )
+        self.assertGreater(parse_color(high["border"])[3], parse_color(normal["border"])[3])
         self.assertEqual(parse_color(high["fg_view"])[3], 1.0)
 
     def test_accents_differ(self) -> None:
-        self.assertNotEqual(Palette("dark", "blue")["accent_bg"], Palette("dark", "teal")["accent_bg"])
+        self.assertNotEqual(
+            Palette("dark", "blue")["accent_bg"], Palette("dark", "teal")["accent_bg"]
+        )
         self.assertNotEqual(
             Palette("light", "blue")["accent_standalone"],
             Palette("dark", "blue")["accent_standalone"],
@@ -137,7 +146,9 @@ class TokensTest(unittest.TestCase):
 
 class ThemeTest(unittest.TestCase):
     def themes(self) -> list[dict[str, Any]]:
-        return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(THEMES.glob("*.json"))]
+        return [
+            json.loads(path.read_text(encoding="utf-8")) for path in sorted(THEMES.glob("*.json"))
+        ]
 
     def test_themes_exist(self) -> None:
         self.assertGreaterEqual(len(self.themes()), 10)
@@ -149,7 +160,9 @@ class ThemeTest(unittest.TestCase):
     def test_colors_are_registered(self) -> None:
         from build import LEGACY_KEYS
 
-        builtin = set(json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text(encoding="utf-8")))
+        builtin = set(
+            json.loads((SRC / "vscode_defaults" / "builtin_keys.json").read_text(encoding="utf-8"))
+        )
         known = set(REGISTRY) | builtin | LEGACY_KEYS
         for theme in self.themes():
             for key in theme["colors"]:
@@ -187,9 +200,14 @@ class ThemeTest(unittest.TestCase):
 
         # 覆盖按需构建的全部强调色和变体，防止仅默认主题完成更名。
         from build import build_plan, build_theme, theme_filename
+
         for request in build_plan(list(ACCENT_NAMES)):
-            theme = build_theme(request["mode"], request["accent"], request["variant"], request["hc"])
-            filename = theme_filename(request["mode"], request["accent"], request["variant"], request["hc"])
+            theme = build_theme(
+                request["mode"], request["accent"], request["variant"], request["hc"]
+            )
+            filename = theme_filename(
+                request["mode"], request["accent"], request["variant"], request["hc"]
+            )
             self.assertTrue(theme["name"].startswith("AdwCode "), theme["name"])
             self.assertTrue(filename.startswith("adwcode-"), filename)
 
@@ -212,7 +230,20 @@ class ThemeTest(unittest.TestCase):
 class GeneratorSafetyTest(unittest.TestCase):
     def test_check_rejects_missing_assets_and_non_hex_colors(self) -> None:
         import build
-        for case in ("empty", "theme", "icons", "icon_registration", "font_source", "font_directory", "label", "type", "ui_color", "token_color", "semantic_color"):
+
+        for case in (
+            "empty",
+            "theme",
+            "icons",
+            "icon_registration",
+            "font_source",
+            "font_directory",
+            "label",
+            "type",
+            "ui_color",
+            "token_color",
+            "semantic_color",
+        ):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 folder = Path(directory)
                 shutil.copytree(THEMES, folder / "themes")
@@ -229,7 +260,9 @@ class GeneratorSafetyTest(unittest.TestCase):
                 elif case == "icon_registration":
                     manifest_path = folder / "package.json"
                     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                    manifest["contributes"]["productIconThemes"][0]["path"] = "./product-icons/missing.json"
+                    manifest["contributes"]["productIconThemes"][0]["path"] = (
+                        "./product-icons/missing.json"
+                    )
                     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
                 elif case in ("font_source", "font_directory"):
                     icon_path = folder / "product-icons/adwcode.json"
@@ -251,33 +284,46 @@ class GeneratorSafetyTest(unittest.TestCase):
                     else:
                         theme["semanticTokenColors"]["class"] = "rgb(0 0 0)"
                     paths[0].write_text(json.dumps(theme), encoding="utf-8")
-                with patch.object(build, "ROOT", folder), patch.object(build, "THEMES", folder / "themes"), redirect_stdout(io.StringIO()):
+                with (
+                    patch.object(build, "ROOT", folder),
+                    patch.object(build, "THEMES", folder / "themes"),
+                    redirect_stdout(io.StringIO()),
+                ):
                     self.assertEqual(build.check(), 1)
 
     def test_jsonc_preserves_string_contents(self) -> None:
         from update_defaults import strip_jsonc
+
         data = json.loads(strip_jsonc('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
         self.assertEqual(data, {"text": ",} // /* ", "list": [1, 2]})
 
     def test_include_cycle_rejected(self) -> None:
         import update_defaults
-        with patch.dict(update_defaults._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}):
+
+        with patch.dict(
+            update_defaults._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}
+        ):
             with self.assertRaisesRegex(ValueError, "include 循环"):
                 update_defaults.resolve_token_colors("a")
 
     def test_accents_deduplicated(self) -> None:
         from build import resolve_accents
+
         self.assertEqual(resolve_accents("blue,teal,blue", False), ["blue", "teal"])
         with self.assertRaises(SystemExit):
             resolve_accents(" , ", False)
 
     def test_generation_failure_preserves_existing_themes(self) -> None:
         import build
+
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             existing = folder / "old.json"
             existing.write_text("原有主题", encoding="utf-8")
-            with patch.object(build, "THEMES", folder), patch.object(build, "build_theme", side_effect=ValueError("生成失败")):
+            with (
+                patch.object(build, "THEMES", folder),
+                patch.object(build, "build_theme", side_effect=ValueError("生成失败")),
+            ):
                 with self.assertRaises(ValueError):
                     build.write_themes(build.build_plan(["blue"]))
             self.assertEqual(existing.read_text(encoding="utf-8"), "原有主题")
@@ -288,16 +334,45 @@ class ExtensionStatusTest(unittest.TestCase):
         node = shutil.which("node")
         if node is None:
             self.skipTest("未安装 Node.js")
-        result = subprocess.run([node, str(ROOT / "tests/test_extension_accent.cjs")], capture_output=True, text=True, timeout=10, check=False)
+        result = subprocess.run(
+            [node, str(ROOT / "tests/test_extension_accent.cjs")],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_missing_development_tools_fail(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SRC / "dev.py"), "typecheck"],
-            env={"PATH": ""}, capture_output=True, text=True, timeout=10, check=False,
+        for action, missing in (
+            ("typecheck", "ty、tsc、node"),
+            ("lint", "ruff"),
+            ("format", "ruff"),
+        ):
+            with self.subTest(action=action):
+                result = subprocess.run(
+                    [sys.executable, str(SRC / "dev.py"), action],
+                    env={"PATH": ""},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"缺少开发工具：{missing}", result.stdout)
+
+    def test_release_notes_extract_version(self) -> None:
+        from release_notes import extract
+
+        changelog = (
+            "## [未发布]\n将来\n## [2.0.0] - 2026-10-06\n\n### 外观\n正文\n## [1.2.0]\n旧版\n"
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("缺少开发工具：ty、tsc、node", result.stdout)
+        self.assertEqual(extract(changelog, "2.0.0"), "### 外观\n正文\n")
+        for version in ("2.0.1", "2x0x0"):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                extract(changelog, version)
+        with self.assertRaises(ValueError):
+            extract("## [2.0.0]\n\n## [1.2.0]\n旧版\n", "2.0.0")
 
     def test_vsix_content_types(self) -> None:
         import package
@@ -310,6 +385,7 @@ class ExtensionStatusTest(unittest.TestCase):
 
     def test_vsix_xml_escapes_metadata(self) -> None:
         import package
+
         manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         manifest["description"] = '说明 <示例> & "引号"'
         with tempfile.TemporaryDirectory() as directory:
@@ -320,7 +396,9 @@ class ExtensionStatusTest(unittest.TestCase):
             icon.write_bytes((ROOT / manifest["icon"]).read_bytes())
             with patch.object(package, "ROOT", folder):
                 package.main()
-            with zipfile.ZipFile(folder / f"{manifest['name']}-{manifest['version']}.vsix") as archive:
+            with zipfile.ZipFile(
+                folder / f"{manifest['name']}-{manifest['version']}.vsix"
+            ) as archive:
                 xml = ET.fromstring(archive.read("extension.vsixmanifest"))
                 description = xml.find("{*}Metadata/{*}Description")
                 assert description is not None
@@ -330,7 +408,11 @@ class ExtensionStatusTest(unittest.TestCase):
                 icon_uri = "extension/" + manifest["icon"]
                 self.assertEqual(icon_metadata.text, icon_uri)
                 assets = xml.findall("{*}Assets/{*}Asset")
-                registered_icons = [asset for asset in assets if asset.attrib["Type"] == "Microsoft.VisualStudio.Services.Icons.Default"]
+                registered_icons = [
+                    asset
+                    for asset in assets
+                    if asset.attrib["Type"] == "Microsoft.VisualStudio.Services.Icons.Default"
+                ]
                 self.assertEqual(len(registered_icons), 1)
                 self.assertEqual(registered_icons[0].attrib["Path"], icon_uri)
                 self.assertEqual(archive.read(icon_uri), icon.read_bytes())
@@ -345,7 +427,13 @@ class ExtensionStatusTest(unittest.TestCase):
         node = shutil.which("node")
         if node is None:
             self.skipTest("未安装 Node.js")
-        result = subprocess.run([node, str(ROOT / "tests/test_extension_settings.cjs")], capture_output=True, text=True, timeout=10, check=False)
+        result = subprocess.run(
+            [node, str(ROOT / "tests/test_extension_settings.cjs")],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_offline_status_panel(self) -> None:
@@ -354,7 +442,10 @@ class ExtensionStatusTest(unittest.TestCase):
             self.skipTest("未安装 Node.js，跳过扩展状态面板测试")
         result = subprocess.run(
             [node, str(ROOT / "tests" / "test_extension_status.cjs")],
-            capture_output=True, text=True, timeout=10, check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -366,7 +457,9 @@ class CssTest(unittest.TestCase):
         sheets = sorted((ROOT / "extras").glob("*.css"))
         self.assertTrue(sheets)
         for sheet in sheets:
-            selectors, declarations = check_css.selectors_and_declarations(sheet.read_text(encoding="utf-8"))
+            selectors, declarations = check_css.selectors_and_declarations(
+                sheet.read_text(encoding="utf-8")
+            )
             self.assertTrue(selectors.strip(), sheet.name)
             self.assertTrue(declarations.strip(), sheet.name)
 
@@ -421,7 +514,9 @@ class ProductIconSourcesTests(unittest.TestCase):
             codepoints: set[int] = set()
             for entry in font["glyphs"]:
                 path = folder / entry["file"]
-                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), entry["sha256"], entry["file"])
+                self.assertEqual(
+                    hashlib.sha256(path.read_bytes()).hexdigest(), entry["sha256"], entry["file"]
+                )
                 self.assertEqual(Path(entry["upstream_path"]).name, path.name)
                 self.assertEqual(ET.parse(path).getroot().tag, "{http://www.w3.org/2000/svg}svg")
                 preview = folder / "rendered" / font["id"] / (entry["codepoint"] + ".svg")
@@ -441,13 +536,21 @@ class ProductIconSourcesTests(unittest.TestCase):
                 for icon in entry["icons"]:
                     self.assertNotIn(icon, mapped)
                     mapped.add(icon)
-                    self.assertEqual(theme["iconDefinitions"][icon], {
-                        "fontId": font["id"], "fontCharacter": "\\" + entry["codepoint"],
-                    })
-        self.assertEqual(mapped, {
-            icon for icon, definition in theme["iconDefinitions"].items()
-            if definition["fontId"] in imported_ids
-        })
+                    self.assertEqual(
+                        theme["iconDefinitions"][icon],
+                        {
+                            "fontId": font["id"],
+                            "fontCharacter": "\\" + entry["codepoint"],
+                        },
+                    )
+        self.assertEqual(
+            mapped,
+            {
+                icon
+                for icon, definition in theme["iconDefinitions"].items()
+                if definition["fontId"] in imported_ids
+            },
+        )
 
     def test_adwaita_equivalents_take_priority(self) -> None:
         """官方已有对应字形时采用 Adwaita；备用 MoreWaita 不参与运行时加载。"""
@@ -457,8 +560,19 @@ class ProductIconSourcesTests(unittest.TestCase):
         priority = ["adwcode-adwaita", "adwcode-builder", "adwcode-morewaita"]
         self.assertEqual(sources["source_priority"], priority)
         self.assertEqual([font["id"] for font in sources["fonts"]], priority)
-        for icon in ("terminal", "extensions", "debug-continue", "debug-stop", "package", "tools",
-                     "root-folder", "chrome-close", "chrome-maximize", "chrome-minimize", "chrome-restore"):
+        for icon in (
+            "terminal",
+            "extensions",
+            "debug-continue",
+            "debug-stop",
+            "package",
+            "tools",
+            "root-folder",
+            "chrome-close",
+            "chrome-maximize",
+            "chrome-minimize",
+            "chrome-restore",
+        ):
             self.assertEqual(theme["iconDefinitions"][icon]["fontId"], "adwcode-adwaita", icon)
         self.assertNotIn("adwcode-morewaita", {font["id"] for font in theme["fonts"]})
 

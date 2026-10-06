@@ -7,8 +7,8 @@
 1. 先运行 `git status --short`，区分已有改动、暂存内容与未跟踪文件；不要覆盖或
    顺手提交与任务无关的内容。版本读取 `package.json`，提交状态读取 Git。
 2. 阅读本文件；按任务查阅 [架构与状态](docs/03-架构与实现状态.md)、
-   [开发与验证](docs/04-开发验证与发布.md)。若工作区存在本地待办文档
-   `docs/02-下一主版本候选.md`，可按需查阅；实现与审查记录见
+   [开发与验证](docs/04-开发验证与发布.md)。后续功能候选见
+   [待办清单](docs/02-待办清单.md)，按需查阅；实现与审查记录见
    [外观实现与验收](docs/05-外观实现与验收.md)，不要把其他候选功能当成已实现功能。
 3. 完成任务后说明改动范围、验证结果和已知限制。涉及重载、推送或发布时，
    遵循当前任务的授权范围。
@@ -49,12 +49,14 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `src/mapping.py` —— VS Code 颜色键到 Adwaita 角色的映射
 - `src/tokens.py` —— GtkSourceView 样式名到 TextMate 作用域的映射
 - `src/build.py` / `src/package.py` / `src/update_defaults.py`
+- `src/release_notes.py` —— 从当前版本更新日志提取发布说明
 - `tests/test_adwcode.py` —— 离线单元测试，运行 `meson test -C builddir --print-errorlogs`
 - `src/gtksourceview_xml/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
 - `src/vscode_defaults/` —— 随附的 VS Code 默认数据与键表（MIT）
 - `themes/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
 - `assets/` —— 扩展图标 SVG 与 PNG，再生成方式见 `assets/README.md`
 - `product-icons/`、`extras/`、`extension/`；`extras/window-state.js` 只同步窗口状态
+- `ruff.toml` —— 全部 Python 文件的静态检查与格式配置（Ruff 0.16.9）
 - `types/`、`ty.toml`、`tsconfig.json` —— 类型检查配置与手写最小类型面
 - `benchmarks/` —— Linux 性能基准，运行方式见其 README，测量结果见
   [性能测试](docs/07-性能测试.md)
@@ -76,8 +78,8 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
   非活动状态由脚本同步到导航容器，不恢复工作台祖先上的 `:has()` 规则；
   安装命令把已知源码与副本引用统一为一份副本，保留其他用户加载项。
   VS Code 1.140 在约 250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*`
-  却从未定义它们，
-  因此 `gnome-look.css` 自行定义这些令牌以提供 Adwaita 几何。VS Code 升级后请
+  却从未定义它们，因此 `gnome-look.css` 自行定义这些令牌以提供 Adwaita 几何。
+  VS Code 升级后请
   运行 `check_css.py`：它会校验每个类选择器仍存在于已安装的构建中（由
   JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
@@ -89,11 +91,13 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 默认解释器为 `python3.14t`，必须是 GIL 关闭的 Python 3.14 自由线程版本；
 可通过 `-Dpython=/绝对路径/python3.14t` 指定。首次运行 `meson setup builddir`；后续可用 `meson setup --reconfigure builddir` 更新配置。
 
-- 静态检查：`meson compile -C builddir lint`
+- 静态与格式检查：`meson compile -C builddir lint`（Ruff 检查全部 Python 文件，含图标生成器；
+  同时校验格式、类型和 JavaScript 语法，缺少检查工具时失败）
+- 格式化全部 Python 文件：`meson compile -C builddir format`（先检查自动重载状态）
 - 类型检查：`meson compile -C builddir typecheck`（ty 检查 `src/`、`tests/`、`benchmarks/`；tsc 检查
   `extension/extension.js`、`extras/*.js`，缺少 ty、tsc 或 Node.js 时失败）
-- 校验（键覆盖、未知键、对比度、产品图标）：`meson compile -C builddir check`
-- 完整检查（静态、类型、主题与离线单元测试）：`meson test -C builddir --print-errorlogs`
+- 校验（产物注册、颜色格式、键覆盖、对比度和产品图标）：`meson compile -C builddir check`
+- 完整检查（静态、格式、类型、主题与离线单元测试）：`meson test -C builddir --print-errorlogs`
 - 构建主题并同步 `package.json`：`meson compile -C builddir themes`（等价于 `python3.14t src/build.py`）
 - 生成全部九种强调色：`python3.14t src/build.py --accents all`
 - 对照已安装的 VS Code 检查自定义 CSS：`python3.14t src/check_css.py`
@@ -103,7 +107,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - 刷新随附的 VS Code 数据与键表：`python3.14t src/update_defaults.py`
 - 开发时主题 JSON 即时重载：`python3.14t src/build.py --watch`
 - 发布：推送 `v*` 标签后由 GitHub Actions 自动构建并上传 VSIX
-  （`.github/workflows/release.yml`，会先校验标签与版本一致、产物与提交一致，
+  （`.github/workflows/release.yml`，发布说明取自更新日志；先校验标签与版本一致、产物与提交一致，
   再跑静态检查与单元测试）；配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
   VSIX 还会发布到 VS Code 扩展市场与 Open VSX（未配置时自动跳过）
 

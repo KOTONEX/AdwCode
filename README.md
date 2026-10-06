@@ -20,7 +20,7 @@
 - **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 支持 GNOME 全部九种强调色（blue、teal、green、yellow、orange、
-  red、pink、purple、slate）。默认构建 blue，可用 `--accents all` 生成其余颜色，
+  red、pink、purple、slate）。默认构建 blue，并读取当前系统强调色；可用 `--accents all` 生成其余颜色，
   或让扩展跟随 `org.gnome.desktop.interface accent-color`。
 - **变体** —— 默认语法高亮（使用 VS Code 自带的语法颜色）与
   彩色状态栏变体，以及高对比度主题。
@@ -39,14 +39,14 @@
 | --- | --- |
 | `AdwCode 深色` / `AdwCode 浅色` | Builder 语法，标准状态栏 |
 | `AdwCode 深色 · 彩色状态栏` / `AdwCode 浅色 · 彩色状态栏` | 状态栏填充强调色 |
-| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带 token 颜色 |
+| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带语法颜色 |
 | `AdwCode <强调色> 深色` / `AdwCode <强调色> 浅色` | 非蓝色强调色，按需生成 |
 | `AdwCode 深色 高对比度` / `AdwCode 浅色 高对比度` | libadwaita 高对比度参数 |
 
 产品图标主题 `AdwCode` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
 补全和常用操作。四个窗口控制字形（`chrome-close`、`chrome-maximize`、
 `chrome-minimize`、`chrome-restore`）只在
-`window.controlsStyle` 设为 `custom` 时出现——默认的 `native` 由 GNOME 自己绘制
+`window.controlsStyle` 设为 `custom` 时出现——推荐的 `native` 由 GNOME 绘制
 按钮，这是推荐配置。未覆盖的图标保留 VS Code 默认 Codicons；来源、字形范围
 和再生成方式见 [产品图标说明](product-icons/README.md)，逐项预览见
 [产品图标陈列](docs/06-产品图标陈列.md)。
@@ -206,12 +206,13 @@ AdwCode/
 │   ├── update_defaults.py       刷新 VS Code 默认主题数据与键表
 │   ├── gtksourceview_xml/       随附的 GtkSourceView 方案（LGPL-2.1+）
 │   └── vscode_defaults/         解析后的 VS Code 默认 token 颜色（MIT）与键表
+├── benchmarks/                  按需性能基准与独立工作台验证
 ├── tests/                       离线单元测试
 │   └── test_adwcode.py          颜色运算、调色板、语法、主题、CSS
 ├── themes/                      生成的主题 JSON（自动生成，请勿手工编辑；已提交）
 ├── product-icons/               产品图标主题（Adwaita 符号字形与字体）
 ├── extras/                      通过 Custom CSS 加载的样式表与窗口状态脚本
-├── extension/                   强调色同步扩展
+├── extension/                   命令、安装、状态面板与强调色同步
 ├── docs/                        深入文档与第三方许可证登记
 └── .github/                     CI、发布工作流与议题 / PR 模板
 ```
@@ -223,9 +224,12 @@ AdwCode/
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
 | Python | 3.9+（CI 与本地开发使用 3.14 自由线程版本） | 仅构建与打包需要 |
 | Meson / Ninja | Meson ≥ 1.3 | 开发命令与 CI 调度；独立 Python 脚本可直接运行 |
-| ty / tsc / Node.js | 类型检查与扩展测试工具 | 完整开发验证需要，最终扩展无额外运行时库依赖 |
+| Ruff / ty / tsc / Node.js | 静态、格式、类型与扩展测试工具 | 完整开发验证需要，最终扩展无额外运行时库依赖 |
 | GNOME | 提供 `org.gnome.desktop.interface accent-color`（GNOME 47 起） | 扩展跟随系统强调色；没有该键时手动选择主题变体 |
 | VS Code 安装目录写权限 | — | Custom CSS and JS Loader 注入自定义 CSS 的要求 |
+
+GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与产品图标可独立使用。
+附加外观的已验证环境及限制见 [外观实现与验收](docs/05-外观实现与验收.md)。
 
 ## 故障排查
 
@@ -233,17 +237,17 @@ AdwCode/
 
 升级会覆盖注入的自定义 CSS：重新执行 **AdwCode: 安装 GNOME 外观（CSS）**，
 或让加载器执行 **Reload Custom CSS and JS**，随后运行
-`python3.14t src/check_css.py` 确认选择器与设计令牌仍然有效。
+`python3.14t src/check_css.py` 初筛类名与设计令牌，再检查实际界面的结构和外观。
 
 ### 强调色不同步
 
-检查 `adwcode.autoAccent` 是否为 `true`（只对以 `AdwCode` 开头的当前主题生效），
+检查 `adwcode.autoAccent` 是否为 `true`（同步 AdwCode 当前主题及普通明暗首选主题），
 或执行命令 **AdwCode: 立即同步强调色**。
 
-### 产品图标按钮不出现
+### 自定义窗口控制图标不出现
 
-产品图标主题只在 `window.controlsStyle` 为 `custom` 时生效；默认的 `native`
-由 GNOME 绘制窗口按钮（推荐配置），此时不会使用 Adwaita 字形。
+四个窗口控制字形只在 `window.controlsStyle` 为 `custom` 时生效；推荐的 `native`
+由 GNOME 绘制窗口按钮。侧栏、调试及其他产品图标仍由所选产品图标主题提供。
 
 ## 开发
 
@@ -257,7 +261,7 @@ AdwCode/
 需要 Python 3.9+（CI 与本地开发使用 3.14 自由线程版本）：
 
 ```sh
-python3.14t src/build.py --check             # 键覆盖、未知键、对比度
+python3.14t src/build.py --check             # 产物注册、颜色格式、键覆盖与对比度
 python3.14t src/check_css.py                 # 自定义 CSS 与已安装 VS Code 的比对
 python3.14t src/build.py --watch             # 给主题加 _watch，编辑 JSON 即时生效
 python3.14t src/update_defaults.py           # 刷新 VS Code 默认主题数据与键表
@@ -269,7 +273,7 @@ python3.14t -m unittest discover -s tests -p 'test_*.py'   # 颜色运算、调�
 
 ```sh
 uv python install 3.14t
-python3.14t -m pip install meson ninja ty
+python3.14t -m pip install meson ninja ty ruff==0.16.9
 npm install -g typescript          # 需先安装 Node.js
 meson setup builddir
 meson test -C builddir --print-errorlogs
@@ -279,14 +283,19 @@ meson test -C builddir --print-errorlogs
 `meson compile -C builddir package`。Meson 不编译扩展 JavaScript；Python 脚本仍可
 单独运行。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
+全部 Python 文件使用 Ruff 0.16.9 检查和格式化，含图标生成器与性能基准。
+运行 `meson compile -C builddir format` 应用格式化，`lint` 目标同时执行
+`ruff check .`、`ruff format --check .`、ty、tsc 和 JavaScript 语法检查。
+Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 检查器提供。
 
-`--check` 会把生成的主题与官方颜色注册表、内置主题比对：未知键（拼写错误）会
-导致检查失败，缺失键会被列出，并校验明暗两种模式的对比度。
+`--check` 检查主题和产品图标的注册及文件完整性，要求界面、TextMate 和语义颜色
+使用六位或八位十六进制写法。未知颜色键会导致失败，未覆盖的内置键会被列出；
+对比度检查覆盖全部已生成主题。
 
 产品图标优先使用 Adwaita 官方字形，再由 GNOME Builder 补充调试、补全和
 版本控制符号；MoreWaita 仅作为缺项的备用来源。布局状态对保留 Adwaita 派生字形。
 来源、许可证和再生成命令见 [产品图标说明](product-icons/README.md)。
-外观实施、两轮审查与试用步骤见 [外观实现与验收](docs/05-外观实现与验收.md)。
+外观实施、两轮审查与安装验证步骤见 [外观实现与验收](docs/05-外观实现与验收.md)。
 
 
 ### 界面与代码字体

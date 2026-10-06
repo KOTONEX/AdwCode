@@ -3,6 +3,7 @@
     "EditorConfig.EditorConfig",
     "ms-python.python",
     "astral-sh.ty",
+    "charliermarsh.ruff",
     "mesonbuild.mesonbuild",
     "redhat.vscode-yaml",
     "github.vscode-github-actions"

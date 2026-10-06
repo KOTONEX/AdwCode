@@ -165,7 +165,10 @@ def build_theme(mode: str, accent: str, variant: str, high_contrast: bool = Fals
 
     token_colors: list[tokens.TokenRule]
     if default_syntax:
-        token_colors = cast(list[tokens.TokenRule], json.loads((DEFAULTS / f"{mode}.json").read_text(encoding="utf-8"))["tokenColors"])
+        token_colors = cast(
+            list[tokens.TokenRule],
+            json.loads((DEFAULTS / f"{mode}.json").read_text(encoding="utf-8"))["tokenColors"],
+        )
     else:
         token_colors = tokens.token_colors(mode)
 
@@ -184,7 +187,11 @@ def build_plan(accents: list[str]) -> list[ThemeRequest]:
     plan: list[ThemeRequest] = []
     for mode in ("dark", "light"):
         for accent in accents:
-            variants = ["builder", "colorful", "default", "default-colorful"] if accent == "blue" else ["builder"]
+            variants = (
+                ["builder", "colorful", "default", "default-colorful"]
+                if accent == "blue"
+                else ["builder"]
+            )
             for variant in variants:
                 plan.append({"mode": mode, "accent": accent, "variant": variant, "hc": False})
         plan.append({"mode": mode, "accent": "blue", "variant": "builder", "hc": True})
@@ -194,7 +201,10 @@ def build_plan(accents: list[str]) -> list[ThemeRequest]:
 def write_themes(plan: list[ThemeRequest], watch: bool = False) -> list[ThemeEntry]:
     THEMES.mkdir(exist_ok=True)
     # 先生成所有内容，生成器失败时保留原有主题文件。
-    prepared = [(item, build_theme(item["mode"], item["accent"], item["variant"], item["hc"])) for item in plan]
+    prepared = [
+        (item, build_theme(item["mode"], item["accent"], item["variant"], item["hc"]))
+        for item in plan
+    ]
     written: set[Path] = set()
     entries: list[ThemeEntry] = []
     for item, theme in prepared:
@@ -274,7 +284,10 @@ def check() -> int:
         failures += 1
 
     def valid_color(value: object) -> bool:
-        return isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?", value) is not None
+        return (
+            isinstance(value, str)
+            and re.fullmatch(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?", value) is not None
+        )
 
     our_keys: set[str] = set()
     labels: list[str] = []
@@ -284,8 +297,11 @@ def check() -> int:
         if theme["type"] not in ("dark", "light"):
             print(f"失败 {path.name}：未知主题类型 {theme['type']}")
             failures += 1
-        if entry and (entry["label"] != theme["name"] or
-                      entry["uiTheme"] not in (("vs-dark", "hc-black") if theme["type"] == "dark" else ("vs", "hc-light"))):
+        if entry and (
+            entry["label"] != theme["name"]
+            or entry["uiTheme"]
+            not in (("vs-dark", "hc-black") if theme["type"] == "dark" else ("vs", "hc-light"))
+        ):
             print(f"失败 {path.name}：主题标签或明暗类型与注册信息不一致")
             failures += 1
         labels.append(theme["name"])
@@ -314,7 +330,10 @@ def check() -> int:
     # 产品图标主题
     icons_path = ROOT / "product-icons" / "adwcode.json"
     icon_entries = manifest.get("contributes", {}).get("productIconThemes", [])
-    if not any(entry.get("id") == "adwcode" and (ROOT / entry["path"]).resolve() == icons_path.resolve() for entry in icon_entries):
+    if not any(
+        entry.get("id") == "adwcode" and (ROOT / entry["path"]).resolve() == icons_path.resolve()
+        for entry in icon_entries
+    ):
         print("失败：package.json 未正确注册 AdwCode 产品图标主题")
         failures += 1
     if icons_path.exists():
@@ -344,7 +363,10 @@ def check() -> int:
             if definition.get("fontId") not in font_ids:
                 print(f"失败 product-icons: {icon} 引用了未知字体")
                 failures += 1
-            if not re.fullmatch(r"\\[0-9a-fA-F]{4,6}", character) or int(character[1:], 16) > 0x10FFFF:
+            if (
+                not re.fullmatch(r"\\[0-9a-fA-F]{4,6}", character)
+                or int(character[1:], 16) > 0x10FFFF
+            ):
                 print(f"失败 product-icons: {icon} 的字形码点无效")
                 failures += 1
         print(f"产品图标：{len(definitions)} 个图标映射，{len(fonts)} 个字体")
@@ -387,7 +409,9 @@ def check() -> int:
         allowed = registry | builtin | LEGACY_KEYS
         unknown = sorted(our_keys - allowed)
         missing = sorted(builtin - our_keys)
-        print(f"\n颜色键：已定义 {len(our_keys)} 个 | 未覆盖内置键 {len(missing)} 个 | 未知键 {len(unknown)} 个")
+        print(
+            f"\n颜色键：已定义 {len(our_keys)} 个 | 未覆盖内置键 {len(missing)} 个 | 未知键 {len(unknown)} 个"
+        )
         if unknown:
             print("未知颜色键（可能存在拼写错误）：")
             for key in unknown:
@@ -419,7 +443,9 @@ def main() -> int:
     if args.check:
         return check()
 
-    accents = resolve_accents(args.accents if args.accents != "system" else None, not args.no_system)
+    accents = resolve_accents(
+        args.accents if args.accents != "system" else None, not args.no_system
+    )
     print(f"强调色： {', '.join(accents)}")
     entries = write_themes(build_plan(accents), watch=args.watch)
     if args.watch:

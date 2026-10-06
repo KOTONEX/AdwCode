@@ -100,7 +100,12 @@ def check(css_path: Path | None, verbose: bool = False) -> int:
     # 附加脚本创建的状态类不属于 VS Code；只认可显式的 classList 创建操作。
     project_classes: set[str] = set()
     for script in EXTRAS.glob("*.js"):
-        project_classes.update(re.findall(r'classList\.(?:add|toggle)\(\s*["\']([\w-]+)["\']', script.read_text(encoding="utf-8")))
+        project_classes.update(
+            re.findall(
+                r'classList\.(?:add|toggle)\(\s*["\']([\w-]+)["\']',
+                script.read_text(encoding="utf-8"),
+            )
+        )
     failures = 0
     for sheet in sorted(EXTRAS.glob("*.css")):
         selectors, declarations = selectors_and_declarations(sheet.read_text(encoding="utf-8"))

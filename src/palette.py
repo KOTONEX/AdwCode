@@ -427,8 +427,12 @@ class Palette:
         # 官方文档表格中九种强调色的前景色均为 #ffffff。
         c["accent_fg"] = "#ffffff"
         c["accent_standalone"] = accent_standalone_dark if dark else accent_standalone_light
-        c["accent_hover"] = mix(accent_bg, "#ffffff", 0.15) if dark else mix(accent_bg, "#000000", 0.12)
-        c["accent_active"] = mix(accent_bg, "#ffffff", 0.25) if dark else mix(accent_bg, "#000000", 0.20)
+        c["accent_hover"] = (
+            mix(accent_bg, "#ffffff", 0.15) if dark else mix(accent_bg, "#000000", 0.12)
+        )
+        c["accent_active"] = (
+            mix(accent_bg, "#ffffff", 0.25) if dark else mix(accent_bg, "#000000", 0.20)
+        )
         for name, bg in (("view", view), ("window", window), ("sidebar", sidebar)):
             c[f"accent_soft_{name}"] = over(rgba(accent_bg, 0.25), bg)
             c[f"accent_faint_{name}"] = over(rgba(accent_bg, 0.15), bg)

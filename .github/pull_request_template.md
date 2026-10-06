@@ -14,7 +14,7 @@
 
 ## 自测
 
-- [ ] `meson compile -C builddir lint` 通过
+- [ ] `meson compile -C builddir lint` 通过（含 Ruff 检查和格式检查）
 - [ ] `meson compile -C builddir check` 通过
 - [ ] `meson test -C builddir --print-errorlogs` 通过（未运行时请在下方说明原因）
 

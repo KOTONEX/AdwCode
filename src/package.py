@@ -65,7 +65,21 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 """
 
-INCLUDE: list[str] = ["package.json", "README.md", "LICENSE", "assets", "extension", "themes", "product-icons", "extras", "docs", "CONTRIBUTING.md", "CHANGELOG.md", "AGENTS.md", "src/vscode_defaults/README.md"]
+INCLUDE: list[str] = [
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "assets",
+    "extension",
+    "themes",
+    "product-icons",
+    "extras",
+    "docs",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "AGENTS.md",
+    "src/vscode_defaults/README.md",
+]
 SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
 ASSET_BUILD_SCRIPTS = {"build_symbols.py", "build_imported.py"}
 
@@ -79,10 +93,15 @@ def collect() -> list[Path]:
         elif path.is_dir():
             files.extend(p for p in sorted(path.rglob("*")) if p.is_file())
     # 字体连同对应 SVG、来源记录与再生成脚本一起分发；它们不参与扩展运行。
-    return [path for path in files if "__pycache__" not in path.parts and (
-        path.suffix not in SKIP_SUFFIXES
-        or (path.parent == ROOT / "product-icons" and path.name in ASSET_BUILD_SCRIPTS)
-    )]
+    return [
+        path
+        for path in files
+        if "__pycache__" not in path.parts
+        and (
+            path.suffix not in SKIP_SUFFIXES
+            or (path.parent == ROOT / "product-icons" and path.name in ASSET_BUILD_SCRIPTS)
+        )
+    ]
 
 
 def main() -> None:
@@ -90,6 +109,7 @@ def main() -> None:
     name = manifest["name"]
     version = manifest["version"]
     output = ROOT / f"{name}-{version}.vsix"
+
     def xml(value: str) -> str:
         return escape(value, {'"': "&quot;", "'": "&apos;"})
 

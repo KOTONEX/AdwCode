@@ -19,8 +19,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-RAW: str = "https://raw.githubusercontent.com/microsoft/vscode/main/extensions/theme-defaults/themes"
-DOCS: str = "https://raw.githubusercontent.com/microsoft/vscode-docs/main/api/references/theme-color.md"
+RAW: str = (
+    "https://raw.githubusercontent.com/microsoft/vscode/main/extensions/theme-defaults/themes"
+)
+DOCS: str = (
+    "https://raw.githubusercontent.com/microsoft/vscode-docs/main/api/references/theme-color.md"
+)
 OUT: Path = Path(__file__).parent / "vscode_defaults"
 VARIANTS: dict[str, str] = {"dark": "2026-dark", "light": "2026-light"}
 ALL_THEMES: list[str] = [
@@ -85,7 +89,7 @@ def strip_jsonc(text: str) -> str:
         else:
             if char == '"':
                 in_string = True
-            if char == "," and clean[index + 1:].lstrip().startswith(("}", "]")):
+            if char == "," and clean[index + 1 :].lstrip().startswith(("}", "]")):
                 continue
             result.append(char)
     return "".join(result)
@@ -115,13 +119,17 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     for mode, name in VARIANTS.items():
         tokens = resolve_token_colors(name)
-        (OUT / f"{mode}.json").write_text(json.dumps({"tokenColors": tokens}, indent=2) + "\n", encoding="utf-8")
+        (OUT / f"{mode}.json").write_text(
+            json.dumps({"tokenColors": tokens}, indent=2) + "\n", encoding="utf-8"
+        )
         print(f"{mode}: 从 {name} 提取 {len(tokens)} 条语法规则")
 
     keys: set[str] = set()
     for name in ALL_THEMES:
         keys |= set(fetch(name).get("colors", {}))
-    (OUT / "builtin_keys.json").write_text(json.dumps(sorted(keys), indent=2) + "\n", encoding="utf-8")
+    (OUT / "builtin_keys.json").write_text(
+        json.dumps(sorted(keys), indent=2) + "\n", encoding="utf-8"
+    )
     print(f"内置颜色键： {len(keys)}")
 
     markdown = urllib.request.urlopen(DOCS, timeout=60).read().decode()
@@ -132,7 +140,9 @@ def main() -> None:
         for item in registry
         if not item.startswith(("workbench.", "editor.token", "configuration.", "vscode."))
     }
-    (OUT / "registry_keys.json").write_text(json.dumps(sorted(registry), indent=2) + "\n", encoding="utf-8")
+    (OUT / "registry_keys.json").write_text(
+        json.dumps(sorted(registry), indent=2) + "\n", encoding="utf-8"
+    )
     print(f"注册表颜色键： {len(registry)}")
 
 

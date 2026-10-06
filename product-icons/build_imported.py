@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """从固定版本 SVG 生成独立授权的字体与预览；再生成时依赖 fontTools 和 skia-pathops。"""
+
 from __future__ import annotations
 
 import hashlib
@@ -56,7 +57,9 @@ def draw_svg(source: Path, pen: TTGlyphPen) -> None:
 
     def visit(element: ElementTree.Element, transform: Transform, effects: bool = False) -> None:
         # 编辑器元数据不参与绘制；SVG 命名空间内的未知元素仍应报错。
-        if element.tag.startswith("{") and not element.tag.startswith("{http://www.w3.org/2000/svg}"):
+        if element.tag.startswith("{") and not element.tag.startswith(
+            "{http://www.w3.org/2000/svg}"
+        ):
             return
         tag = element.tag.rsplit("}", 1)[-1]
         if tag in {"defs", "filter", "mask", "clipPath", "metadata", "title", "desc"}:
@@ -70,8 +73,13 @@ def draw_svg(source: Path, pen: TTGlyphPen) -> None:
         paths = PathBuilder()
         if not paths.add_path_from_element(element):
             raise ValueError(f"{source.name} 存在不支持的元素：{tag}")
-        style = dict(part.split(":", 1) for part in element.attrib.get("style", "").split(";") if ":" in part)
-        attributes = {**element.attrib, **{key.strip(): value.strip() for key, value in style.items()}}
+        style = dict(
+            part.split(":", 1) for part in element.attrib.get("style", "").split(";") if ":" in part
+        )
+        attributes = {
+            **element.attrib,
+            **{key.strip(): value.strip() for key, value in style.items()},
+        }
         stroked = attributes.get("stroke", "none") != "none"
         if attributes.get("fill") == "none" and not stroked:
             return
@@ -84,17 +92,29 @@ def draw_svg(source: Path, pen: TTGlyphPen) -> None:
                 try:
                     import pathops
                 except ImportError as error:
-                    raise RuntimeError("再生成描边图标还需要 skia-pathops；扩展运行不需要该依赖") from error
+                    raise RuntimeError(
+                        "再生成描边图标还需要 skia-pathops；扩展运行不需要该依赖"
+                    ) from error
                 if "stroke-dasharray" in attributes or "stroke-dashoffset" in attributes:
                     raise ValueError(f"{source.name} 使用尚未支持的虚线描边")
                 outline = pathops.Path()
                 parse_path(path, outline.getPen())
-                caps = {"butt": pathops.LineCap.BUTT_CAP, "round": pathops.LineCap.ROUND_CAP, "square": pathops.LineCap.SQUARE_CAP}
-                joins = {"miter": pathops.LineJoin.MITER_JOIN, "round": pathops.LineJoin.ROUND_JOIN, "bevel": pathops.LineJoin.BEVEL_JOIN}
-                outline.stroke(float(attributes.get("stroke-width", "1")),
-                               caps[attributes.get("stroke-linecap", "butt")],
-                               joins[attributes.get("stroke-linejoin", "miter")],
-                               float(attributes.get("stroke-miterlimit", "4")))
+                caps = {
+                    "butt": pathops.LineCap.BUTT_CAP,
+                    "round": pathops.LineCap.ROUND_CAP,
+                    "square": pathops.LineCap.SQUARE_CAP,
+                }
+                joins = {
+                    "miter": pathops.LineJoin.MITER_JOIN,
+                    "round": pathops.LineJoin.ROUND_JOIN,
+                    "bevel": pathops.LineJoin.BEVEL_JOIN,
+                }
+                outline.stroke(
+                    float(attributes.get("stroke-width", "1")),
+                    caps[attributes.get("stroke-linecap", "butt")],
+                    joins[attributes.get("stroke-linejoin", "miter")],
+                    float(attributes.get("stroke-miterlimit", "4")),
+                )
                 outline.convertConicsToQuads(0.01)
                 outline.simplify()
                 outline.draw(TransformPen(recording, transform))
@@ -150,20 +170,28 @@ def main() -> None:
             if glyph.numberOfContours == 0:
                 raise ValueError(f"字形为空：{source.name}")
             inset = entry.get("weight_inset", font.get("weight_inset", 0))
-            if not isinstance(inset, (int, float)) or not math.isfinite(inset) or not 0 <= inset <= 0.25:
+            if (
+                not isinstance(inset, (int, float))
+                or not math.isfinite(inset)
+                or not 0 <= inset <= 0.25
+            ):
                 raise ValueError(f"字重内缩需在 0 至 0.25 个 SVG 像素之间：{source.name}")
             if inset:
                 # 围绕闭合轮廓移除窄边带，外轮廓收缩、内孔扩张；保留原中心线。
                 try:
                     import pathops
                 except ImportError as error:
-                    raise RuntimeError("再生成字重调整还需要 skia-pathops；扩展运行不需要该依赖") from error
+                    raise RuntimeError(
+                        "再生成字重调整还需要 skia-pathops；扩展运行不需要该依赖"
+                    ) from error
 
                 filled = pathops.Path()
                 glyph.draw(filled.getPen(), None)
                 filled.simplify()
                 boundary = pathops.Path(filled)
-                boundary.stroke(inset * 128, pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
+                boundary.stroke(
+                    inset * 128, pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4
+                )
                 boundary.convertConicsToQuads(0.5)
                 adjusted = pathops.op(filled, boundary, pathops.PathOp.DIFFERENCE)
                 adjusted_pen = TTGlyphPen(None)
@@ -175,17 +203,28 @@ def main() -> None:
         builder.setupGlyf(glyphs)
         for glyph in glyphs.values():
             glyph.recalcBounds(glyphs)
-        builder.setupHorizontalMetrics({name: (1024, getattr(glyphs[name], "xMin", 0)) for name in order})
+        builder.setupHorizontalMetrics(
+            {name: (1024, getattr(glyphs[name], "xMin", 0)) for name in order}
+        )
         builder.setupHorizontalHeader(ascent=896, descent=-128)
-        builder.setupCharacterMap({int(g["codepoint"], 16): name for g, name in zip(entries, order[1:])})
+        builder.setupCharacterMap(
+            {int(g["codepoint"], 16): name for g, name in zip(entries, order[1:])}
+        )
         ps_name = font["family"].replace(" ", "") + "-Regular"
-        builder.setupNameTable({
-            "familyName": font["family"], "styleName": "Regular", "fullName": font["family"],
-            "uniqueFontIdentifier": ps_name, "psName": ps_name, "version": "Version 1.0",
-            "copyright": font["attribution"],
-            "licenseDescription": font["license"] + "；由 AdwCode 转换为单色轮廓；来源与字重参数见 sources.json",
-            "licenseInfoURL": font["license_url"],
-        })
+        builder.setupNameTable(
+            {
+                "familyName": font["family"],
+                "styleName": "Regular",
+                "fullName": font["family"],
+                "uniqueFontIdentifier": ps_name,
+                "psName": ps_name,
+                "version": "Version 1.0",
+                "copyright": font["attribution"],
+                "licenseDescription": font["license"]
+                + "；由 AdwCode 转换为单色轮廓；来源与字重参数见 sources.json",
+                "licenseInfoURL": font["license_url"],
+            }
+        )
         builder.setupOS2(sTypoAscender=896, sTypoDescender=-128, usWinAscent=896, usWinDescent=128)
         builder.setupPost()
         builder.font["head"].created = builder.font["head"].modified = 3863548800
@@ -198,10 +237,12 @@ def main() -> None:
         for entry, name in zip(entries, order[1:]):
             svg_pen = SVGPathPen(None)
             glyphs[name].draw(TransformPen(svg_pen, (1 / 64, 0, 0, -1 / 64, 0, 14)), glyphs)
-            svg = (f'<!-- SPDX-License-Identifier: {font["license"]} -->\n'
-                   f'<!-- 署名：{font["attribution"]}；由 AdwCode 从字体轮廓生成，来源见 sources.json。 -->\n'
-                   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
-                   f'<path fill="currentColor" d="{svg_pen.getCommands()}"/></svg>\n')
+            svg = (
+                f"<!-- SPDX-License-Identifier: {font['license']} -->\n"
+                f"<!-- 署名：{font['attribution']}；由 AdwCode 从字体轮廓生成，来源见 sources.json。 -->\n"
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+                f'<path fill="currentColor" d="{svg_pen.getCommands()}"/></svg>\n'
+            )
             (preview_folder / (entry["codepoint"] + ".svg")).write_text(svg, encoding="utf-8")
         for obsolete in preview_folder.glob("*.svg"):
             if obsolete.name not in expected_previews:

@@ -877,7 +877,6 @@ def build_ui_colors(p: Palette, colorful_status_bar: bool = False) -> dict[str, 
         "testing.iconUnset.retired": p["fg_disabled"],
         "testing.iconSkipped.retired": p["fg_disabled"],
         # --- 列表 --------------------------------------------------------------
-
         "list.dropBetweenBackground": rgba(p["accent_bg"], 0.75),
         "list.filterMatchBackground": rgba(p["accent_bg"], 0.25),
         "list.filterMatchBorder": p["accent_bg"],
@@ -893,12 +892,10 @@ def build_ui_colors(p: Palette, colorful_status_bar: bool = False) -> dict[str, 
         "notebook.inactiveFocusedCellBorder": p["border_input"],
         "notebook.symbolHighlightBackground": rgba(p["accent_bg"], 0.15),
         # --- 聊天 -----------------------------------------------------------------
-
         "chat.requestBackground": p["bg_window"],
         "chat.requestBorder": p["border"],
         "chat.requestCodeBorder": p["border_input"],
         # --- 差异 ------------------------------------------------------------------
-
         "diffEditor.insertedTextBorder": p["success_bg"],
         "diffEditor.removedTextBorder": p["error_bg"],
         "diffEditor.move.border": p["warning_bg"],

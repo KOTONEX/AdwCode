@@ -9,6 +9,9 @@
   "[javascript][json][jsonc][css][svg][yaml]": {
     "editor.tabSize": 2
   },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
     "editor.wordWrap": "on"
@@ -50,7 +53,7 @@
   // 隐藏缓存目录；构建日志仍可通过路径直接打开。
   "files.exclude": {
     "**/__pycache__": true,
-    ".mypy_cache": true,
+    ".ruff_cache": true,
     "builddir": true
   },
   "search.exclude": {

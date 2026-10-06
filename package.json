@@ -41,6 +41,7 @@
     "test": "meson test -C builddir --print-errorlogs",
     "package": "meson compile -C builddir package",
     "lint": "meson compile -C builddir lint",
+    "format": "meson compile -C builddir format",
     "typecheck": "meson compile -C builddir typecheck"
   },
   "contributes": {
@@ -112,7 +113,7 @@
         "adwcode.autoAccent": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），在 AdwCode 主题的各强调色变体之间切换。仅在当前使用 AdwCode 主题时生效。"
+          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），同步 AdwCode 当前主题及普通明暗首选主题的已安装变体。保留其他主题、高对比度和工作区覆盖的值。"
         },
         "adwcode.autoReload": {
           "type": "boolean",
@@ -122,7 +123,7 @@
         "adwcode.uiFontFamily": {
           "type": "string",
           "default": "",
-          "markdownDescription": "界面字体族；留空时在安装 GNOME 外观时读取 GNOME 界面字体。仅指定一个字体族，代码和终端字体保持独立。修改后需重新安装外观并由你手动加载。"
+          "markdownDescription": "界面字体族；留空时在安装 GNOME 外观时读取 GNOME 界面字体。仅指定一个字体族，代码和终端字体保持独立。修改后需重新安装外观并手动加载。"
         }
       }
     },

@@ -17,11 +17,12 @@ run_target('themes', command: [python, root / 'src/build.py'])
 run_target('package', command: [python, root / 'src/package.py'])
 run_target('typecheck', command: [python, dev, 'typecheck'])
 run_target('lint', command: [python, dev, 'lint'])
+run_target('format', command: [python, dev, 'format'])
 run_target('check', command: [python, root / 'src/build.py', '--check'])
 run_target('check-css', command: [python, root / 'src/check_css.py'])
 run_target('performance', command: [python, root / 'benchmarks/run.py'])
 
-test('静态与类型检查', python, args: [dev, 'lint'], workdir: root, timeout: 120)
+test('静态、格式与类型检查', python, args: [dev, 'lint'], workdir: root, timeout: 120)
 test('主题与图标校验', python, args: [root / 'src/build.py', '--check'], workdir: root)
 test('离线单元测试', python,
   args: ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'],

@@ -25,15 +25,15 @@ jobs:
           python-version: "3.14"
           freethreaded: true
 
-      - name: 安装类型检查工具（ty / tsc）
+      - name: 安装检查工具（Ruff / ty / tsc）
         run: |
-          "${{ steps.python.outputs.python-path }}" -m pip install ty meson ninja
+          "${{ steps.python.outputs.python-path }}" -m pip install ruff==0.16.9 ty meson ninja
           npm install -g typescript
 
       - name: 配置 Meson
         run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
 
-      - name: 静态与类型检查
+      - name: 静态、格式与类型检查
         run: meson compile -C builddir lint
 
       - name: 生成/构建校验

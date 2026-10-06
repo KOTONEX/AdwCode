@@ -105,7 +105,7 @@ MAP: dict[str, list[str]] = {
     ],
     "def:decimal": [
         "constant.numeric",
-        "constant.numeric entity.name.type.numeric",  # 1→i64← (in e.g. Rust)
+        "constant.numeric entity.name.type.numeric",  # 1→i64← （例如 Rust）
     ],
     "def:deletion": [
         "markup.strikethrough",
@@ -121,7 +121,7 @@ MAP: dict[str, list[str]] = {
     "def:floating-point": [
         "constant.numeric.float",
     ],
-    # 注意：gtksv 对 def:function 的应用并不一致（仅 Python 定义处生效），
+    # 注意：GtkSourceView 对 def:function 的应用并不一致（仅 Python 定义处生效），
     # 因此函数保持默认色，与上游一致。
     "def:function": [],
     "def:heading": [
@@ -318,7 +318,9 @@ MAP: dict[str, list[str]] = {
 #: 预期在当前方案中不存在的样式。
 TOLERATED_MISSING: set[str] = {"def:keyword", "c-sharp:format", "diff:changed-line"}
 
-_RGBA_RE: re.Pattern[str] = re.compile(r"#rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)")
+_RGBA_RE: re.Pattern[str] = re.compile(
+    r"#rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)"
+)
 
 
 def load_scheme(mode: str) -> Scheme:
