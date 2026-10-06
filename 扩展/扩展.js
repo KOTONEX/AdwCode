@@ -42,8 +42,6 @@ const 旧加载文件 = ["gnome-look.css", "controls-close-only.css", "gnome-fon
  * @type {Record<string, string | boolean | number | null>}
  */
 const RECOMMENDED_SETTINGS = {
-  // 先写入用户级关闭值，工作区仍可显式覆盖。
-  "adwcode.自动重载": false,
   "editor.fontFamily": "Adwaita Mono, monospace",
   "window.autoDetectColorScheme": true,
   "window.autoDetectHighContrast": true,
@@ -165,8 +163,6 @@ function 合并加载引用(context, imports, names) {
   return merged;
 }
 
-/** @type {import("vscode").ExtensionContext | undefined} */
-let extensionContext;
 /** @returns {string | undefined} */
 function 工作台HTML路径() {
   const candidates = [
@@ -420,7 +416,7 @@ async function 应用推荐设置(context) {
     const preview = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`).join("\n");
     const apply = "应用";
     const choice = await vscode.window.showInformationMessage(
-      `AdwCode 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格，用户级自动重载将关闭。\n` +
+      `AdwCode 将把 ${entries.length} 项用户设置改为 GNOME Builder 风格。\n` +
         `工作区设置可能覆盖这些用户值。\n\n${preview}` +
         (unavailable.length ? `\n\n当前 VS Code 未提供以下设置，已跳过：${unavailable.join("、")}` : ""),
       { modal: true },
@@ -446,10 +442,8 @@ async function 应用推荐设置(context) {
       await config.update(name, value, vscode.ConfigurationTarget.Global);
     }
 
-    const reloadEnabled = vscode.workspace.getConfiguration("adwcode").get("自动重载", false);
     await vscode.window.showInformationMessage(
       "AdwCode：推荐设置已应用。" +
-        (reloadEnabled ? "用户级自动重载已关闭，但工作区仍开启了该项，请在工作区设置中关闭。" : "自动重载已关闭。") +
         "标题栏和窗口控件等配置可能需要重载；" +
         "请保存工作并结束扩展会话后手动重载窗口。"
     );
@@ -476,6 +470,13 @@ async function 恢复推荐设置(context) {
     }
     for (const [key, record] of Object.entries(previous)) {
       const [section, name] = 拆分设置键(key);
+      const inspected = vscode.workspace.getConfiguration(section).inspect(name);
+      // 设置已被移除时 inspect 不再返回默认值；删除残留记录，避免 update 对未注册键失败。
+      if (!inspected || inspected.defaultValue === undefined) {
+        delete previous[key];
+        await context.globalState.update("adwcode.previousSettings", { ...previous });
+        continue;
+      }
       const target = record && record.wasSet ? record.value : undefined;
       await vscode.workspace.getConfiguration(section).update(
         name,
@@ -503,127 +504,6 @@ function 拆分设置键(key) {
   return [key.slice(0, index), key.slice(index + 1)];
 }
 
-/** @type {import("vscode").FileSystemWatcher[]} */
-let reloadWatchers = [];
-/** @type {ReturnType<typeof setTimeout> | undefined} */
-let reloadTimer;
-let reloadRunning = false;
-let reloadGeneration = 0;
-
-/**
- * 重新应用 Custom CSS 并重载窗口（开发时让样式/主题/代码改动立即生效）。
- * @param {import("vscode").ExtensionContext} context
- * @returns {Promise<void>}
- */
-async function 应用样式并重载(context) {
-  const generation = reloadGeneration;
-  const allowed = () => extensionContext === context && generation === reloadGeneration && vscode.workspace.getConfiguration("adwcode").get("自动重载", false);
-  if (!allowed()) return;
-  await 读取系统字体();
-  if (!allowed()) return;
-  try {
-    // 加载器读取安装目录中的副本，只同步用户已安装的样式。
-    for (const name of Object.keys(CSS_FILES)) {
-      if (!allowed()) return;
-      const target = path.join(CSS_DIR, name);
-      if (fs.existsSync(target)) {
-        await fs.promises.writeFile(target, 样式源码(context, name), "utf8");
-      }
-    }
-  } catch (error) {
-    const message = /** @type {Error} */ (error).message;
-    vscode.window.showErrorMessage(`AdwCode：无法同步 CSS 文件：${message}`);
-    return;
-  }
-  // 文件写入会让出执行权；停用或关闭设置后不能继续修改工作台补丁。
-  if (!allowed()) return;
-  try {
-    // Custom CSS and JS Loader 会把 imports 中的样式重新内联进 workbench.html
-    await vscode.commands.executeCommand("extension.updateCustomCSS");
-  } catch {
-    // 已安装加载器但更新失败时，不把错误当成“未安装”，避免无效重载。
-    if (vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION)) {
-      vscode.window.showErrorMessage("AdwCode：Custom CSS 更新失败，已取消自动重载。请手动检查加载器。");
-      return;
-    }
-  }
-  if (!allowed()) {
-    return;
-  }
-  await vscode.commands.executeCommand("workbench.action.reloadWindow");
-}
-
-/**
- * @param {import("vscode").ExtensionContext} context
- * @returns {void}
- */
-function 安排重载(context) {
-  if (reloadTimer !== undefined) {
-    clearTimeout(reloadTimer);
-  }
-  reloadTimer = setTimeout(() => {
-    reloadTimer = undefined;
-    // 加载器会恢复备份并重新写入 HTML，不允许两次更新同时执行。
-    if (reloadRunning) {
-      安排重载(context);
-      return;
-    }
-    reloadRunning = true;
-    应用样式并重载(context).catch(() => undefined).finally(() => {
-      reloadRunning = false;
-    });
-  }, 1500);
-}
-
-/**
- * @param {import("vscode").ExtensionContext} context
- * @returns {void}
- */
-function 启动文件监视(context) {
-  if (reloadWatchers.length > 0) {
-    return;
-  }
-  for (const pattern of ["扩展/扩展.js", "附加外观/*.css", "附加外观/*.js", "主题/*.json", "package.json"]) {
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(context.extensionPath, pattern)
-    );
-    watcher.onDidChange(() => 安排重载(context));
-    watcher.onDidCreate(() => 安排重载(context));
-    watcher.onDidDelete(() => 安排重载(context));
-    reloadWatchers.push(watcher);
-  }
-}
-
-/** @returns {void} */
-function 停止文件监视() {
-  // 即使随后重新开启，也不能恢复上一次已经取消的异步更新。
-  reloadGeneration++;
-  for (const watcher of reloadWatchers) {
-    watcher.dispose();
-  }
-  reloadWatchers = [];
-  if (reloadTimer !== undefined) {
-    clearTimeout(reloadTimer);
-    reloadTimer = undefined;
-  }
-}
-
-/**
- * 按 `adwcode.自动重载` 设置启停文件监视。
- * @param {import("vscode").ExtensionContext} context
- * @returns {void}
- */
-function 同步文件监视(context) {
-  const enabled = /** @type {boolean} */ (
-    vscode.workspace.getConfiguration("adwcode").get("自动重载", false)
-  );
-  if (enabled) {
-    启动文件监视(context);
-  } else {
-    停止文件监视();
-  }
-}
-
 /**
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
@@ -632,7 +512,6 @@ function activate(context) {
   if (process.platform !== "linux") {
     return;
   }
-  extensionContext = context;
 
   context.subscriptions.push(
     vscode.commands.registerCommand("adwcode.查看外观安装状态", async () => { await 读取系统字体(); 显示外观安装状态(context); }),
@@ -648,22 +527,8 @@ function activate(context) {
     vscode.commands.registerCommand("adwcode.恢复推荐设置", () =>
       恢复推荐设置(context)
     ),
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("adwcode.自动重载")) {
-        同步文件监视(context);
-      }
-    }),
-    { dispose: 停止文件监视 }
   );
-
-  同步文件监视(context);
 }
 
-/** @returns {void} */
-function deactivate() {
-  extensionContext = undefined;
-  停止文件监视();
-}
-
-/** @type {{ activate: typeof activate, deactivate: typeof deactivate }} */
-module.exports = { activate, deactivate };
+/** @type {{ activate: typeof activate }} */
+module.exports = { activate };

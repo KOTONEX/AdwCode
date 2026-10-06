@@ -54,31 +54,12 @@ declare module "vscode" {
         readonly globalState: Memento;
     }
 
-    export interface ConfigurationChangeEvent {
-        affectsConfiguration(section: string, scope?: unknown): boolean;
-    }
-
     export interface Clipboard {
         writeText(value: string): Thenable<void>;
     }
 
-    export class RelativePattern {
-        constructor(base: string, pattern: string);
-    }
-
-    export interface FileSystemWatcher {
-        onDidChange(listener: (uri: Uri) => unknown): Disposable;
-        onDidCreate(listener: (uri: Uri) => unknown): Disposable;
-        onDidDelete(listener: (uri: Uri) => unknown): Disposable;
-        dispose(): unknown;
-    }
-
     export namespace workspace {
         function getConfiguration(section?: string): WorkspaceConfiguration;
-        function onDidChangeConfiguration(
-            listener: (event: ConfigurationChangeEvent) => unknown
-        ): Disposable;
-        function createFileSystemWatcher(pattern: RelativePattern): FileSystemWatcher;
     }
 
     export namespace window {

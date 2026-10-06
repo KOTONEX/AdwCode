@@ -26,16 +26,15 @@ function load() {
     extensions: { getExtension() { return {}; } },
     Uri: { parse(value) { const url = new URL(value); return { scheme: url.protocol.slice(0, -1), fsPath: decodeURIComponent(url.pathname) }; } },
     workspace: {
-      getConfiguration(section) { return {
-        get(key, fallback) { if (section === 'adwcode') return false; return fallback; },
+      getConfiguration() { return {
+        get(_key, fallback) { return fallback; },
         async update() { writes++; throw Error('禁止配置写入'); },
       }; },
-      onDidChangeConfiguration: disposable,
     },
     window: { createWebviewPanel() { return panel; } },
     commands: { registerCommand: disposable, async executeCommand() { commands++; throw Error('禁止命令执行'); } },
   };
-  const sandbox = { module: { exports: {} }, process: { platform: 'linux' }, setTimeout, clearTimeout,
+  const sandbox = { module: { exports: {} }, process: { platform: 'linux' },
     require(name) {
       if (name === 'vscode') return vscode;
       if (name === 'os') return { homedir: () => temporary };
@@ -76,7 +75,7 @@ try {
   assert.ok(runtime.sandbox.外观安装状态(runtime.context).every(row => row.copied === '已同步' && row.patched === '磁盘补丁已更新'));
   const results = [
     bench('脚本加载（含 VM 创建）', () => undefined, () => load(), 200),
-    bench('激活与停用（自动重载关闭）', load, input => { input.sandbox.module.exports.activate(input.context); input.sandbox.module.exports.deactivate(); }, 200),
+    bench('扩展激活', load, input => { input.sandbox.module.exports.activate(input.context); }, 200),
     bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
     bench('外观状态面板生成（模拟 Webview）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),
   ];
@@ -89,7 +88,7 @@ try {
   assert.equal(writes, 0);
   assert.equal(processes, 0);
   assert.equal(commands, 0);
-  console.log(JSON.stringify({ node: process.version, limitations: '模拟宿主 API；激活样本关闭自动重载；不等于真实扩展宿主启动时间', results, writes, processes, commands }));
+  console.log(JSON.stringify({ node: process.version, limitations: '模拟宿主 API；不等于真实扩展宿主启动时间', results, writes, processes, commands }));
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });
 }

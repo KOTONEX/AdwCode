@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -29,9 +29,6 @@
     "url": "https://github.com/KOTONEX/AdwCode.git"
   },
   "main": "./扩展/扩展.js",
-  "activationEvents": [
-    "onStartupFinished"
-  ],
   "scripts": {
     "配置": "meson setup builddir",
     "构建": "meson compile -C builddir 主题",
@@ -91,11 +88,6 @@
     "configuration": {
       "title": "AdwCode",
       "properties": {
-        "adwcode.自动重载": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "开发用：当本扩展的样式（`附加外观/*.css`、`附加外观/*.js`）、主题（`主题/*.json`）、清单或代码变化时，自动重新应用 Custom CSS 并重载窗口。"
-        },
         "adwcode.界面字体": {
           "type": "string",
           "default": "",

@@ -51,8 +51,6 @@ const sandbox = {
   },
   module: { exports: {} },
   process: { platform: "linux" },
-  setTimeout,
-  clearTimeout,
 };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../扩展/扩展.js"), "utf8"), sandbox);
@@ -169,95 +167,11 @@ assert.equal(sandbox.解析Pango字体("'Adwaita Sans Bold Italic 10.5'"), "Adwa
 assert.equal(sandbox.解析Pango字体("无效描述"), undefined);
 assert.ok(!sandbox.引用字体名称('字体"</style>\n').includes('</style>'));
 assert.ok(!sandbox.引用字体名称('字体"</style>\n').includes('\n'));
-// 使用模拟命令验证失败和取消路径，不向真实窗口发送重载命令。
-await (async () => {
-  await sandbox.读取系统字体();
-  const generated = sandbox.样式源码(context, "GNOME字体.css");
-  assert.ok(generated.includes('"更纱黑体 UI SC"'));
-  assert.ok(generated.includes('system-ui, sans-serif'));
-  sandbox.testContext = context;
-  vm.runInContext("extensionContext = testContext", sandbox);
-  let reloads = 0;
-  let errors = 0;
-  let enabled = true;
-  let failUpdate = true;
-  sandbox.mockFs.promises = {
-    async copyFile(source, target) { files.set(target, files.get(source)); },
-    async writeFile(target, data) { files.set(target, data); },
-  };
-  vscode.window.showErrorMessage = () => { errors++; };
-  vscode.workspace.getConfiguration = () => ({ get: () => enabled });
-  vscode.commands = {
-    async executeCommand(command) {
-      if (command === "extension.updateCustomCSS" && failUpdate) throw new Error("补丁失败");
-      if (command === "workbench.action.reloadWindow") reloads++;
-    },
-  };
-  await sandbox.应用样式并重载(context);
-  assert.equal(errors, 1);
-  assert.equal(reloads, 0);
-  failUpdate = false;
-  enabled = false;
-  await sandbox.应用样式并重载(context);
-  assert.equal(reloads, 0);
-  enabled = true;
-  await sandbox.应用样式并重载(context);
-  assert.equal(reloads, 1);
-  // 在异步复制期间关闭或停用，不能继续调用加载器或重载。
-  for (const action of ["disable", "deactivate", "re-enable"]) {
-    enabled = true;
-    vm.runInContext("extensionContext = testContext", sandbox);
-    let loaderCalls = 0;
-    sandbox.mockFs.promises.writeFile = async (target, data) => {
-      files.set(target, data);
-      if (action === "disable") enabled = false;
-      else if (action === "deactivate") sandbox.deactivate();
-      else {
-        enabled = false;
-        sandbox.停止文件监视();
-        enabled = true;
-      }
-      await Promise.resolve();
-    };
-    vscode.commands.executeCommand = async command => {
-      if (command === "extension.updateCustomCSS") loaderCalls++;
-      if (command === "workbench.action.reloadWindow") reloads++;
-    };
-    await sandbox.应用样式并重载(context);
-    assert.equal(loaderCalls, 0, action);
-    assert.equal(reloads, 1, action);
-  }
-  enabled = true;
-  vm.runInContext("extensionContext = testContext", sandbox);
-  sandbox.mockFs.promises.writeFile = async (target, data) => { files.set(target, data); };
-  let callback;
-  let cleared = false;
-  sandbox.setTimeout = (fn) => { callback = fn; return 123; };
-  sandbox.clearTimeout = (timer) => { cleared = timer === 123; };
-  sandbox.安排重载(context);
-  assert.equal(typeof callback, "function");
-  // 未完成的加载器更新期间，下一次触发应继续防抖，不并发修改补丁。
-  let finishUpdate;
-  let updates = 0;
-  vscode.commands.executeCommand = async (command) => {
-    if (command === "extension.updateCustomCSS") {
-      updates++;
-      await new Promise((resolve) => { finishUpdate = resolve; });
-    }
-  };
-  callback();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(updates, 1);
-  sandbox.安排重载(context);
-  callback();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(updates, 1);
-  finishUpdate();
-  await new Promise((resolve) => setImmediate(resolve));
-  sandbox.deactivate();
-  assert.ok(cleared);
-  console.log("自动重载：更新失败、设置关闭和停用清理测试通过（仅使用模拟对象）");
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+await sandbox.读取系统字体();
+const generated = sandbox.样式源码(context, "GNOME字体.css");
+assert.ok(generated.includes('"更纱黑体 UI SC"'));
+assert.ok(generated.includes('system-ui, sans-serif'));
+console.log("界面字体：Pango 解析与 CSS 生成测试通过");
 
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

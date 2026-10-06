@@ -78,7 +78,6 @@ def 入口() -> None:
             "workbench.productIconTheme": "adwcode",
             "workbench.startupEditor": "none",
             "window.restoreWindows": "none",
-            "adwcode.自动重载": False,
             "security.workspace.trust.enabled": False,
             "telemetry.telemetryLevel": "off",
             "update.mode": "none",
