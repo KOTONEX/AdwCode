@@ -31,6 +31,9 @@ pub mod 打包;
 #[path = "检查样式.rs"]
 pub mod 检查样式;
 
+#[path = "更新默认数据.rs"]
+pub mod 更新默认数据;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
