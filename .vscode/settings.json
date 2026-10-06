@@ -23,14 +23,14 @@
 
   // 跟随系统明暗模式；四个主题分别用于普通及高对比度预览。
   "window.autoDetectColorScheme": true,
-  "workbench.preferredLightColorTheme": "AdwCode 浅色",
+  "workbench.preferredLightColorTheme": "AdwCode 浅色 · 彩色状态栏",
   "workbench.preferredDarkColorTheme": "AdwCode 深色",
   "workbench.preferredHighContrastLightColorTheme": "AdwCode 浅色 高对比度",
   "workbench.preferredHighContrastColorTheme": "AdwCode 深色 高对比度",
   "workbench.productIconTheme": "adwcode",
   "workbench.iconTheme": null,
 
-  // GNOME Builder 风格的编辑区和导航；字体沿用用户及系统配置。
+  // GNOME Builder 风格的编辑区和导航；开启命令中心，字体沿用用户及系统配置。
   "editor.minimap.enabled": false,
   "editor.renderLineHighlight": "none",
   "editor.guides.indentation": true,
@@ -38,7 +38,7 @@
   "editor.smoothScrolling": true,
   "breadcrumbs.enabled": false,
   "scm.diffDecorations": "none",
-  "window.commandCenter": false,
+  "window.commandCenter": true,
   "window.density.editorTabHeight": "compact",
   "workbench.editor.tabSizing": "shrink",
   "workbench.tree.indent": 12,

@@ -76,9 +76,10 @@ code --install-extension AdwCode-<版本>.vsix
 ```jsonc
 "window.titleBarStyle": "custom",
 "window.controlsStyle": "native",        // 由 GNOME 绘制窗口按钮
+"window.commandCenter": true,           // 顶栏提供工作区搜索与命令入口
 "window.autoDetectColorScheme": true,
 "workbench.preferredDarkColorTheme": "AdwCode 深色",
-"workbench.preferredLightColorTheme": "AdwCode 浅色",
+"workbench.preferredLightColorTheme": "AdwCode 浅色 · 彩色状态栏",
 "workbench.productIconTheme": "adwcode",
 "editor.renderLineHighlight": "none",    // libadwaita 没有当前行边框
 "workbench.tree.indent": 12,
@@ -125,6 +126,7 @@ GNOME 扩展
 **AdwCode: 应用推荐设置** 先预览再写入用户设置：随系统切换普通与高对比度的
 AdwCode 主题，采用 AdwCode 产品图标、GNOME 代码字体、原生窗口控件和 Builder
 风格布局（关闭缩略图与面包屑、紧凑标签、12px 树缩进、平滑滚动等）。
+默认开启命令中心，浅色采用彩色状态栏变体，深色采用普通变体；高对比度主题沿用原方案。
 当前 VS Code 未提供的配置会在预览中列明并跳过。
 命令用于日常外观，不写入 Python、ty、Meson 或格式化等项目开发配置。
 
