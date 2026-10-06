@@ -10,6 +10,7 @@ dist/
 # 类型检查的本地缓存与依赖（node_modules 仅用于本地装 typescript 时）
 builddir/
 node_modules/
+target/
 
 # 编辑器 / 操作系统
 .DS_Store

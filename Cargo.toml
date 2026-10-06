@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
+# Cargo 清单文件名与字段名由工具约定；二进制名 adwcode 是项目规定前缀。
+[package]
+name = "adwcode"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "AdwCode 构建与打包工具"
+license = "AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later"
+publish = false
+
+[workspace]
+
+[lib]
+path = "源码/库/入口.rs"
+
+[[bin]]
+name = "adwcode"
+path = "源码/程序/主程序.rs"
+
+[profile.release]
+lto = true
+strip = true
