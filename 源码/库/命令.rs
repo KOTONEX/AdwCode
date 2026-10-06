@@ -27,7 +27,7 @@ AdwCode 构建与打包工具
 
 /// 执行命令行；返回 `Ok(())` 表示成功。
 pub fn 执行(参数: &[String]) -> 结果<()> {
-    let Some((子命令, _其余)) = 参数.split_first() else {
+    let Some((子命令, 其余)) = 参数.split_first() else {
         print!("{帮助文本}");
         return Ok(());
     };
@@ -36,6 +36,8 @@ pub fn 执行(参数: &[String]) -> 结果<()> {
             print!("{帮助文本}");
             Ok(())
         }
+        "主题" => crate::主题生成::生成入口(&crate::仓库::根目录()?, 其余),
+        "校验" => crate::主题生成::校验入口(&crate::仓库::根目录()?),
         其他 => Err(工具错误::新(format!(
             "子命令尚未迁移：{其他}；运行 adwcode 帮助 查看用法"
         ))),

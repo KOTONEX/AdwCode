@@ -16,6 +16,12 @@ pub mod 调色板;
 #[path = "语法映射.rs"]
 pub mod 语法映射;
 
+#[path = "界面映射.rs"]
+pub mod 界面映射;
+
+#[path = "主题生成.rs"]
+pub mod 主题生成;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
