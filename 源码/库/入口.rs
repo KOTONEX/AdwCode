@@ -22,6 +22,9 @@ pub mod 界面映射;
 #[path = "主题生成.rs"]
 pub mod 主题生成;
 
+#[path = "变更日志.rs"]
+pub mod 变更日志;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
