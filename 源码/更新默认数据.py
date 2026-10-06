@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
-"""从 microsoft/vscode 刷新 源码/vscode_defaults 下的全部数据。
+"""从 microsoft/vscode 刷新颜色键表。
 
-- dark.json / light.json：内置 “2026 Dark” / “2026 Light” 主题解析后的 `tokenColors`
-  （MIT），供 “default syntax highlighting” 变体使用。
-- builtin_keys.json：内置主题定义的全部颜色键并集，作为 `生成主题.py --check`
-  的覆盖度基准。
-- registry_keys.json：VS Code “Theme Color” 参考文档中记录的全部颜色 id，
-  用于发现映射表中的拼写错误。
+builtin_keys.json 保存内置主题颜色键并集，registry_keys.json 保存官方颜色标识符表，
+用于主题映射校验。下载与解析全部成功后再写入文件。
 """
 
 from __future__ import annotations
@@ -26,7 +22,6 @@ DOCS: str = (
     "https://raw.githubusercontent.com/microsoft/vscode-docs/main/api/references/theme-color.md"
 )
 OUT: Path = Path(__file__).parent / "VSCode默认数据"
-VARIANTS: dict[str, str] = {"dark": "2026-dark", "light": "2026-light"}
 ALL_THEMES: list[str] = [
     "2026-dark",
     "2026-light",
@@ -102,28 +97,10 @@ def 获取默认主题(name: str) -> dict[str, Any]:
     return _cache[name]
 
 
-def 解析默认语法颜色(name: str, seen: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
-    if name in seen:
-        raise ValueError(f"主题 include 循环：{name}")
-    seen = seen | {name}
-    theme = 获取默认主题(name)
-    语法映射: list[dict[str, Any]] = []
-    include = theme.get("include")
-    if include:
-        语法映射 += 解析默认语法颜色(Path(include).stem, seen)
-    语法映射 += theme.get("tokenColors", [])
-    return 语法映射
-
-
 def 入口() -> None:
     # 所有下载和解析成功后再写文件，避免中途失败留下混合版本的数据。
     prepared: dict[str, str] = {}
     messages: list[str] = []
-    for mode, name in VARIANTS.items():
-        语法映射 = 解析默认语法颜色(name)
-        prepared[f"{mode}.json"] = json.dumps({"tokenColors": 语法映射}, indent=2) + "\n"
-        messages.append(f"{mode}: 从 {name} 提取 {len(语法映射)} 条语法规则")
-
     keys: set[str] = set()
     for name in ALL_THEMES:
         keys |= set(获取默认主题(name).get("colors", {}))

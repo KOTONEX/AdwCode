@@ -170,7 +170,7 @@ def 入口() -> None:
         shutil.copy2(ROOT / "builddir/CHANGELOG.md", clone / "builddir/CHANGELOG.md")
         commands = [
             ("Python 空进程", [python, "-c", "pass"]),
-            ("默认构建（10 个蓝色主题）", [python, "源码/生成主题.py"]),
+            ("默认构建（6 个蓝色主题）", [python, "源码/生成主题.py"]),
             ("默认主题校验", [python, "源码/生成主题.py", "--校验"]),
             ("CSS 兼容校验", [python, "源码/检查样式.py"]),
             ("VSIX 打包", [python, "源码/打包扩展.py", "--变更日志", "builddir/CHANGELOG.md"]),

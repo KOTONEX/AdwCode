@@ -147,6 +147,15 @@ class TokensTest(unittest.TestCase):
 
 
 class ThemeTest(unittest.TestCase):
+    def test_不再生成默认语法高亮变体(self) -> None:
+        from 生成主题 import 构建计划, 生成主题对象
+
+        plan = 构建计划(["blue"])
+        self.assertEqual({item["variant"] for item in plan}, {"builder", "colorful"})
+        for variant in ("default", "default-colorful"):
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                生成主题对象("light", "blue", variant)
+
     def test_浅色标签条带区分选中与编辑区(self) -> None:
         from 生成主题 import 对比度, 生成主题对象
 
@@ -162,7 +171,7 @@ class ThemeTest(unittest.TestCase):
     def test_固定蓝色并拒绝其他强调色(self) -> None:
         from 生成主题 import 构建计划
 
-        self.assertEqual(len(构建计划(["blue"])), 10)
+        self.assertEqual(len(构建计划(["blue"])), 6)
         for accent in ("teal", "green", "yellow", "orange", "red", "pink", "purple", "slate"):
             with self.subTest(accent=accent), self.assertRaises(ValueError):
                 调色板对象("dark", accent=accent)
@@ -195,7 +204,7 @@ class ThemeTest(unittest.TestCase):
         ]
 
     def test_themes_exist(self) -> None:
-        self.assertGreaterEqual(len(self.themes()), 10)
+        self.assertGreaterEqual(len(self.themes()), 6)
 
     def test_labels_unique(self) -> None:
         labels = [theme["name"] for theme in self.themes()]
@@ -350,21 +359,12 @@ class GeneratorSafetyTest(unittest.TestCase):
         data = json.loads(清理JSON注释('{"text": ",} // /* ", /* 注释 */ "list": [1, 2,],}'))
         self.assertEqual(data, {"text": ",} // /* ", "list": [1, 2]})
 
-    def test_include_cycle_rejected(self) -> None:
-        import 更新默认数据
-
-        with patch.dict(
-            更新默认数据._cache, {"a": {"include": "b.json"}, "b": {"include": "a.json"}}
-        ):
-            with self.assertRaisesRegex(ValueError, "include 循环"):
-                更新默认数据.解析默认语法颜色("a")
-
     def test_defaults_download_failure_preserves_existing_data(self) -> None:
         import 更新默认数据
 
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
-            files = ("dark.json", "light.json", "builtin_keys.json", "registry_keys.json")
+            files = ("builtin_keys.json", "registry_keys.json")
             for name in files:
                 (folder / name).write_text("原有数据", encoding="utf-8")
             with (

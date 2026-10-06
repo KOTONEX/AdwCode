@@ -75,10 +75,6 @@ def 主题文件名(mode: str, accent: str, variant: str, high_contrast: bool = 
         parts.append("高对比度")
     elif variant == "colorful":
         parts.append("彩色状态栏")
-    elif variant == "default":
-        parts.append("默认语法高亮")
-    elif variant == "default-colorful":
-        parts.append("默认语法高亮-彩色状态栏")
     return "-".join(parts) + ".json"
 
 
@@ -104,29 +100,19 @@ def 主题标签(mode: str, accent: str) -> str:
 
 
 def 生成主题对象(mode: str, accent: str, variant: str, high_contrast: bool = False) -> 主题对象:
-    """variant 取值：builder、colorful、default、default-colorful。"""
+    """variant 取值：builder、colorful。"""
     scheme = 语法映射.编辑器颜色(mode)
     调色板 = 调色板对象(mode, accent=accent, high_contrast=high_contrast, scheme=scheme)
-    colorful = variant in ("colorful", "default-colorful")
-    default_syntax = variant in ("default", "default-colorful")
+    if variant not in ("builder", "colorful"):
+        raise ValueError(f"未知主题变体：{variant}")
+    colorful = variant == "colorful"
 
     if high_contrast:
         label = f"AdwCode {MODE_LABELS[mode]} 高对比度"
     else:
         label = 主题标签(mode, accent)
-        if default_syntax:
-            label += " · 默认语法高亮"
         if colorful:
             label += " · 彩色状态栏"
-
-    语法颜色: list[语法映射.语法规则]
-    if default_syntax:
-        语法颜色 = cast(
-            list[语法映射.语法规则],
-            json.loads((DEFAULTS / f"{mode}.json").read_text(encoding="utf-8"))["tokenColors"],
-        )
-    else:
-        语法颜色 = 语法映射.语法颜色(mode)
 
     return {
         "$schema": "vscode://schemas/color-theme",
@@ -134,7 +120,7 @@ def 生成主题对象(mode: str, accent: str, variant: str, high_contrast: bool
         "type": mode,
         "semanticHighlighting": True,
         "colors": 界面映射.生成界面颜色(调色板, colorful_status_bar=colorful),
-        "tokenColors": 语法颜色,
+        "tokenColors": 语法映射.语法颜色(mode),
         "semanticTokenColors": 语法映射.语义标记颜色(mode),
     }
 
@@ -143,7 +129,7 @@ def 构建计划(accents: list[str]) -> list[主题构建请求]:
     plan: list[主题构建请求] = []
     for mode in ("dark", "light"):
         for accent in accents:
-            variants = ["builder", "colorful", "default", "default-colorful"]
+            variants = ["builder", "colorful"]
             for variant in variants:
                 plan.append({"mode": mode, "accent": accent, "variant": variant, "hc": False})
         plan.append({"mode": mode, "accent": "blue", "variant": "builder", "hc": True})

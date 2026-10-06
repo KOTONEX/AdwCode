@@ -23,8 +23,7 @@
 - **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 固定使用 Adwaita 蓝色。
-- **变体** —— 默认语法高亮（使用 VS Code 自带的 TextMate 规则）与
-  彩色状态栏变体，以及高对比度主题。
+- **变体** —— 标准状态栏、彩色状态栏与高对比度主题，均使用 Builder 语法高亮。
 - **产品图标主题** —— GNOME 风格的侧栏、调试、版本控制、补全与文件操作符号；
   窗口控制字形在 `window.controlsStyle` 为 `custom` 时生效。
 - **GNOME 外观（CSS）** —— 为整个工作台带来 Adwaita 几何：9px 的按钮/输入框/
@@ -40,10 +39,8 @@
 | --- | --- |
 | `AdwCode 深色` / `AdwCode 浅色` | Builder 语法，标准状态栏 |
 | `AdwCode 深色 · 彩色状态栏` / `AdwCode 浅色 · 彩色状态栏` | 状态栏填充强调色 |
-| `AdwCode 深色 · 默认语法高亮` / `AdwCode 浅色 · 默认语法高亮` | 使用 VS Code 自带 TextMate 规则 |
 | `AdwCode 深色 高对比度` / `AdwCode 浅色 高对比度` | libadwaita 高对比度参数 |
 
-默认语法高亮变体只替换 TextMate 规则；界面配色和语义高亮仍沿用 AdwCode。
 
 产品图标主题 `AdwCode` 覆盖 79 个图标标识，包含侧栏、布局、调试、版本控制、
 补全和常用操作。四个窗口控制字形（`chrome-close`、`chrome-maximize`、
@@ -60,7 +57,7 @@
 [中文接口迁移](文档/08-中文接口迁移.md#直接安装新-vsix)。
 
 从 [Releases](https://github.com/KOTONEX/AdwCode/releases) 下载由 CI 自动构建的
-`AdwCode-<版本>.vsix`，包含蓝色的 10 个主题变体。
+`AdwCode-<版本>.vsix`，包含蓝色的 6 个主题变体。
 把 `<版本>` 换成实际版本号，文件名以发布页附件为准，然后安装：
 
 ```sh
@@ -201,7 +198,7 @@ AdwCode/
 │   ├── 语法映射.py                GtkSourceView 样式名到 TextMate 作用域的映射
 │   ├── 更新默认数据.py       刷新 VS Code 默认主题数据与键表
 │   ├── GtkSourceView方案/       随附的 GtkSourceView 方案（LGPL-2.1+）
-│   └── VSCode默认数据/         解析后的 VS Code 默认 token 颜色（MIT）与键表
+│   └── VSCode默认数据/         VS Code 颜色键表（MIT）
 ├── 基准/                  按需性能基准与独立工作台验证
 ├── 测试/                       离线单元测试
 │   └── test_主题.py          颜色运算、调色板、语法、主题、CSS

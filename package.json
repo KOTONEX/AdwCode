@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -61,16 +61,6 @@
         "path": "./主题/adwcode-深色-彩色状态栏.json"
       },
       {
-        "label": "AdwCode 深色 · 默认语法高亮",
-        "uiTheme": "vs-dark",
-        "path": "./主题/adwcode-深色-默认语法高亮.json"
-      },
-      {
-        "label": "AdwCode 深色 · 默认语法高亮 · 彩色状态栏",
-        "uiTheme": "vs-dark",
-        "path": "./主题/adwcode-深色-默认语法高亮-彩色状态栏.json"
-      },
-      {
         "label": "AdwCode 深色 高对比度",
         "uiTheme": "hc-black",
         "path": "./主题/adwcode-深色-高对比度.json"
@@ -84,16 +74,6 @@
         "label": "AdwCode 浅色 · 彩色状态栏",
         "uiTheme": "vs",
         "path": "./主题/adwcode-浅色-彩色状态栏.json"
-      },
-      {
-        "label": "AdwCode 浅色 · 默认语法高亮",
-        "uiTheme": "vs",
-        "path": "./主题/adwcode-浅色-默认语法高亮.json"
-      },
-      {
-        "label": "AdwCode 浅色 · 默认语法高亮 · 彩色状态栏",
-        "uiTheme": "vs",
-        "path": "./主题/adwcode-浅色-默认语法高亮-彩色状态栏.json"
       },
       {
         "label": "AdwCode 浅色 高对比度",
