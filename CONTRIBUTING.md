@@ -11,8 +11,8 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 | Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
 | [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成导入的单色字体或备用自有字体时需要，见产品图标说明 |
 | [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅再生成资产时处理描边、裁切与字重内缩 |
-| [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `product-icons/adwaita-icons.ttf` 时需要 |
-| VS Code | 供 `python3.14t src/检查样式.py` 对照已安装的构建检查 `extras/*.css` |
+| [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `产品图标/adwaita-icons.ttf` 时需要 |
+| VS Code | 供 `python3.14t 源码/检查样式.py` 对照已安装的构建检查 `附加外观/*.css` |
 
 ## 常用命令
 
@@ -40,14 +40,14 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 
 ## 改动流程
 
-开始前阅读 [架构与实现状态](docs/03-架构与实现状态.md)，按
-[开发、验证与发布](docs/04-开发验证与发布.md) 选择检查方式。
+开始前阅读 [架构与实现状态](文档/03-架构与实现状态.md)，按
+[开发、验证与发布](文档/04-开发验证与发布.md) 选择检查方式。
 自动化测试应使用独立环境，避免重载正在使用的工作窗口；修改受监视文件前检查
 自动重载设置。
 
-- `themes/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir 主题`，
+- `主题/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir 主题`，
   并让生成结果随提交一起入库。
-- 新增颜色键必须存在于 `src/vscode_defaults/registry_keys.json`，或在
+- 新增颜色键必须存在于 `源码/VSCode默认数据/registry_keys.json`，或在
   `build.LEGACY_KEYS` 中，否则 `meson compile -C builddir 校验` 会失败。
 - 主题 JSON 中的颜色必须是十六进制（`#rrggbb` / `#rrggbbaa`）：VS Code 会忽略
   CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `palette.as_hex()`。
@@ -58,12 +58,15 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ## 提交与 PR
 
 - README、项目文档、代码注释、界面提示与自有脚本说明统一使用简体中文。
-  项目自有 API（含模块、函数与类型名称）、配置键、命令标识、脚本参数和文件名，
+  项目自有 API（含模块、函数与类型名称）、配置键、命令标识、脚本参数、文件名和目录名，
   除明确特例外必须采用简体中文，不保留英文兼容别名。特例仅包括外部平台、协议、
   文件格式或工具规定的接口、字段与标准文件名，第三方 API、命令、原始文件名与
   上游标识，以及专有名称、许可证标识与原文、文件扩展名和项目规定的 `adwcode` 前缀。
   特例须有规范、来源或项目明确约定作为依据；习惯使用英文不构成例外。
-  改名时同步更新调用、清单、文档与测试；详见 [中文接口迁移](docs/08-中文接口迁移.md)。
+  自有目录及子目录必须采用简体中文；工具规定的 `.git`、`.github`、`.vscode`、
+  `LICENSES`、生成的缓存与构建目录、VSIX 标准 `extension/` 根目录，以及第三方原始目录
+  保留约定名称。目录更名须同步更新导入与路径引用、构建、打包、CI、测试和文档。
+  改名时同步更新调用、清单、文档与测试；详见 [中文接口迁移](文档/08-中文接口迁移.md)。
 - 提交信息使用**简体中文类型前缀**（格式 `类型: 描述`，半角冒号 + 空格）：
 
   | 类型 | 用途 | 对应英文约定 |
@@ -93,5 +96,5 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 可选许可，使用者可任选其一；范围与全文见 [许可声明](许可声明.md)。
 
 第三方内容及其衍生部分保留原许可；引入前核对兼容性、署名和分发边界，在
-[第三方许可证](docs/01-第三方许可证.md) 登记。包含第三方内容的文件不能因
+[第三方许可证](文档/01-第三方许可证.md) 登记。包含第三方内容的文件不能因
 其中的自有贡献提供双重许可而整体重新许可。

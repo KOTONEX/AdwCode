@@ -2,10 +2,10 @@
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 [environment]
 python-version = "3.9"
-extra-paths = ["src"]
+extra-paths = ["源码"]
 
 [src]
-include = ["src", "tests", "benchmarks"]
+include = ["源码", "测试", "基准"]
 
 [rules]
 all = "error"

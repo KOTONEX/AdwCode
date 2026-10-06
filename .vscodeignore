@@ -1,11 +1,11 @@
 .git/**
 .vscode/**
-src/**
-assets/screenshot*
+源码/**
+资产/screenshot*
 *.vsix
 .gitignore
-docs/**
-tests/**
+文档/**
+测试/**
 CONTRIBUTING.md
 CHANGELOG.md
 AGENTS.md

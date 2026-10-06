@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode contributors
+"""把扩展打包为 .vsix（带 VS Code 清单的 zip）。
+
+无需 Node.js：归档结构与 `vsce package` 生成的一致。
+默认从完整 Git 历史生成日志；无 Git 的源码副本可显式提供预先生成的日志。
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import zipfile
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+from 生成变更日志 import 生成变更日志
+
+ROOT: Path = Path(__file__).parent.parent
+
+CONTENT_TYPES: str = """<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="json" ContentType="application/json"/>
+  <Default Extension="js" ContentType="application/javascript"/>
+  <Default Extension="py" ContentType="text/x-python"/>
+  <Default Extension="css" ContentType="text/css"/>
+  <Default Extension="svg" ContentType="image/svg+xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="md" ContentType="text/markdown"/>
+  <Default Extension="txt" ContentType="text/plain"/>
+  <Default Extension="vsixmanifest" ContentType="text/xml"/>
+  <Default Extension="xml" ContentType="text/xml"/>
+  <Default Extension="ttf" ContentType="application/font-sfnt"/>
+</Types>
+"""
+
+MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="{name}" Version="{version}" Publisher="{publisher}" />
+    <DisplayName>{display_name}</DisplayName>
+    <Description xml:space="preserve">{description}</Description>
+    <Tags>{keywords}</Tags>
+    <Categories>{categories}</Categories>
+    <GalleryFlags>Public</GalleryFlags>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="{engine}" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="ui" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
+    </Properties>
+    <License>extension/许可声明.md</License>
+{icon_metadata}
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+  </Installation>
+  <Dependencies/>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/许可声明.md" Addressable="true" />
+{icon_asset}
+  </Assets>
+</PackageManifest>
+"""
+
+INCLUDE: list[str] = [
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "许可声明.md",
+    "LICENSES",
+    "资产",
+    "扩展",
+    "主题",
+    "产品图标",
+    "附加外观",
+    "文档",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "源码/VSCode默认数据/README.md",
+]
+SKIP_SUFFIXES: set[str] = {".pyc", ".py"}
+ASSET_BUILD_SCRIPTS = {"生成自有字形.py", "生成导入字形.py"}
+
+
+def 收集文件() -> list[Path]:
+    files: list[Path] = []
+    for item in INCLUDE:
+        path = ROOT / item
+        if path.is_file():
+            files.append(path)
+        elif path.is_dir():
+            files.extend(p for p in sorted(path.rglob("*")) if p.is_file())
+    # 字体连同对应 SVG、来源记录与再生成脚本一起分发；它们不参与扩展运行。
+    return [
+        path
+        for path in files
+        if "__pycache__" not in path.parts
+        and (
+            path.suffix not in SKIP_SUFFIXES
+            or (path.parent == ROOT / "产品图标" and path.name in ASSET_BUILD_SCRIPTS)
+        )
+    ]
+
+
+def 入口(changelog_path: Path | None = None) -> None:
+    manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    name = manifest["name"]
+    version = manifest["version"]
+    output = ROOT / f"{name}-{version}.vsix"
+
+    def xml(value: str) -> str:
+        return escape(value, {'"': "&quot;", "'": "&apos;"})
+
+    files = 收集文件()
+    icon = manifest.get("icon")
+    icon_metadata = ""
+    icon_asset = ""
+    if icon:
+        icon_path = Path(icon)
+        if icon_path.is_absolute() or ".." in icon_path.parts or ROOT / icon_path not in files:
+            raise ValueError("扩展图标必须是已纳入打包范围的仓库内文件")
+        icon_uri = xml(f"extension/{icon_path.as_posix()}")
+        icon_metadata = f"    <Icon>{icon_uri}</Icon>"
+        icon_asset = (
+            f'    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" '
+            f'Path="{icon_uri}" Addressable="true" />'
+        )
+
+    vsix_manifest = MANIFEST.format(
+        icon_metadata=icon_metadata,
+        icon_asset=icon_asset,
+        name=xml(name),
+        version=xml(version),
+        publisher=xml(manifest["publisher"]),
+        display_name=xml(manifest["displayName"]),
+        description=xml(manifest["description"]),
+        keywords=xml(",".join(manifest.get("keywords", []))),
+        categories=xml(",".join(manifest.get("categories", []))),
+        engine=xml(manifest["engines"]["vscode"]),
+    )
+    # 正常打包读取完整 Git 历史；无 Git 的导出副本须显式提供已生成日志。
+    changelog = (
+        changelog_path.read_text(encoding="utf-8")
+        if changelog_path is not None
+        else 生成变更日志(ROOT)
+    )
+    if not changelog.strip():
+        raise ValueError("用于打包的变更日志为空")
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", CONTENT_TYPES)
+        archive.writestr("extension.vsixmanifest", vsix_manifest)
+        archive.writestr("extension/CHANGELOG.md", changelog)
+        for path in files:
+            archive.write(path, f"extension/{path.relative_to(ROOT)}")
+    print(f"已生成 {output.relative_to(ROOT)} ({output.stat().st_size / 1024:.0f} KiB)")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--变更日志", dest="changelog", type=Path, help="无 Git 的导出副本使用预先生成的变更日志"
+    )
+    try:
+        入口(parser.parse_args().changelog)
+    except (ValueError, OSError) as error:
+        raise SystemExit(str(error)) from error

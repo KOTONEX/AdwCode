@@ -1,9 +1,9 @@
 {
   "name": "AdwCode",
   "displayName": "AdwCode",
-  "icon": "assets/adwcode.png",
+  "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -28,14 +28,13 @@
     "type": "git",
     "url": "https://github.com/KOTONEX/AdwCode.git"
   },
-  "main": "./extension/扩展.js",
+  "main": "./扩展/扩展.js",
   "activationEvents": [
     "onStartupFinished"
   ],
   "scripts": {
     "配置": "meson setup builddir",
     "构建": "meson compile -C builddir 主题",
-    "构建全部强调色": "python3.14t src/生成主题.py --强调色 全部",
     "校验": "meson compile -C builddir 校验",
     "检查样式": "meson compile -C builddir 检查样式",
     "test": "meson test -C builddir --print-errorlogs",
@@ -54,73 +53,68 @@
       {
         "label": "AdwCode 深色",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwcode-深色.json"
+        "path": "./主题/adwcode-深色.json"
       },
       {
         "label": "AdwCode 深色 · 彩色状态栏",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwcode-深色-彩色状态栏.json"
+        "path": "./主题/adwcode-深色-彩色状态栏.json"
       },
       {
         "label": "AdwCode 深色 · 默认语法高亮",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwcode-深色-默认语法高亮.json"
+        "path": "./主题/adwcode-深色-默认语法高亮.json"
       },
       {
         "label": "AdwCode 深色 · 默认语法高亮 · 彩色状态栏",
         "uiTheme": "vs-dark",
-        "path": "./themes/adwcode-深色-默认语法高亮-彩色状态栏.json"
+        "path": "./主题/adwcode-深色-默认语法高亮-彩色状态栏.json"
       },
       {
         "label": "AdwCode 深色 高对比度",
         "uiTheme": "hc-black",
-        "path": "./themes/adwcode-深色-高对比度.json"
+        "path": "./主题/adwcode-深色-高对比度.json"
       },
       {
         "label": "AdwCode 浅色",
         "uiTheme": "vs",
-        "path": "./themes/adwcode-浅色.json"
+        "path": "./主题/adwcode-浅色.json"
       },
       {
         "label": "AdwCode 浅色 · 彩色状态栏",
         "uiTheme": "vs",
-        "path": "./themes/adwcode-浅色-彩色状态栏.json"
+        "path": "./主题/adwcode-浅色-彩色状态栏.json"
       },
       {
         "label": "AdwCode 浅色 · 默认语法高亮",
         "uiTheme": "vs",
-        "path": "./themes/adwcode-浅色-默认语法高亮.json"
+        "path": "./主题/adwcode-浅色-默认语法高亮.json"
       },
       {
         "label": "AdwCode 浅色 · 默认语法高亮 · 彩色状态栏",
         "uiTheme": "vs",
-        "path": "./themes/adwcode-浅色-默认语法高亮-彩色状态栏.json"
+        "path": "./主题/adwcode-浅色-默认语法高亮-彩色状态栏.json"
       },
       {
         "label": "AdwCode 浅色 高对比度",
         "uiTheme": "hc-light",
-        "path": "./themes/adwcode-浅色-高对比度.json"
+        "path": "./主题/adwcode-浅色-高对比度.json"
       }
     ],
     "productIconThemes": [
       {
         "id": "adwcode",
         "label": "AdwCode",
-        "path": "./product-icons/adwcode.json"
+        "path": "./产品图标/adwcode.json"
       }
     ],
     "configuration": {
       "title": "AdwCode",
       "properties": {
-        "adwcode.自动强调色": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "跟随 GNOME 系统强调色（`org.gnome.desktop.interface accent-color`），同步 AdwCode 当前主题及普通明暗首选主题的已安装变体。保留其他主题、高对比度和工作区覆盖的值。"
-        },
         "adwcode.自动重载": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "开发用：当本扩展的样式（`extras/*.css`、`extras/*.js`）、主题（`themes/*.json`）、清单或代码变化时，自动重新应用 Custom CSS 并重载窗口。"
+          "markdownDescription": "开发用：当本扩展的样式（`附加外观/*.css`、`附加外观/*.js`）、主题（`主题/*.json`）、清单或代码变化时，自动重新应用 Custom CSS 并重载窗口。"
         },
         "adwcode.界面字体": {
           "type": "string",
@@ -133,11 +127,6 @@
       {
         "command": "adwcode.查看外观安装状态",
         "title": "查看外观安装状态",
-        "category": "AdwCode"
-      },
-      {
-        "command": "adwcode.同步强调色",
-        "title": "立即同步强调色",
         "category": "AdwCode"
       },
       {

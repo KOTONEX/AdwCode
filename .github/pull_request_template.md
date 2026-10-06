@@ -20,6 +20,6 @@
 
 ## 约束检查
 
-- [ ] 改动 `themes/` 后已重跑 `meson compile -C builddir 主题`，且未手工编辑生成物
+- [ ] 改动 `主题/` 后已重跑 `meson compile -C builddir 主题`，且未手工编辑生成物
 - [ ] 主题颜色使用十六进制（`#rrggbb` / `#rrggbbaa`），`contrastBorder` 只出现在高对比度主题
-- [ ] 新增颜色键已存在于 `src/vscode_defaults/registry_keys.json` 或 `build.LEGACY_KEYS`
+- [ ] 新增颜色键已存在于 `源码/VSCode默认数据/registry_keys.json` 或 `build.LEGACY_KEYS`

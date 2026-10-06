@@ -22,6 +22,6 @@ trim_trailing_whitespace = false
 [Makefile]
 indent_style = tab
 
-[product-icons/imported/**]
+[产品图标/导入图标/**]
 insert_final_newline = false
 trim_trailing_whitespace = false

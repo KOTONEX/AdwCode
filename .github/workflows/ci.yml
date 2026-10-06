@@ -41,7 +41,7 @@ jobs:
       - name: 生成/构建校验
         run: |
           meson compile -C builddir 主题
-          git diff --exit-code -- themes package.json
+          git diff --exit-code -- 主题 package.json
 
       - name: 离线单元测试
         run: meson test -C builddir --print-errorlogs

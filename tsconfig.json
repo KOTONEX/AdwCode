@@ -3,7 +3,7 @@
     // SPDX-FileCopyrightText: 2026 AdwCode contributors
     //
     // 扩展与工作台脚本的类型检查：不产出文件（noEmit），做 checkJs 校验。
-    // vscode 与 Node 运行时由 types/ 下的手写最小类型面提供，
+    // vscode 与 Node 运行时由 类型声明/ 下的手写最小类型面提供，
     // 无需 @types/vscode、@types/node 等 npm 依赖。
     "compilerOptions": {
         "allowJs": true,
@@ -19,8 +19,8 @@
         "skipLibCheck": true
     },
     "include": [
-        "extension/扩展.js",
-        "extras/*.js",
-        "types/**/*.d.ts"
+        "扩展/扩展.js",
+        "附加外观/*.js",
+        "类型声明/**/*.d.ts"
     ]
 }

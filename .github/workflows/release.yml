@@ -59,7 +59,7 @@ jobs:
       - name: 生成/构建校验
         run: |
           meson compile -C builddir 主题
-          git diff --exit-code -- themes package.json
+          git diff --exit-code -- 主题 package.json
 
       - name: 离线单元测试
         run: meson test -C builddir --print-errorlogs
@@ -74,7 +74,7 @@ jobs:
         run: |
           vsix="$(ls -1 *.vsix | head -1)"
           # 从当前标签的提交范围生成说明，标签必须严格对应 HEAD 与清单版本。
-          "${{ steps.python.outputs.python-path }}" src/生成变更日志.py 发布说明 --标签 "$GITHUB_REF_NAME"
+          "${{ steps.python.outputs.python-path }}" 源码/生成变更日志.py 发布说明 --标签 "$GITHUB_REF_NAME"
           # 标签对应固定提交；重复发布保留已有附件，只补齐缺失附件并更新说明。
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             asset_names="$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')"
