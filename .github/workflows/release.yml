@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 name: 发布
 
-# 推送形如 v1.0.0 的标签时：校验 → 测试 → 打包 → 上传到对应 Release。
+# 推送与清单版本一致的 v<版本> 标签时：校验 → 测试 → 打包 → 上传到对应 Release。
 # 仓库中不保存 VSIX，构建产物只作为 Release 附件发布。
 # 变更日志与发布说明按 Git 版本标签和提交标题自动生成；配置 VSCE_PAT / OVSX_PAT 后
 # 同一 VSIX 会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。

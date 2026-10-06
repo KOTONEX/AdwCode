@@ -86,6 +86,8 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
   VS Code 升级后请
   运行 `检查样式.py`：它会校验每个类选择器仍存在于已安装的构建中（由
   JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
+- VSIX 产物不变的改动只提交与推送，不更新发布版本号、不打版本标签、不创建 Release。
+  是否发布以实际打包内容的变化为依据，不因产生新提交而自动发布。
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
   `.github/workflows/release.yml`。
 - 不手工维护 `CHANGELOG.md`；提交标题与主线上的版本标签是日志输入。

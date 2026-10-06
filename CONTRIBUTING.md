@@ -84,7 +84,9 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
   主线版本标签划分发布范围，生成文件位于 `builddir/CHANGELOG.md`，不提交到仓库；
   完整 Git 历史与标签是生成所需输入。未分类的旧标题归入“其他”，合并提交不重复列出。
 - PR 描述请填写仓库自带的模板，逐项确认约束检查。
-- 发布：`package.json` 的 `version` 是版本号的唯一事实源；推送形如 `v1.0.0` 的
+- VSIX 产物不变的改动只提交与推送，不更新发布版本号、不打版本标签、不创建 Release。
+  是否发布以实际打包内容的变化为依据，不因产生新提交而自动发布。
+- 发布：`package.json` 的 `version` 是版本号的唯一事实源；推送与清单版本一致的 `v<版本>`
   标签后，GitHub Actions 会自动构建并上传 VSIX 到对应的 Release，变更日志及说明
   从版本范围内的 Git 提交标题生成；配置 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一 VSIX 会同步发布到
   VS Code 扩展市场与 Open VSX；未配置 Secrets 时只跳过市场发布。
