@@ -5,7 +5,7 @@
 
 ## 命令行与扩展逻辑
 
-需要 Python 3.14 自由线程版本、Node.js、GNOME 的 `gsettings` 和可自动定位的
+需要完整 Git 历史与版本标签、Python 3.14 自由线程版本、Node.js、GNOME 的 `gsettings` 和可自动定位的
 本机 VS Code 样式表。找不到样式表时基准会失败，不把跳过校验记为成功样本：
 
 ```sh
@@ -20,8 +20,10 @@ meson compile -C builddir performance
 python3.14t benchmarks/run.py --runs 50 --output builddir/performance.json
 ```
 
-`run.py` 在临时副本中生成主题和 VSIX，不改动仓库产物；采集墙钟时间、子进程
+`run.py` 在临时副本中生成主题和 VSIX，不改动已跟踪的仓库产物；采集墙钟时间、子进程
 CPU 时间与 exec 后的内存高水位。内存每 0.5 ms 采样，短进程可能漏掉最后的峰值。
+准备阶段从 Git 生成固定的 `builddir/CHANGELOG.md`，临时副本显式使用该日志打包。
+生成日志的耗时不计入 VSIX 打包样本，临时副本也不复制 Git 仓库。
 随后只读监听 GNOME 强调色 3 秒，记录 CPU 计数和 RSS，结束后立即停止监听器。
 
 `extension.cjs` 使用真实临时文件和模拟 VS Code API，测量脚本加载、激活与停用、

@@ -198,7 +198,6 @@ python3.14t src/build.py --no-system            # 仅 blue
 ```text
 AdwCode/
 ├── AGENTS.md                    自动化代理（含 AI）说明
-├── CHANGELOG.md                 更新日志
 ├── CONTRIBUTING.md              贡献指南
 ├── LICENSE                      AGPL-3.0 全文
 ├── meson.build                  统一命令入口
@@ -210,7 +209,7 @@ AdwCode/
 │   ├── mapping.py               VS Code 颜色键到 Adwaita 角色的映射
 │   ├── package.py               打包 VSIX
 │   ├── palette.py               libadwaita 颜色角色与合成工具
-│   ├── release_notes.py         从版本更新日志提取发布说明
+│   ├── release_notes.py         从 Git 标签与提交标题自动生成日志和发布说明
 │   ├── tokens.py                GtkSourceView 样式名到 TextMate 作用域的映射
 │   ├── update_defaults.py       刷新 VS Code 默认主题数据与键表
 │   ├── gtksourceview_xml/       随附的 GtkSourceView 方案（LGPL-2.1+）
@@ -232,6 +231,7 @@ AdwCode/
 | --- | --- | --- |
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
 | Python | 3.9+（CI 与本地开发使用 3.14 自由线程版本） | 仅构建与打包需要 |
+| Git | 完整项目历史与版本标签 | 自动生成变更日志及打包；使用预先生成日志的源码导出副本可不带 Git |
 | Meson / Ninja | Meson ≥ 1.3 | 开发命令与 CI 调度；独立 Python 脚本可直接运行 |
 | Ruff / ty / tsc / Node.js | 静态、格式、类型与扩展测试工具 | 完整开发验证需要，最终扩展无额外运行时库依赖 |
 | GNOME | 提供 `org.gnome.desktop.interface accent-color`（GNOME 47 起） | 扩展跟随系统强调色；没有该键时手动选择主题变体 |
@@ -292,6 +292,13 @@ meson test -C builddir --print-errorlogs
 `meson compile -C builddir package`。Meson 不编译扩展 JavaScript；Python 脚本仍可
 单独运行。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
+变更日志从 Git 提交标题和版本标签自动生成，无需维护手写文件。运行
+`meson compile -C builddir changelog` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
+VSIX。当前版本的说明可通过 `meson compile -C builddir release-notes` 预览。
+未提交修改不进入日志；已发布记录见
+[GitHub Releases](https://github.com/KOTONEX/AdwCode/releases)，完整规则见
+[自动变更日志](docs/04-开发验证与发布.md#自动变更日志)。
+
 全部 Python 文件使用 Ruff 0.16.9 检查和格式化，含图标生成器与性能基准。
 运行 `meson compile -C builddir format` 应用格式化，`lint` 目标同时执行
 `ruff check .`、`ruff format --check .`、ty、tsc 和 JavaScript 语法检查。
@@ -321,6 +328,7 @@ Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 
 ## 许可证
 
 本项目自有代码以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME
-基金会无隶属关系。第三方资产保留各自许可证。随附的第三方组件与数据
+基金会无隶属关系。扩展徽标采用 **CC BY-SA 4.0 或 AGPL-3.0-or-later**，
+使用者可任选其一，声明见 [图标许可证](assets/LICENSE)。第三方资产保留各自许可证。随附的第三方组件与数据
 （GtkSourceView 样式方案、VS Code 默认主题数据、TextMate 作用域映射与产品图标等）登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)。

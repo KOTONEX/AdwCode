@@ -40,6 +40,8 @@
     "check:css": "meson compile -C builddir check-css",
     "test": "meson test -C builddir --print-errorlogs",
     "package": "meson compile -C builddir package",
+    "changelog": "meson compile -C builddir changelog",
+    "release-notes": "meson compile -C builddir release-notes",
     "lint": "meson compile -C builddir lint",
     "format": "meson compile -C builddir format",
     "typecheck": "meson compile -C builddir typecheck"

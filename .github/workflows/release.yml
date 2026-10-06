@@ -4,7 +4,7 @@ name: 发布
 
 # 推送形如 v1.0.0 的标签时：校验 → 测试 → 打包 → 上传到对应 Release。
 # 仓库中不保存 VSIX，构建产物只作为 Release 附件发布。
-# 发布说明取自 CHANGELOG.md 的对应版本；配置 VSCE_PAT / OVSX_PAT 后
+# 变更日志与发布说明按 Git 版本标签和提交标题自动生成；配置 VSCE_PAT / OVSX_PAT 后
 # 同一 VSIX 会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
 on:
   push:
@@ -73,13 +73,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           vsix="$(ls -1 *.vsix | head -1)"
-          # 从版本更新日志提取公开发布说明，避免混入开发过程记录。
-          "${{ steps.python.outputs.python-path }}" src/release_notes.py
-          prev="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
-          if [ -n "$prev" ]; then
-            printf '\n**完整变更**：https://github.com/%s/compare/%s...%s\n' \
-              "$GITHUB_REPOSITORY" "$prev" "$GITHUB_REF_NAME" >> release-notes.md
-          fi
+          # 从当前标签的提交范围生成说明，标签必须严格对应 HEAD 与清单版本。
+          "${{ steps.python.outputs.python-path }}" src/release_notes.py release --tag "$GITHUB_REF_NAME"
           # 标签对应固定提交；重复发布保留已有附件，只补齐缺失附件并更新说明。
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             asset_names="$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')"
@@ -98,11 +93,11 @@ jobs:
             fi
             gh release edit "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
-              --notes-file release-notes.md
+              --notes-file builddir/release-notes.md
           else
             gh release create "$GITHUB_REF_NAME" "$vsix" \
               --title "$GITHUB_REF_NAME" \
-              --notes-file release-notes.md
+              --notes-file builddir/release-notes.md
           fi
 
       - name: 发布到扩展市场

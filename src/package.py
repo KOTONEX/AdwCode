@@ -4,14 +4,18 @@
 """把扩展打包为 .vsix（带 VS Code 清单的 zip）。
 
 无需 Node.js：归档结构与 `vsce package` 生成的一致。
+默认从完整 Git 历史生成日志；无 Git 的源码副本可显式提供预先生成的日志。
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+from release_notes import generate_changelog
 
 ROOT: Path = Path(__file__).parent.parent
 
@@ -76,7 +80,6 @@ INCLUDE: list[str] = [
     "extras",
     "docs",
     "CONTRIBUTING.md",
-    "CHANGELOG.md",
     "AGENTS.md",
     "src/vscode_defaults/README.md",
 ]
@@ -104,7 +107,7 @@ def collect() -> list[Path]:
     ]
 
 
-def main() -> None:
+def main(changelog_path: Path | None = None) -> None:
     manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     name = manifest["name"]
     version = manifest["version"]
@@ -140,13 +143,27 @@ def main() -> None:
         categories=xml(",".join(manifest.get("categories", []))),
         engine=xml(manifest["engines"]["vscode"]),
     )
+    # 正常打包读取完整 Git 历史；无 Git 的导出副本须显式提供已生成日志。
+    changelog = (
+        changelog_path.read_text(encoding="utf-8")
+        if changelog_path is not None
+        else generate_changelog(ROOT)
+    )
+    if not changelog.strip():
+        raise ValueError("用于打包的变更日志为空")
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("[Content_Types].xml", CONTENT_TYPES)
         archive.writestr("extension.vsixmanifest", vsix_manifest)
+        archive.writestr("extension/CHANGELOG.md", changelog)
         for path in files:
             archive.write(path, f"extension/{path.relative_to(ROOT)}")
     print(f"已生成 {output.relative_to(ROOT)} ({output.stat().st_size / 1024:.0f} KiB)")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--changelog", type=Path, help="无 Git 的导出副本使用预先生成的变更日志")
+    try:
+        main(parser.parse_args().changelog)
+    except (ValueError, OSError) as error:
+        raise SystemExit(str(error)) from error

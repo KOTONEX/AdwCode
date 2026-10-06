@@ -49,7 +49,7 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - `src/mapping.py` —— VS Code 颜色键到 Adwaita 角色的映射
 - `src/tokens.py` —— GtkSourceView 样式名到 TextMate 作用域的映射
 - `src/build.py` / `src/package.py` / `src/update_defaults.py`
-- `src/release_notes.py` —— 从当前版本更新日志提取发布说明
+- `src/release_notes.py` —— 从 Git 版本标签和提交标题生成变更日志与发布说明
 - `tests/test_adwcode.py` —— 离线单元测试，运行 `meson test -C builddir --print-errorlogs`
 - `src/gtksourceview_xml/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
 - `src/vscode_defaults/` —— 随附的 VS Code 默认数据与键表（MIT）
@@ -84,6 +84,9 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
   JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
   `.github/workflows/release.yml`。
+- 不手工维护 `CHANGELOG.md`；提交标题与主线上的版本标签是日志输入。
+  `meson compile -C builddir changelog` 生成 `builddir/CHANGELOG.md`，打包时自动写入
+  VSIX。完整历史和标签不可缺失，CI 必须完整检出；未提交修改不会进入日志。
 - 不以“类名存在”或“磁盘补丁已更新”宣称当前窗口外观已验证。
 
 ## 常用命令
@@ -104,10 +107,12 @@ CI 与本地开发使用 Python 3.14 自由线程版本（GIL 关闭）。
 - 按需运行离线性能基准：`meson compile -C builddir performance`（不属于常规完整检查；
   独立工作台基准另见 `benchmarks/README.md`）
 - 打包 VSIX（无需 Node.js）：`meson compile -C builddir package`
+- 自动生成变更日志：`meson compile -C builddir changelog`
+- 预览当前版本发布说明：`meson compile -C builddir release-notes`
 - 刷新随附的 VS Code 数据与键表：`python3.14t src/update_defaults.py`
 - 开发时主题 JSON 即时重载：`python3.14t src/build.py --watch`
 - 发布：推送 `v*` 标签后由 GitHub Actions 自动构建并上传 VSIX
-  （`.github/workflows/release.yml`，发布说明取自更新日志；先校验标签与版本一致、产物与提交一致，
+  （`.github/workflows/release.yml`，发布说明从 Git 提交范围生成；先校验标签与版本一致、产物与提交一致，
   再跑静态检查与单元测试）；配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
   VSIX 还会发布到 VS Code 扩展市场与 Open VSX（未配置时自动跳过）
 

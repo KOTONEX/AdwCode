@@ -193,18 +193,21 @@ def main() -> None:
             "README.md",
             "LICENSE",
             "CONTRIBUTING.md",
-            "CHANGELOG.md",
             "AGENTS.md",
         ]:
             shutil.copy2(ROOT / name, clone / name)
         python = sys.executable
+        # 先生成固定日志，临时副本不含 Git；准备过程不计入打包测量。
+        subprocess.run([python, str(ROOT / "src/release_notes.py"), "changelog"], check=True)
+        (clone / "builddir").mkdir()
+        shutil.copy2(ROOT / "builddir/CHANGELOG.md", clone / "builddir/CHANGELOG.md")
         commands = [
             ("Python 空进程", [python, "-c", "pass"]),
             ("默认构建（10 个主题，不读取系统）", [python, "src/build.py", "--no-system"]),
             ("全部强调色构建（26 个主题）", [python, "src/build.py", "--accents", "all"]),
             ("默认主题校验", [python, "src/build.py", "--check"]),
             ("CSS 兼容校验", [python, "src/check_css.py"]),
-            ("VSIX 打包", [python, "src/package.py"]),
+            ("VSIX 打包", [python, "src/package.py", "--changelog", "builddir/CHANGELOG.md"]),
             (
                 "读取 GNOME 强调色",
                 [

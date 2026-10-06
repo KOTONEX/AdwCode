@@ -14,6 +14,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from git_fixture import git
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -42,8 +44,11 @@ class ReleaseWorkflowTest(unittest.TestCase):
                 folder = Path(directory)
                 (folder / "src").mkdir()
                 shutil.copy2(ROOT / "src/release_notes.py", folder / "src/release_notes.py")
-                for name in ("package.json", "CHANGELOG.md"):
-                    shutil.copy2(ROOT / name, folder / name)
+                shutil.copy2(ROOT / "package.json", folder / "package.json")
+                git(folder, "init", "--quiet")
+                git(folder, "add", "package.json")
+                git(folder, "commit", "--quiet", "-m", "新增: 测试发布")
+                git(folder, "tag", f"v{version}")
                 (folder / asset_name).write_bytes("测试归档".encode())
                 marker = folder / "existing-release"
                 if existing:
@@ -69,10 +74,7 @@ class ReleaseWorkflowTest(unittest.TestCase):
                     "*) exit 2 ;;\nesac\n",
                     encoding="utf-8",
                 )
-                git = binaries / "git"
-                git.write_text('#!/bin/sh\nprintf "%s\\n" "v1.2.0"\n', encoding="utf-8")
                 gh.chmod(0o755)
-                git.chmod(0o755)
                 trace = folder / "commands.log"
                 environment = {
                     **os.environ,

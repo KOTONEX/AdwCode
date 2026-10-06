@@ -426,19 +426,6 @@ class ExtensionStatusTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(f"缺少开发工具：{missing}", result.stdout)
 
-    def test_release_notes_extract_version(self) -> None:
-        from release_notes import extract
-
-        changelog = (
-            "## [未发布]\n将来\n## [2.0.0] - 2026-10-06\n\n### 外观\n正文\n## [1.2.0]\n旧版\n"
-        )
-        self.assertEqual(extract(changelog, "2.0.0"), "### 外观\n正文\n")
-        for version in ("2.0.1", "2x0x0"):
-            with self.subTest(version=version), self.assertRaises(ValueError):
-                extract(changelog, version)
-        with self.assertRaises(ValueError):
-            extract("## [2.0.0]\n\n## [1.2.0]\n旧版\n", "2.0.0")
-
     def test_vsix_content_types(self) -> None:
         import package
 
@@ -459,8 +446,10 @@ class ExtensionStatusTest(unittest.TestCase):
             icon = folder / manifest["icon"]
             icon.parent.mkdir(parents=True)
             icon.write_bytes((ROOT / manifest["icon"]).read_bytes())
+            changelog = folder / "generated.md"
+            changelog.write_text("# 自动生成日志\n", encoding="utf-8")
             with patch.object(package, "ROOT", folder):
-                package.main()
+                package.main(changelog)
             with zipfile.ZipFile(
                 folder / f"{manifest['name']}-{manifest['version']}.vsix"
             ) as archive:
@@ -481,12 +470,13 @@ class ExtensionStatusTest(unittest.TestCase):
                 self.assertEqual(len(registered_icons), 1)
                 self.assertEqual(registered_icons[0].attrib["Path"], icon_uri)
                 self.assertEqual(archive.read(icon_uri), icon.read_bytes())
+                self.assertEqual(archive.read("extension/CHANGELOG.md"), changelog.read_bytes())
             # 配置了图标却未纳入包，或引用仓库之外的文件时必须失败。
             for bad_icon in ("missing.png", "../outside.png", str(icon)):
                 manifest["icon"] = bad_icon
                 (folder / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
                 with patch.object(package, "ROOT", folder), self.assertRaises(ValueError):
-                    package.main()
+                    package.main(changelog)
 
     def test_recommended_settings_recovery(self) -> None:
         node = shutil.which("node")

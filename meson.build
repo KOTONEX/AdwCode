@@ -15,6 +15,8 @@ dev = files('src/dev.py')
 # 主题必须保存在源码目录，供符号链接安装和提交生成产物使用。
 run_target('themes', command: [python, root / 'src/build.py'])
 run_target('package', command: [python, root / 'src/package.py'])
+run_target('changelog', command: [python, root / 'src/release_notes.py', 'changelog'])
+run_target('release-notes', command: [python, root / 'src/release_notes.py', 'release'])
 run_target('typecheck', command: [python, dev, 'typecheck'])
 run_target('lint', command: [python, dev, 'lint'])
 run_target('format', command: [python, dev, 'format'])

@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: 安装自由线程 Python
         id: python
@@ -43,3 +45,6 @@ jobs:
 
       - name: 离线单元测试
         run: meson test -C builddir --print-errorlogs
+
+      - name: 自动生成变更日志
+        run: meson compile -C builddir changelog

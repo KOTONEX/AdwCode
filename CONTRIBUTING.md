@@ -30,6 +30,8 @@ meson compile -C builddir format    # Ruff 格式化全部 Python 文件
 meson compile -C builddir check     # 主题校验
 meson test -C builddir --print-errorlogs  # 完整检查及离线测试
 meson compile -C builddir package   # 打包 VSIX
+meson compile -C builddir changelog # 自动生成变更日志
+meson compile -C builddir release-notes # 预览当前版本发布说明
 meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 ```
 
@@ -70,10 +72,13 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
   | `初始化:` | 仓库 / 模块的初始提交 | init |
 
 - 提交前必须运行 `meson test -C builddir --print-errorlogs`，Ruff 静态与格式检查、类型、主题和离线测试均应通过。
+- 提交标题是变更日志的输入，请写清具体变化；无需编辑 `CHANGELOG.md`。
+  主线版本标签划分发布范围，生成文件位于 `builddir/CHANGELOG.md`，不提交到仓库；
+  完整 Git 历史与标签是生成所需输入。未分类的旧标题归入“其他”，合并提交不重复列出。
 - PR 描述请填写仓库自带的模板，逐项确认约束检查。
 - 发布：`package.json` 的 `version` 是版本号的唯一事实源；推送形如 `v1.0.0` 的
-  标签后，GitHub Actions 会自动构建并上传 VSIX 到对应的 Release，发布说明取自
-  版本更新日志；配置 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一 VSIX 会同步发布到
+  标签后，GitHub Actions 会自动构建并上传 VSIX 到对应的 Release，变更日志及说明
+  从版本范围内的 Git 提交标题生成；配置 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一 VSIX 会同步发布到
   VS Code 扩展市场与 Open VSX；未配置 Secrets 时只跳过市场发布。
 
 ## 许可证
@@ -82,3 +87,7 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 同意以该许可证发布你的自有代码贡献。引入第三方代码或组合依赖前，先确认
 AGPL-3.0-or-later 兼容性；独立艺术资产保留原许可、署名和分发边界。
 所有第三方来源均须在 [docs/01-第三方许可证.md](docs/01-第三方许可证.md) 登记。
+
+扩展徽标采用 `CC-BY-SA-4.0 OR AGPL-3.0-or-later` 双重许可，使用者可任选其一。
+提交对该徽标的自有贡献时，同意按这两种可选许可发布；声明见
+[图标许可证](assets/LICENSE)。
