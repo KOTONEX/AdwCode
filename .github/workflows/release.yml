@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 name: 发布
 
 # 推送与清单版本一致的 v<版本> 标签时：校验 → 测试 → 打包 → 上传到对应 Release。

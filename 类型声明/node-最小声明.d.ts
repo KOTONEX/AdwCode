@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-// SPDX-FileCopyrightText: 2026 AdwCode contributors
+// SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //
 // Node 运行时与环境的最小类型面：只声明 扩展/扩展.js 用到的 API。
 // 官方 @types/node 不在本仓库依赖中。

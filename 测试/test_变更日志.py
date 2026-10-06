@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 """在临时 Git 仓库验证版本范围、发布校验及自动日志分发。"""
 
 from __future__ import annotations

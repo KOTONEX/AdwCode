@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 """AdwCode 生成器测试：颜色运算、调色板、语法与主题。
 
 运行：python3.14t -m unittest discover -s 测试 -p 'test_*.py'

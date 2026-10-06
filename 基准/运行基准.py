@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 """Linux 离线性能基准：临时副本中运行命令，输出耗时、CPU 时间与峰值 RSS。"""
 
 from __future__ import annotations

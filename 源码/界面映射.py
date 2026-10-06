@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 """VS Code 工作台颜色到 Adwaita 角色的映射。
 
 映射遵循 libadwaita 1.10 的约定：

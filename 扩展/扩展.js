@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-// SPDX-FileCopyrightText: 2026 AdwCode contributors
+// SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //
 // JSDoc 类型使用 `import("vscode")` / `import("child_process")` 等写法；
 // 检查由 tsconfig.json + 类型声明/ 下的手写最小类型面完成（meson compile -C builddir 类型检查），

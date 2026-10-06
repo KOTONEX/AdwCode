@@ -20,7 +20,7 @@ AdwCode 使用原创的 GNOME 风格编辑器图标：暖白色圆角窗口、�
 图标由本项目按文字描述生成并编辑自有候选图像，未引入第三方徽标或图像素材。
 项目对有权许可的图标内容采用 **CC BY-SA 4.0（或其后续版本）与 AGPL-3.0-or-later 双重许可**，
 使用者可任选其一，并遵守所选许可的全部条款。SPDX 表达式为
-`CC-BY-SA-4.0+ OR AGPL-3.0-or-later`，署名使用 AdwCode contributors。
+`CC-BY-SA-4.0+ OR AGPL-3.0-or-later`，署名使用 AdwCode 贡献者。
 声明见 [图标许可证](LICENSE)，两种许可全文分别随附于
 [CC-BY-SA-4.0.txt](CC-BY-SA-4.0.txt) 与 [项目许可证](../LICENSE)。
 此许可声明不授予任何第三方商标权利。

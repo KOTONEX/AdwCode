@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-// SPDX-FileCopyrightText: 2026 AdwCode contributors
+// SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 // 只同步原生标题栏的窗口状态，不修改菜单位置、正文或窗口焦点。
 // @ts-check
 (() => {

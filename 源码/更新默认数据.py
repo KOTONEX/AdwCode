@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-# SPDX-FileCopyrightText: 2026 AdwCode contributors
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 """从 microsoft/vscode 刷新颜色键表。
 
 builtin_keys.json 保存内置主题颜色键并集，registry_keys.json 保存官方颜色标识符表，

@@ -1,6 +1,6 @@
 {
     // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
-    // SPDX-FileCopyrightText: 2026 AdwCode contributors
+    // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
     //
     // 扩展与工作台脚本的类型检查：不产出文件（noEmit），做 checkJs 校验。
     // vscode 与 Node 运行时由 类型声明/ 下的手写最小类型面提供，
