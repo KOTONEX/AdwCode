@@ -147,6 +147,18 @@ class TokensTest(unittest.TestCase):
 
 
 class ThemeTest(unittest.TestCase):
+    def test_浅色标签条带区分选中与编辑区(self) -> None:
+        from 生成主题 import 对比度, 生成主题对象
+
+        colors = 生成主题对象("light", "blue", "builder")["colors"]
+        self.assertNotEqual(colors["editorGroupHeader.tabsBackground"], colors["editor.background"])
+        self.assertNotEqual(colors["tab.activeBackground"], colors["tab.inactiveBackground"])
+        self.assertEqual(colors["tab.activeBackground"], colors["editor.background"])
+        self.assertGreaterEqual(
+            对比度(colors["tab.inactiveForeground"], colors["tab.inactiveBackground"]), 4.5
+        )
+        self.assertNotEqual(colors["editorGroupHeader.tabsBorder"], "#00000000")
+
     def test_固定蓝色并拒绝其他强调色(self) -> None:
         from 生成主题 import 构建计划
 

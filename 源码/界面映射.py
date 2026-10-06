@@ -8,7 +8,7 @@
 - 列表选中使用 25% 强调色（对应 ``--view-selected-color``）；
 - 悬停与“激活”背景分别为前景色的 7% / 12%；
 - 边框为 ``currentColor`` 的 15%（高对比度为 50%）；
-- 标签页对齐 ``AdwTabBar``：中性色条带、活动标签 10% 高亮。
+- 标签页对齐 ``AdwTabBar``：浅色采用浅灰条带与白色活动标签，深色采用 10% 高亮。
 """
 
 from __future__ import annotations
@@ -33,6 +33,14 @@ def 生成界面颜色(p: 调色板对象, colorful_status_bar: bool = False) ->
 
     def hue(name: str, level_dark: int = 2, level_light: int = 4) -> str:
         return PALETTE[name][level_dark if dark else level_light]
+
+    # 浅色标题栏与编辑区同为白色，标签条带需独立的中性色阶。
+    light_tabs = not dark and not p.high_contrast
+    tabs_background = p.叠加颜色(p["fg"], 0.06, "bg_window") if light_tabs else p["bg_headerbar"]
+    active_tab = p["bg_view"] if light_tabs else p.叠加颜色(p["fg"], 0.10, "bg_headerbar")
+    inactive_tab_fg = (
+        p.叠加颜色(p["fg"], 0.75, "bg_window") if light_tabs else p["fg_dim_headerbar"]
+    )
 
     colors: dict[str, str | None] = {
         # --- 全局 ---
@@ -238,25 +246,29 @@ def 生成界面颜色(p: 调色板对象, colorful_status_bar: bool = False) ->
         "editorGroup.dropIntoPromptBackground": p["bg_popover"],
         "editorGroup.emptyBackground": p["bg_window"],
         "editorGroup.focusedEmptyBorder": "#00000000",
-        "editorGroupHeader.tabsBackground": p["bg_headerbar"],
-        "editorGroupHeader.tabsBorder": "#00000000",
+        "editorGroupHeader.tabsBackground": tabs_background,
+        "editorGroupHeader.tabsBorder": p["border"] if light_tabs else "#00000000",
         "editorGroupHeader.border": "#00000000",
         "editorGroupHeader.noTabsBackground": p["bg_window"],
-        "editorGroupHeader.connectedTabsBackground": p["bg_headerbar"],
-        "tab.activeBackground": p.叠加颜色(p["fg"], 0.10, "bg_headerbar"),
+        "editorGroupHeader.connectedTabsBackground": tabs_background,
+        "tab.activeBackground": active_tab,
         "tab.activeForeground": p["fg_headerbar"],
         "tab.activeBorder": "#00000000",
         "tab.activeBorderTop": "#00000000",
         "tab.activeModifiedBorder": p["accent_bg"],
-        "tab.unfocusedActiveBackground": p.叠加颜色(p["fg"], 0.06, "bg_headerbar_backdrop"),
+        "tab.unfocusedActiveBackground": active_tab
+        if light_tabs
+        else p.叠加颜色(p["fg"], 0.06, "bg_headerbar_backdrop"),
         "tab.unfocusedActiveForeground": p["fg_dim_headerbar"],
         "tab.unfocusedActiveBorder": "#00000000",
         "tab.unfocusedActiveBorderTop": "#00000000",
         "tab.unfocusedActiveModifiedBorder": p["border_dim"],
-        "tab.inactiveBackground": p["bg_headerbar"],
-        "tab.inactiveForeground": p["fg_dim_headerbar"],
+        "tab.inactiveBackground": tabs_background,
+        "tab.inactiveForeground": inactive_tab_fg,
         "tab.inactiveModifiedBorder": p["border_dim"],
-        "tab.unfocusedInactiveBackground": p["bg_headerbar_backdrop"],
+        "tab.unfocusedInactiveBackground": tabs_background
+        if light_tabs
+        else p["bg_headerbar_backdrop"],
         "tab.unfocusedInactiveForeground": p["fg_disabled_headerbar"],
         "tab.hoverBackground": p["bg_hover_headerbar"],
         "tab.hoverForeground": p["fg_headerbar"],
@@ -267,7 +279,7 @@ def 生成界面颜色(p: 调色板对象, colorful_status_bar: bool = False) ->
         "tab.border": "#00000000",
         "tab.lastPinnedBorder": p["border_dim"],
         "tab.selectedBorderTop": "#00000000",
-        "tab.selectedBackground": p.叠加颜色(p["fg"], 0.10, "bg_headerbar"),
+        "tab.selectedBackground": active_tab,
         "tab.selectedForeground": p["fg_headerbar"],
         "tab.dragAndDropBorder": 合成透明颜色(p["accent_bg"], 0.75),
         # --- 面包屑 ---
