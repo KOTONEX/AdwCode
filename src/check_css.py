@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """对照已安装的 VS Code 检查 extras/ 中的自定义 CSS。
 

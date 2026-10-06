@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """Linux 离线性能基准：临时副本中运行命令，输出耗时、CPU 时间与峰值 RSS。"""
 
@@ -184,7 +184,16 @@ def main() -> None:
     )
     with tempfile.TemporaryDirectory(prefix="adwcode-performance-") as directory:
         clone = Path(directory)
-        for name in ["src", "themes", "product-icons", "extension", "extras", "assets", "docs"]:
+        for name in [
+            "src",
+            "themes",
+            "product-icons",
+            "extension",
+            "extras",
+            "assets",
+            "docs",
+            "LICENSES",
+        ]:
             shutil.copytree(
                 ROOT / name, clone / name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
             )
@@ -192,6 +201,7 @@ def main() -> None:
             "package.json",
             "README.md",
             "LICENSE",
+            "LICENSING.md",
             "CONTRIBUTING.md",
             "AGENTS.md",
         ]:

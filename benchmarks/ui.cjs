@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 // 仅连接 ui.py 创建的独立进程；CSS 注入只修改该窗口的 DOM。
 const fs = require('node:fs');
@@ -49,7 +49,7 @@ async function main() {
     await page.keyboard.press('Control+Home');
     // 安装目录中的既有补丁会被新窗口读取，先从测试 DOM 移除项目样式。
     const removedStyles = await page.evaluate(() => {
-      const styles = [...document.querySelectorAll('style')].filter(style => style.textContent.trim().startsWith('/* SPDX-License-Identifier: AGPL-3.0-or-later */') && style.textContent.includes('AdwCode contributors'));
+      const styles = [...document.querySelectorAll('style')].filter(style => /^\/\* SPDX-License-Identifier: AGPL-3\.0-or-later(?: OR LicenseRef-MulanPubL-2\.0(?:-or-later)?)? \*\//.test(style.textContent.trim()) && style.textContent.includes('AdwCode contributors'));
       const sizes = styles.map(style => style.textContent.length);
       styles.forEach(style => style.remove());
       return sizes;

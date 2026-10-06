@@ -62,7 +62,7 @@ Adwaita 通常将轮廓边缘内缩 0.18 个 SVG 像素，Builder 为 0.12；终
 
 未覆盖的产品图标继续使用 VS Code 默认 Codicons；不同的断点验证状态没有强行
 合并为同一符号。汉堡菜单保持原生位置。本项目原有的 `symbolic/`、
-`adwcode-symbols.ttf` 为 AGPL-3.0-or-later 自有字形，保留作为备用源资产，
+`adwcode-symbols.ttf` 为 AGPL-3.0-or-later 或 CC BY-SA 4.0 双重许可的自有字形，保留作为备用源资产，
 当前主题不再引用该字体。
 
 ## 再生成
@@ -96,3 +96,6 @@ nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
 可选资产工具的 C 扩展可能重新启用 GIL；它们不属于 Meson 的自由线程开发检查。
 最终扩展直接读取随附的 TTF，不加载 Python 或字体生成依赖。
 许可证登记见 [第三方许可证](../docs/01-第三方许可证.md)。
+
+自有 SVG、字体及映射的授权范围见 [自有字形许可](LICENSE)，生成脚本采用
+[项目代码双重许可](../LICENSING.md)。第三方字体、导出轮廓与缩略图保留来源许可。

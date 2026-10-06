@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 // 使用内存配置与命令模拟，验证重复应用和部分失败，不访问工作窗口。
 const assert = require('node:assert/strict');

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 // 用延迟的系统读取模拟用户切换与停用，不运行真实子进程或 VS Code 命令。
 const assert = require('node:assert/strict');

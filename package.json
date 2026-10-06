@@ -5,7 +5,7 @@
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
   "version": "2.1.0",
   "publisher": "KOTONEX",
-  "license": "AGPL-3.0-or-later",
+  "license": "SEE LICENSE IN LICENSING.md",
   "engines": {
     "vscode": "^1.100.0"
   },

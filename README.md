@@ -8,7 +8,7 @@
 （GNOME 51），语法高亮对齐 **GNOME Builder** 的 GtkSourceView 方案，强调色可以
 跟随 GNOME 系统设置。
 
-本项目以 AGPL-3.0-or-later 发布；使用的第三方组件与数据登记在
+自有代码与资产采用可任选其一的双重许可，范围见 [许可声明](LICENSING.md)；第三方组件与数据登记在
 [docs/01-第三方许可证.md](docs/01-第三方许可证.md)，许可证声明见文末
 [「许可证」](#许可证)。
 
@@ -327,8 +327,7 @@ Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 
 
 ## 许可证
 
-本项目自有代码以 **AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)；与 GNOME
-基金会无隶属关系。扩展徽标采用 **CC BY-SA 4.0 或 AGPL-3.0-or-later**，
-使用者可任选其一，声明见 [图标许可证](assets/LICENSE)。第三方资产保留各自许可证。随附的第三方组件与数据
-（GtkSourceView 样式方案、VS Code 默认主题数据、TextMate 作用域映射与产品图标等）登记在
-[docs/01-第三方许可证.md](docs/01-第三方许可证.md)。
+自有代码采用 **AGPL-3.0-or-later 或木兰公共许可证第 2 版或其后续版本**，自有资产采用
+**AGPL-3.0-or-later 或 CC BY-SA 4.0 或其后续版本**，使用者可任选其一。全文与具体范围见
+[许可声明](LICENSING.md)。第三方及其衍生内容保留原许可，登记在
+[第三方许可证](docs/01-第三方许可证.md)。本项目与 GNOME 基金会无隶属关系。

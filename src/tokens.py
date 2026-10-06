@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
+# 自有贡献另可选择 LicenseRef-MulanPubL-2.0-or-later；第三方映射仍受 GPL-3.0-only 约束。
 """基于 GNOME Builder 的 GtkSourceView 样式方案的语法高亮。
 
 下面的 ``MAP`` 派生自 piousdeer/vscode-adwaita

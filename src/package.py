@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """把扩展打包为 .vsix（带 VS Code 清单的 zip）。
 
@@ -53,7 +53,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
       <Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
       <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
     </Properties>
-    <License>extension/LICENSE</License>
+    <License>extension/LICENSING.md</License>
 {icon_metadata}
   </Metadata>
   <Installation>
@@ -63,7 +63,7 @@ MANIFEST: str = """<?xml version="1.0" encoding="utf-8"?>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
     <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
-    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSING.md" Addressable="true" />
 {icon_asset}
   </Assets>
 </PackageManifest>
@@ -73,6 +73,8 @@ INCLUDE: list[str] = [
     "package.json",
     "README.md",
     "LICENSE",
+    "LICENSING.md",
+    "LICENSES",
     "assets",
     "extension",
     "themes",

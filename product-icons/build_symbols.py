@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 # SPDX-FileCopyrightText: 2026 AdwCode contributors
 """用 fontTools 将自有 SVG 字形生成为单色产品图标字体，仅再生成时需要依赖。"""
 
@@ -38,6 +38,9 @@ builder.setupNameTable(
         "fullName": "AdwCode Symbols",
         "psName": "AdwCodeSymbols-Regular",
         "version": "Version 1.0",
+        "copyright": "2026 AdwCode contributors",
+        "licenseDescription": "AGPL-3.0-or-later OR CC-BY-SA-4.0+; see product-icons/LICENSE",
+        "licenseInfoURL": "https://github.com/KOTONEX/AdwCode/blob/main/product-icons/LICENSE",
     }
 )
 builder.setupOS2(sTypoAscender=896, sTypoDescender=-128, usWinAscent=896, usWinDescent=128)

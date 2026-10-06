@@ -4,7 +4,7 @@
       "file": "adwcode.png",
       "name": "AdwCode 原创编辑器图标",
       "created": "2026-10-06",
-      "license": "CC-BY-SA-4.0 OR AGPL-3.0-or-later",
+      "license": "CC-BY-SA-4.0+ OR AGPL-3.0-or-later",
       "attribution": "AdwCode contributors",
       "notice": "LICENSE",
       "method": "内置 imagegen 文字生成与自有图像编辑；PNG 为发布用位图原件。",

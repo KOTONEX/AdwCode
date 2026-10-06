@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode contributors
 // 离线扩展基准：真实临时文件，模拟 VS Code API，禁止外部命令与配置写入。
 const fs = require('node:fs');
