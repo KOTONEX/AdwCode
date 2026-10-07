@@ -3,8 +3,13 @@
 // 离线验证状态检测，不加载真实 VS Code，也不修改工作台。
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const vm = require("node:vm");
 const path = require("node:path");
+function 加载服务(依赖) {
+  return require("../扩展/外观服务").创建外观服务({
+    vscode: 依赖.require("vscode"), fs: 依赖.require("fs"), os: 依赖.require("os"), path,
+    execFile: 依赖.require("child_process").execFile, 环境: 依赖.process.env || {},
+  });
+}
 async function main() {
 const files = new Map();
 let imports = [];
@@ -46,8 +51,7 @@ const sandbox = {
   module: { exports: {} },
   process: { platform: "linux" },
 };
-vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname, "../扩展/扩展.js"), "utf8"), sandbox);
+Object.assign(sandbox, 加载服务(sandbox));
 const context = { extensionPath: "/repo", subscriptions: [] };
 let rows = sandbox.外观安装状态(context);
 assert.equal(rows[0].copied, "源文件不可读");
@@ -123,8 +127,7 @@ assert.equal(sandbox.识别加载文件(context, "https://example.org/GNOME外�
 const originalMockFs = sandbox.mockFs;
 for (const [xdg, expected] of [["/配置", "/配置/adwcode"], ["relative", "/user/.config/adwcode"], ["", "/user/.config/adwcode"]]) {
   const isolated = { ...sandbox, process: { platform: "linux", env: { XDG_CONFIG_HOME: xdg } }, module: { exports: {} } };
-  vm.createContext(isolated);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "../扩展/扩展.js"), "utf8"), isolated);
+  Object.assign(isolated, 加载服务(isolated));
   assert.deepEqual(Array.from(isolated.合并加载引用(context, ["file:///user/.config/adwcode/GNOME外观.css"], ["GNOME外观.css"])), [`file://${expected}/GNOME外观.css`]);
 }
 sandbox.mockFs = originalMockFs;

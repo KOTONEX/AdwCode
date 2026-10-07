@@ -3,13 +3,11 @@
 // 离线扩展基准：真实临时文件，模拟 VS Code API，禁止外部命令与配置写入。
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
 const os = require('node:os');
 const { performance } = require('node:perf_hooks');
 const assert = require('node:assert/strict');
 const root = path.resolve(process.argv[2]);
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'adwcode-extension-performance-'));
-const source = fs.readFileSync(path.join(root, '扩展/扩展.js'), 'utf8');
 const cssDir = path.join(temporary, '.config/adwcode');
 const appRoot = path.join(temporary, 'app');
 const html = path.join(appRoot, 'out/vs/code/electron-browser/workbench/workbench.esm.html');
@@ -19,6 +17,12 @@ let writes = 0;
 let processes = 0;
 let commands = 0;
 const disposable = () => ({ dispose() {} });
+function 加载服务(依赖) {
+  return require("../扩展/外观服务").创建外观服务({
+    vscode: 依赖.require("vscode"), fs: 依赖.require("fs"), os: 依赖.require("os"), path,
+    execFile: 依赖.require("child_process").execFile, 环境: 依赖.process.env || {},
+  });
+}
 function load() {
   const channel = { replace() {}, show() {}, dispose() {} };
   const vscode = {
@@ -42,8 +46,9 @@ function load() {
       return require(name);
     },
   };
-  vm.createContext(sandbox);
-  vm.runInContext(source, sandbox);
+  const 服务 = 加载服务(sandbox);
+  Object.assign(sandbox, 服务);
+  sandbox.module.exports.activate = context => require('../扩展/命令').注册命令(vscode, 服务, context);
   return { sandbox, channel, context: { extensionPath: root, subscriptions: [] } };
 }
 function bench(name, prepare, invoke, count) {
@@ -62,7 +67,7 @@ function bench(name, prepare, invoke, count) {
 try {
   const runtime = load();
   let content = '<!-- !! VSCODE-CUSTOM-CSS-START !! -->';
-  for (const name of vm.runInContext('Object.keys(CSS_FILES)', runtime.sandbox)) {
+  for (const name of Object.keys(runtime.sandbox.组件标记)) {
     const css = runtime.sandbox.样式源码(runtime.context, name);
     fs.writeFileSync(path.join(cssDir, name), css);
     content += name.endsWith('.js') ? `<script>${css}</script>` : `<style>${css}</style>`;
@@ -71,7 +76,7 @@ try {
   fs.writeFileSync(html, '<!--' + 'x'.repeat(128 * 1024) + '-->' + content);
   assert.ok(runtime.sandbox.外观安装状态(runtime.context).every(row => row.copied === '已同步' && row.patched === '磁盘补丁已更新'));
   const results = [
-    bench('脚本加载（含 VM 创建）', () => undefined, () => load(), 200),
+    bench('外观服务创建（模块实例）', () => undefined, () => load(), 200),
     bench('扩展激活', load, input => { input.sandbox.module.exports.activate(input.context); }, 200),
     bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
     bench('外观状态输出生成（模拟输出通道）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),

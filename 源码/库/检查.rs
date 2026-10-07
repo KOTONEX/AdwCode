@@ -43,11 +43,11 @@ fn 要求程序(根目录: &Path, 程序: &str) -> 结果<()> {
 /// 收集需要语法检查的 JavaScript 文件。
 pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
     let mut 文件 = vec![
-        "扩展/扩展.js".to_string(),
         "测试/验证状态.cjs".to_string(),
         "基准/扩展基准.cjs".to_string(),
         "基准/工作台基准.cjs".to_string(),
     ];
+    收集模块(&根目录.join("扩展"), 根目录, &mut 文件)?;
     let 附加目录 = 根目录.join("附加外观");
     let mut 附加: Vec<String> = std::fs::read_dir(&附加目录)?
         .collect::<std::io::Result<Vec<_>>>()?
@@ -58,6 +58,26 @@ pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
     附加.sort();
     文件.extend(附加);
     Ok(文件)
+}
+
+fn 收集模块(目录: &Path, 根目录: &Path, 文件: &mut Vec<String>) -> 结果<()> {
+    for 条目 in std::fs::read_dir(目录)? {
+        let 路径 = 条目?.path();
+        crate::文件事务::校验普通路径(&路径)?;
+        if 路径.is_dir() {
+            收集模块(&路径, 根目录, 文件)?;
+        } else if 路径.extension().is_some_and(|扩展| 扩展 == "js") {
+            文件.push(
+                路径
+                    .strip_prefix(根目录)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+        }
+    }
+    文件.sort();
+    Ok(())
 }
 
 /// `adwcode 检查`：完整离线检查。

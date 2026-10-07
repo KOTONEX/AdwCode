@@ -19,7 +19,7 @@
         "skipLibCheck": true
     },
     "include": [
-        "扩展/扩展.js",
+        "扩展/**/*.js",
         "附加外观/*.js",
         "类型声明/**/*.d.ts"
     ]
