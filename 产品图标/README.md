@@ -86,8 +86,8 @@ cargo run --quiet -- 生成导入字形
 cargo run --quiet -- 生成自有字形
 ```
 
-历史色彩字体 `adwaita-icons.ttf` 由 nanoemoji 一次性生成，当前不参与主题或
-产品图标加载；其再生成方式保持原样（需要 nanoemoji，其中未使用的窗口字形仍保留）：
+色彩字体 `adwaita-icons.ttf` 由 nanoemoji 一次性生成，当前为六个布局状态图标
+提供字形；其再生成方式保持原样（需要 nanoemoji，其中未使用的窗口字形仍保留）：
 
 ```sh
 nanoemoji --color_format glyf_colr_1 --family adwaita-icons \

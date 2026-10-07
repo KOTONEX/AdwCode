@@ -6,7 +6,7 @@
 
 declare function require(id: string): any;
 declare var module: { exports: any };
-declare var process: { readonly platform: string };
+declare var process: { readonly platform: string; readonly env: Record<string, string | undefined> };
 declare function setTimeout(callback: (...args: unknown[]) => void, ms?: number): unknown;
 declare function clearTimeout(timeout: unknown): void;
 
@@ -60,4 +60,5 @@ declare module "path" {
     export function join(...parts: string[]): string;
     export function resolve(...parts: string[]): string;
     export function basename(path: string): string;
+    export function isAbsolute(path: string): boolean;
 }

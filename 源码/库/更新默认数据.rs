@@ -74,10 +74,17 @@ pub fn 清理json注释(文本: &str) -> String {
             continue;
         }
         if 当前 == '/' && 位置 + 1 < 长度 && 字符[位置 + 1] == '*' {
-            let 结束 = 字符[位置..]
-                .windows(2)
-                .position(|窗口| 窗口 == ['*', '/'])
-                .map_or(长度, |偏移| 位置 + 偏移 + 2);
+            let Some(偏移) = 字符[位置..].windows(2).position(|窗口| 窗口 == ['*', '/'])
+            else {
+                // 保留非法输入，由 JSON 解析器报告未闭合注释。
+                return 文本.to_string();
+            };
+            let 结束 = 位置 + 偏移 + 2;
+            输出.extend(
+                字符[位置..结束]
+                    .iter()
+                    .map(|字符| if *字符 == '\n' { '\n' } else { ' ' }),
+            );
             位置 = 结束;
             continue;
         }
@@ -206,6 +213,14 @@ fn 写字符串数组(值: &BTreeSet<String>) -> String {
 #[cfg(test)]
 mod 测试 {
     use super::*;
+
+    #[test]
+    fn 注释不能连接数字或吞掉未闭合输入() {
+        for 文本 in ["{\"a\":1/*注释*/2}", "{\"a\":1}/*未闭合"] {
+            assert!(serde_json::from_str::<serde_json::Value>(&清理json注释(文本)).is_err());
+        }
+        assert_eq!(清理json注释("[1,/*行一\n行二*/2]").matches('\n').count(), 1);
+    }
 
     #[test]
     fn 清理注释与尾逗号() {

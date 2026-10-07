@@ -14,7 +14,14 @@ impl 有序映射 {
     }
 
     pub fn 放(&mut self, 键: impl Into<String>, 值: impl Into<String>) {
-        self.条目.push((键.into(), 值.into()));
+        let 键 = 键.into();
+        let 值 = 值.into();
+        if let Some((_, 已有值)) = self.条目.iter_mut().find(|(已有键, _)| *已有键 == 键)
+        {
+            *已有值 = 值;
+        } else {
+            self.条目.push((键, 值));
+        }
     }
 
     #[must_use]
@@ -77,5 +84,16 @@ mod 测试 {
         assert_eq!(映射.取("第二"), Some("#ffffff"));
         assert_eq!(映射.取("第三"), None);
         assert!(映射.包含("第一"));
+    }
+
+    #[test]
+    fn 重复键原位更新而不增加条目() {
+        let mut 映射 = 有序映射::新();
+        映射.放("第一", "旧值");
+        映射.放("第二", "第二值");
+        映射.放("第一", "新值");
+        assert_eq!(映射.取("第一"), Some("新值"));
+        assert_eq!(映射.数量(), 2);
+        assert_eq!(映射.条目()[0].0, "第一");
     }
 }

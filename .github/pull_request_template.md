@@ -14,12 +14,12 @@
 
 ## 自测
 
-- [ ] `meson compile -C builddir 静态检查` 通过（含 Ruff 检查和格式检查）
-- [ ] `meson compile -C builddir 校验` 通过
-- [ ] `meson test -C builddir --print-errorlogs` 通过（未运行时请在下方说明原因）
+- [ ] `cargo run --quiet -- 检查` 通过（含 rustfmt、clippy、Rust 与 JS 测试）
+- [ ] `cargo run --quiet -- 校验` 通过
+- [ ] `cargo test` 通过（未运行时请在下方说明原因）
 
 ## 约束检查
 
-- [ ] 改动 `主题/` 后已重跑 `meson compile -C builddir 主题`，且未手工编辑生成物
+- [ ] 改动 `主题/` 后已重跑 `cargo run --quiet -- 主题`，且未手工编辑生成物
 - [ ] 主题颜色使用十六进制（`#rrggbb` / `#rrggbbaa`），`contrastBorder` 只出现在高对比度主题
-- [ ] 新增颜色键已存在于 `源码/VSCode默认数据/registry_keys.json` 或 `build.LEGACY_KEYS`
+- [ ] 新增颜色键已存在于 `源码/VSCode默认数据/registry_keys.json` 或 `主题生成::补充颜色键`

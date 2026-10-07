@@ -47,10 +47,12 @@ pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
         "测试/验证状态.cjs".to_string(),
         "测试/验证设置.cjs".to_string(),
         "基准/扩展基准.cjs".to_string(),
+        "基准/工作台基准.cjs".to_string(),
     ];
     let 附加目录 = 根目录.join("附加外观");
     let mut 附加: Vec<String> = std::fs::read_dir(&附加目录)?
-        .flatten()
+        .collect::<std::io::Result<Vec<_>>>()?
+        .into_iter()
         .filter(|条目| 条目.path().extension().is_some_and(|扩展| 扩展 == "js"))
         .map(|条目| format!("附加外观/{}", 条目.file_name().to_string_lossy()))
         .collect();

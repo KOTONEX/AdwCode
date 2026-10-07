@@ -296,6 +296,9 @@ pub static 容忍缺失: &[&str] = &["def:keyword", "c-sharp:format", "diff:chan
 
 /// 解析随附的 GtkSourceView 方案并解析其中的具名颜色。
 pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样式方案> {
+    if !matches!(mode, "dark" | "light") {
+        return Err(工具错误::新(format!("未知主题模式：{mode}")));
+    }
     let 文件 = 根目录
         .join("源码")
         .join("GtkSourceView方案")
@@ -351,22 +354,37 @@ pub fn 加载样式方案(根目录: &std::path::Path, mode: &str) -> 结果<样
         具名颜色: &BTreeMap<String, Option<String>>,
         文件名: &str,
     ) -> 结果<Option<String>> {
-        if let Some(参数) = 解析rgba(值) {
-            let (r, g, b, a) = 参数;
-            return Ok(Some(转为十六进制(r, g, b, a)));
+        let mut 当前 = 值;
+        let mut 已访问 = std::collections::BTreeSet::new();
+        loop {
+            if !已访问.insert(当前) {
+                return Err(工具错误::新(format!(
+                    "{文件名} 中存在循环颜色引用 {当前:?}"
+                )));
+            }
+            if let Some((r, g, b, a)) = 解析rgba(当前) {
+                return Ok(Some(转为十六进制(r, g, b, a)));
+            }
+            if let Some(十六进制) = 当前.strip_prefix('#') {
+                if matches!(十六进制.len(), 6 | 8)
+                    && 十六进制.bytes().all(|字符| 字符.is_ascii_hexdigit())
+                {
+                    return Ok(Some(当前.to_lowercase()));
+                }
+                return Err(工具错误::新(
+                    format!("{文件名} 中存在无效颜色 {当前:?}"),
+                ));
+            }
+            match 具名颜色.get(当前) {
+                Some(Some(目标)) => 当前 = 目标,
+                Some(None) => return Ok(None),
+                None => {
+                    return Err(工具错误::新(format!(
+                        "{文件名} 中存在未知颜色名称 {当前:?}"
+                    )));
+                }
+            }
         }
-        if 值.starts_with('#') {
-            return Ok(Some(值.to_lowercase()));
-        }
-        if let Some(目标) = 具名颜色.get(值) {
-            return match 目标 {
-                Some(目标值) => 解析值(目标值, 具名颜色, 文件名),
-                None => Ok(None),
-            };
-        }
-        Err(工具错误::新(
-            format!("{文件名} 中存在未知颜色名称 {值:?}"),
-        ))
     }
 
     let 文件名 = 文件.file_name().map_or_else(
@@ -414,6 +432,12 @@ fn 解析rgba(值: &str) -> Option<(f64, f64, f64, f64)> {
         .iter()
         .map(|项| 项.parse::<f64>().ok())
         .collect::<Option<Vec<f64>>>()?;
+    if 数值.iter().any(|数| !数.is_finite())
+        || 数值[..3].iter().any(|数| !(0.0..=255.0).contains(数))
+        || !(0.0..=1.0).contains(&数值[3])
+    {
+        return None;
+    }
     Some((数值[0].trunc(), 数值[1].trunc(), 数值[2].trunc(), 数值[3]))
 }
 
@@ -513,6 +537,29 @@ mod 测试 {
 
     fn 根目录() -> &'static Path {
         Path::new(env!("CARGO_MANIFEST_DIR"))
+    }
+
+    #[test]
+    fn 拒绝循环引用无效颜色和未知模式() {
+        let 临时 = tempfile::tempdir().unwrap();
+        let 目录 = 临时.path().join("源码/GtkSourceView方案");
+        std::fs::create_dir_all(&目录).unwrap();
+        for 颜色 in [
+            "<color name=\"a\" value=\"b\"/><color name=\"b\" value=\"a\"/>",
+            "<color name=\"a\" value=\"#rgba(NaN,0,0,1)\"/>",
+            "<color name=\"a\" value=\"#rgba(256,0,0,1)\"/>",
+            "<color name=\"a\" value=\"#nope\"/>",
+        ] {
+            std::fs::write(
+                目录.join("Adwaita.xml"),
+                format!(
+                    "<style-scheme>{颜色}<style name=\"text\" foreground=\"a\"/></style-scheme>"
+                ),
+            )
+            .unwrap();
+            assert!(加载样式方案(临时.path(), "light").is_err());
+        }
+        assert!(加载样式方案(根目录(), "不存在").is_err());
     }
 
     #[test]

@@ -14,7 +14,10 @@ const os = /** @type {typeof import("os")} */ (require("os"));
 const path = /** @type {typeof import("path")} */ (require("path"));
 
 const CUSTOM_CSS_EXTENSION = "be5invis.vscode-custom-css";
-const CSS_DIR = path.join(os.homedir(), ".config", "adwcode");
+const 旧配置目录 = path.join(os.homedir(), ".config", "adwcode");
+const 配置根目录 = process.env?.XDG_CONFIG_HOME;
+const CSS_DIR = 配置根目录 && path.isAbsolute(配置根目录)
+  ? path.join(配置根目录, "adwcode") : 旧配置目录;
 
 /**
  * 附加外观/ 中的外观样式与状态脚本，以及各自在补丁 HTML 中的识别标记。
@@ -87,7 +90,7 @@ function 识别加载文件(context, value) {
     const name = path.basename(file);
     if (![...Object.keys(CSS_FILES), ...旧加载文件].includes(name)) return undefined;
     // 旧目录仅参与失效引用清理，不作为加载入口。
-    const folders = [CSS_DIR, path.join(context.extensionPath, "附加外观")];
+    const folders = [CSS_DIR, 旧配置目录, path.join(context.extensionPath, "附加外观")];
     if (旧加载文件.includes(name)) folders.push(path.join(context.extensionPath, "extras"));
     return folders.some((folder) =>
       file === path.resolve(folder, name)) ? name : undefined;

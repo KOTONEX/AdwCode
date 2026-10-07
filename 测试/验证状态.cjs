@@ -119,6 +119,16 @@ assert.deepEqual(Array.from(sandbox.合并加载引用(context, merged, ["GNOME�
 assert.equal(sandbox.识别加载文件({ extensionPath: "/项目" }, "file:///" + encodeURIComponent("项目") + "/附加外观/GNOME外观.css"), "GNOME外观.css");
 assert.equal(sandbox.识别加载文件(context, "https://example.org/GNOME外观.css"), undefined);
 
+// XDG 配置路径须为绝对路径；升级时仍识别旧默认目录引用。
+const originalMockFs = sandbox.mockFs;
+for (const [xdg, expected] of [["/配置", "/配置/adwcode"], ["relative", "/user/.config/adwcode"], ["", "/user/.config/adwcode"]]) {
+  const isolated = { ...sandbox, process: { platform: "linux", env: { XDG_CONFIG_HOME: xdg } }, module: { exports: {} } };
+  vm.createContext(isolated);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../扩展/扩展.js"), "utf8"), isolated);
+  assert.deepEqual(Array.from(isolated.合并加载引用(context, ["file:///user/.config/adwcode/GNOME外观.css"], ["GNOME外观.css"])), [`file://${expected}/GNOME外观.css`]);
+}
+sandbox.mockFs = originalMockFs;
+
 // 安装命令应调用去重逻辑；拒绝补丁按钮时不执行任何外部命令。
 let updates = 0;
 let workspaceImports;

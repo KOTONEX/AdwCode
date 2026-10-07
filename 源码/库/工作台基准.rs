@@ -6,9 +6,10 @@
 //! 隔离环境、启动调试端口、执行测量并清理本次创建的进程组。
 
 use std::net::TcpListener;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
@@ -21,7 +22,12 @@ pub fn 查找程序(名称: &str) -> Option<PathBuf> {
     let 路径 = std::env::var_os("PATH")?;
     std::env::split_paths(&路径)
         .map(|目录| 目录.join(名称))
-        .find(|候选| 候选.is_file())
+        .find(|候选| {
+            候选.is_file()
+                && 候选
+                    .metadata()
+                    .is_ok_and(|信息| 信息.permissions().mode() & 0o111 != 0)
+        })
 }
 
 fn 参数错误(消息: &str) -> 工具错误 {
@@ -36,6 +42,25 @@ struct 隔离环境 {
 impl Drop for 隔离环境 {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.目录);
+    }
+}
+
+/// 子进程一启动即接管；错误返回也会清理其独立进程组。
+struct 受管进程(Child);
+
+impl Drop for 受管进程 {
+    fn drop(&mut self) {
+        终止进程组(self.0.id(), "-TERM");
+        let 截止 = Instant::now() + Duration::from_secs(1);
+        while Instant::now() < 截止 {
+            if self.0.try_wait().ok().flatten().is_some() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        // 主进程已退出也可能仍有后代持有调试端口。
+        终止进程组(self.0.id(), "-KILL");
+        let _ = self.0.wait();
     }
 }
 
@@ -115,7 +140,8 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             "需要本机 Linux VS Code、Node.js 与独立安装的 playwright",
         ));
     }
-    输出路径 = std::fs::canonicalize(&输出路径).unwrap_or(输出路径);
+    输出路径 = std::path::absolute(输出路径)?;
+    let 参考样式 = 参考样式.map(std::fs::canonicalize).transpose()?;
     if let Some(父目录) = 输出路径.parent() {
         std::fs::create_dir_all(父目录)?;
     }
@@ -225,13 +251,15 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             启动命令.env_remove(键);
         }
     }
-    let mut 编辑器进程 = 启动命令
-        .spawn()
-        .map_err(|错误| 工具错误::带来源("无法启动 VS Code".to_string(), 错误))?;
+    let 编辑器进程 = 受管进程(
+        启动命令
+            .spawn()
+            .map_err(|错误| 工具错误::带来源("无法启动 VS Code".to_string(), 错误))?,
+    );
     let mut session = Map::new();
     session.insert("directory".to_string(), json!(文件夹.to_string_lossy()));
     session.insert("port".to_string(), json!(端口));
-    session.insert("pid".to_string(), json!(编辑器进程.id()));
+    session.insert("pid".to_string(), json!(编辑器进程.0.id()));
     session.insert("profile".to_string(), json!(配置.to_string_lossy()));
     session.insert("fixture".to_string(), json!(工作区.to_string_lossy()));
     session.insert(
@@ -247,47 +275,36 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         crate::主题生成::写json(&Value::Object(session)),
     )?;
 
-    let mut 测量 = Command::new(&node)
-        .arg(根目录.join("基准/工作台基准.cjs"))
-        .arg(&session路径)
-        .arg(std::fs::canonicalize(&浏览器工具)?)
-        .arg(&输出路径)
-        .arg(次数.to_string())
-        .arg(仅选择器.to_string())
-        .spawn()
-        .map_err(|错误| 工具错误::带来源("无法运行工作台基准".to_string(), 错误))?;
+    let mut 测量 = 受管进程(
+        Command::new(&node)
+            .arg(根目录.join("基准/工作台基准.cjs"))
+            .arg(&session路径)
+            .arg(std::fs::canonicalize(&浏览器工具)?)
+            .arg(&输出路径)
+            .arg(次数.to_string())
+            .arg(仅选择器.to_string())
+            .process_group(0)
+            .spawn()
+            .map_err(|错误| 工具错误::带来源("无法运行工作台基准".to_string(), 错误))?,
+    );
     let 截止 = Instant::now() + Duration::from_secs(240);
     let mut 超时 = false;
     let mut 测量状态 = None;
     while 测量状态.is_none() {
-        if let Some(状态) = 测量.try_wait()? {
+        if let Some(状态) = 测量.0.try_wait()? {
             测量状态 = Some(状态);
             break;
         }
         if Instant::now() > 截止 {
-            let _ = 测量.kill();
-            let _ = 测量.wait();
+            let _ = 测量.0.kill();
+            let _ = 测量.0.wait();
             超时 = true;
             break;
         }
         std::thread::sleep(Duration::from_millis(100));
     }
-    // 只终止本次创建的独立进程组；不连接操作者的窗口。
-    if 编辑器进程.try_wait()?.is_none() {
-        终止进程组(编辑器进程.id(), "-TERM");
-        let 截止 = Instant::now() + Duration::from_secs(10);
-        loop {
-            if 编辑器进程.try_wait()?.is_some() {
-                break;
-            }
-            if Instant::now() > 截止 {
-                终止进程组(编辑器进程.id(), "-KILL");
-                let _ = 编辑器进程.wait();
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(100));
-        }
-    }
+    drop(测量);
+    drop(编辑器进程);
     if 超时 {
         return Err(工具错误::新("工作台基准超时（240 秒）"));
     }
@@ -300,6 +317,35 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
 fn 终止进程组(pid: u32, 信号: &str) {
     let _ = Command::new("kill")
         .arg(信号)
+        .arg("--")
         .arg(format!("-{pid}"))
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .status();
+}
+
+#[cfg(test)]
+mod 测试 {
+    use super::*;
+
+    #[test]
+    fn 错误返回清理已启动的进程() {
+        let 临时 = tempfile::tempdir().unwrap();
+        let 标记 = 临时.path().join("不应写入");
+        let 运行 = || -> 结果<()> {
+            let _进程 = 受管进程(
+                Command::new("sh")
+                    .arg("-c")
+                    .arg("sleep 1; touch \"$1\"")
+                    .arg("sh")
+                    .arg(&标记)
+                    .process_group(0)
+                    .spawn()?,
+            );
+            Err(工具错误::新("模拟后续步骤失败"))
+        };
+        assert!(运行().is_err());
+        std::thread::sleep(Duration::from_millis(1200));
+        assert!(!标记.exists());
+    }
 }

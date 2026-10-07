@@ -70,7 +70,7 @@ pub fn 主题标签(mode: &str) -> String {
 pub fn 生成主题对象(根目录: &Path, 请求: &主题构建请求) -> 结果<Value> {
     let scheme = 语法映射::编辑器颜色(根目录, 请求.mode)?;
     let 调色板 = 调色板::调色板对象::新(请求.mode, 请求.accent, 请求.hc, scheme)?;
-    if request_variant_invalid(请求.variant) {
+    if 变体无效(请求.variant) {
         return Err(工具错误::新(format!("未知主题变体：{}", 请求.variant)));
     }
     let colorful = 请求.variant == "colorful";
@@ -132,7 +132,7 @@ pub fn 生成主题对象(根目录: &Path, 请求: &主题构建请求) -> 结�
     Ok(Value::Object(对象))
 }
 
-fn request_variant_invalid(variant: &str) -> bool {
+fn 变体无效(variant: &str) -> bool {
     !matches!(variant, "builder" | "colorful")
 }
 
@@ -280,8 +280,12 @@ pub fn 加载颜色键表(根目录: &Path) -> 结果<(颜色键表, 颜色键�
             .as_array()
             .ok_or_else(|| 工具错误::新(format!("{名字} 应为数组")))?
             .iter()
-            .filter_map(|项| 项.as_str().map(str::to_string))
-            .collect();
+            .map(|项| {
+                项.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| 工具错误::新(format!("{名字} 包含非字符串键")))
+            })
+            .collect::<结果<HashSet<String>>>()?;
         Ok(Some(集合))
     };
     Ok((读取("registry_keys.json")?, 读取("builtin_keys.json")?))
@@ -324,7 +328,7 @@ fn 是字形码点(文本: &str) -> bool {
     };
     (4..=6).contains(&十六进制.len())
         && 十六进制.chars().all(|字符| 字符.is_ascii_hexdigit())
-        && i64::from_str_radix(十六进制, 16).is_ok_and(|值| 值 <= 0x10FFFF)
+        && u32::from_str_radix(十六进制, 16).is_ok_and(|值| char::from_u32(值).is_some())
 }
 
 /// 规范化路径，仅做词法上的 `.` / `..` 折叠，不做符号链接解析。
@@ -362,7 +366,8 @@ fn 主题目录检查(
 ) -> 结果<i32> {
     let 主题目录 = 根目录.join("主题");
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&主题目录)?
-        .filter_map(|项| 项.ok())
+        .collect::<std::io::Result<Vec<_>>>()?
+        .into_iter()
         .map(|项| 项.path())
         .filter(|路径| {
             路径
@@ -424,8 +429,38 @@ fn 主题目录检查(
                 *failures += 1;
             }
         }
+        if theme["name"].as_str().is_none_or(str::is_empty)
+            || theme["colors"].as_object().is_none_or(|表| 表.is_empty())
+            || theme["tokenColors"].as_array().is_none_or(Vec::is_empty)
+            || theme["semanticTokenColors"]
+                .as_object()
+                .is_none_or(|表| 表.is_empty())
+        {
+            println!("失败 {文件名}：缺少名称、颜色表、语法规则或语义颜色表");
+            *failures += 1;
+        }
         labels.push(theme["name"].as_str().unwrap_or("").to_string());
         if let Some(颜色表) = theme["colors"].as_object() {
+            let 缺失: Vec<_> = builtin
+                .iter()
+                .filter(|键| {
+                    !颜色表.contains_key(*键)
+                        && !(matches!(键.as_str(), "contrastBorder" | "contrastActiveBorder")
+                            && !registered.iter().any(|(路径, 注册)| {
+                                路径 == &规范
+                                    && matches!(
+                                        注册["uiTheme"].as_str(),
+                                        Some("hc-black" | "hc-light")
+                                    )
+                            }))
+                })
+                .collect();
+            if !缺失.is_empty() {
+                println!(
+                    "提示 {文件名}：{} 个内置键使用 VS Code 默认颜色",
+                    缺失.len()
+                );
+            }
             for 键 in 颜色表.keys() {
                 our_keys.insert(键.clone());
             }
@@ -440,7 +475,7 @@ fn 主题目录检查(
             for 规则 in 规则表 {
                 let 有范围 = match &规则["scope"] {
                     Value::String(文本) => !文本.is_empty(),
-                    Value::Array(项) => !项.is_empty(),
+                    Value::Array(项) => !项.is_empty() && 项.iter().all(Value::is_string),
                     _ => false,
                 };
                 let 有设置 = 规则["settings"]
@@ -616,7 +651,12 @@ fn 校验产品图标(根目录: &Path, manifest: &Value) -> 结果<i32> {
             let 目标 = 来源["path"]
                 .as_str()
                 .map(|路径| 规范路径(&图标路径.parent().unwrap().join(路径)));
-            if !目标.as_deref().is_some_and(Path::exists) {
+            if !目标.as_deref().is_some_and(|路径| {
+                路径.is_file()
+                    && std::fs::canonicalize(路径).is_ok_and(|目标| {
+                        std::fs::canonicalize(根目录).is_ok_and(|根| 目标.starts_with(根))
+                    })
+            }) {
                 println!(
                     "失败 product-icons：缺少 {}",
                     来源["path"].as_str().unwrap_or("")
@@ -629,7 +669,10 @@ fn 校验产品图标(根目录: &Path, manifest: &Value) -> 结果<i32> {
         .iter()
         .filter_map(|字体| 字体["id"].as_str())
         .collect();
-    if font_ids.len() != font_ids.iter().collect::<HashSet<_>>().len() {
+    if font_ids.len() != fonts.len()
+        || font_ids.iter().any(|标识| 标识.is_empty())
+        || font_ids.len() != font_ids.iter().collect::<HashSet<_>>().len()
+    {
         println!("失败 product-icons: 字体标识重复");
         failures += 1;
     }
@@ -692,6 +735,42 @@ mod 测试 {
 
     fn 根目录() -> &'static Path {
         Path::new(env!("CARGO_MANIFEST_DIR"))
+    }
+
+    #[test]
+    fn 完整仓库的语法字段缺失不能被其他主题掩盖() {
+        fn 复制(来源: &Path, 目标: &Path) {
+            std::fs::create_dir_all(目标).unwrap();
+            for 条目 in std::fs::read_dir(来源).unwrap() {
+                let 条目 = 条目.unwrap();
+                let 路径 = 目标.join(条目.file_name());
+                if 条目.file_type().unwrap().is_dir() {
+                    复制(&条目.path(), &路径);
+                } else {
+                    std::fs::copy(条目.path(), 路径).unwrap();
+                }
+            }
+        }
+        let 临时 = tempfile::tempdir().unwrap();
+        for 名称 in ["主题", "产品图标", "源码/VSCode默认数据"] {
+            复制(&根目录().join(名称), &临时.path().join(名称));
+        }
+        std::fs::copy(
+            根目录().join("package.json"),
+            临时.path().join("package.json"),
+        )
+        .unwrap();
+        assert_eq!(校验(临时.path()).unwrap(), 0);
+        let 路径 = 临时.path().join("主题/adwcode-深色.json");
+        let 原文 = std::fs::read_to_string(&路径).unwrap();
+        for 字段 in ["tokenColors", "semanticTokenColors"] {
+            let mut 主题: Value = serde_json::from_str(&原文).unwrap();
+            主题.as_object_mut().unwrap().remove(字段);
+            std::fs::write(&路径, 写json(&主题)).unwrap();
+            assert!(校验(临时.path()).unwrap() > 0, "{字段}");
+        }
+        assert!(!是字形码点("\\d800"));
+        assert!(是字形码点("\\e300"));
     }
 
     #[test]

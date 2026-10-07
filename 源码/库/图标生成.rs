@@ -207,7 +207,7 @@ impl 子路径 {
     /// 轮廓内部的一点：从首段中点沿向内法线偏移，用于包含关系判断。
     fn 内部采样点(&self) -> Point {
         let 向内 = if self.有向面积() > 0.0 { 1.0 } else { -1.0 };
-        let 起点 = self.起点;
+        let mut 起点 = self.起点;
         for 段 in &self.段 {
             let (中点, 切线) = match *段 {
                 线段::直线(终点) => (起点.midpoint(终点), 终点 - 起点),
@@ -224,6 +224,7 @@ impl 子路径 {
                 let 法线 = Vec2::new(-切线.y, 切线.x) / 切线.hypot();
                 return 中点 + 法线 * 向内 * 0.05;
             }
+            起点 = 段.终点();
         }
         self.起点
     }
@@ -277,7 +278,11 @@ fn 展平二次(
         return;
     }
     let 弦 = 终点 - 起点;
-    let 偏差 = (控制 - 起点).cross(弦).abs() / 弦.hypot().max(1e-12);
+    let 偏差 = if 弦.hypot() < 1e-12 {
+        (控制 - 起点).hypot()
+    } else {
+        (控制 - 起点).cross(弦).abs() / 弦.hypot()
+    };
     if 偏差 <= 容差 {
         输出.push(终点);
         return;
@@ -303,8 +308,16 @@ fn 展平三次(
         输出.push(终点);
         return;
     }
-    let 偏差1 = (控制1 - 起点).cross(终点 - 起点).abs() / (终点 - 起点).hypot().max(1e-12);
-    let 偏差2 = (控制2 - 起点).cross(终点 - 起点).abs() / (终点 - 起点).hypot().max(1e-12);
+    let 弦 = 终点 - 起点;
+    let 偏差 = |控制: Point| {
+        if 弦.hypot() < 1e-12 {
+            (控制 - 起点).hypot()
+        } else {
+            (控制 - 起点).cross(弦).abs() / 弦.hypot()
+        }
+    };
+    let 偏差1 = 偏差(控制1);
+    let 偏差2 = 偏差(控制2);
     if 偏差1.max(偏差2) <= 容差 {
         输出.push(终点);
         return;
@@ -708,6 +721,9 @@ fn 解析xml(文本: &str, 文件名: &str) -> 结果<节点> {
             .map_err(|错误| 工具错误::新(format!("{文件名} XML 解析失败：{错误}")))?;
         match &事件 {
             Event::Start(元素) | Event::Empty(元素) => {
+                if 节点栈.is_empty() && 根.is_some() {
+                    return Err(工具错误::新(format!("{文件名} 包含多个 XML 根节点")));
+                }
                 let 是空元素 = matches!(事件, Event::Empty(_));
                 let 原始名 = String::from_utf8_lossy(元素.name().as_ref()).to_string();
                 let mut 属性 = BTreeMap::new();
@@ -776,7 +792,12 @@ fn 解析xml(文本: &str, 文件名: &str) -> 结果<节点> {
                     }
                 }
             }
-            Event::Eof => break,
+            Event::Eof => {
+                if !节点栈.is_empty() {
+                    return Err(工具错误::新(format!("{文件名} XML 节点未闭合")));
+                }
+                break;
+            }
             _ => {}
         }
     }
@@ -800,6 +821,11 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                     子路径列表.push(路径);
                 }
                 let 目标 = 取值(abs, 当前, x, y);
+                if !段坐标有效(&线段::直线(目标)) {
+                    return Err(工具错误::新(
+                        format!("{文件名} 的起点坐标超出允许范围"),
+                    ));
+                }
                 当前 = 目标;
                 起点 = 目标;
                 有起点 = true;
@@ -1741,6 +1767,9 @@ fn 修补os2版本(字节: &mut [u8], 版本: u16) -> 结果<()> {
         }
     }
     let (记录, 偏移, 长度) = os2记录.ok_or_else(|| 工具错误::新("字体缺少 OS/2 表"))?;
+    if 长度 < 2 || 偏移.checked_add(长度).is_none_or(|结束| 结束 > 字节.len()) {
+        return Err(工具错误::新("OS/2 表超出字体范围"));
+    }
     字节[偏移..偏移 + 2].copy_from_slice(&版本.to_be_bytes());
     let 表校验 = 表校验和(
         字节
@@ -1750,7 +1779,10 @@ fn 修补os2版本(字节: &mut [u8], 版本: u16) -> 结果<()> {
     字节[记录 + 4..记录 + 8].copy_from_slice(&表校验.to_be_bytes());
     let head偏移 = head偏移.ok_or_else(|| 工具错误::新("字体缺少 head 表"))?;
     let 调整位置 = head偏移 + 8;
-    字节[调整位置..调整位置 + 4].fill(0);
+    字节
+        .get_mut(调整位置..调整位置 + 4)
+        .ok_or_else(|| 工具错误::新("head 表超出字体范围"))?
+        .fill(0);
     let 总校验 = 表校验和(字节);
     let 调整 = 0xB1B0_AFBAu32.wrapping_sub(总校验);
     字节[调整位置..调整位置 + 4].copy_from_slice(&调整.to_be_bytes());
@@ -2098,6 +2130,41 @@ mod 测试 {
 
     fn 读取字体(路径: &路径) -> Vec<u8> {
         std::fs::read(路径).expect("读取字体")
+    }
+
+    #[test]
+    fn 同起终点的闭环曲线不能被展平丢失() {
+        let mut 点 = vec![Point::ZERO];
+        展平三次(
+            Point::ZERO,
+            Point::new(10.0, 0.0),
+            Point::new(0.0, 10.0),
+            Point::ZERO,
+            0.1,
+            0,
+            &mut 点,
+        );
+        assert!(点.len() > 4);
+        assert!(点.iter().any(|点| 点.x > 1.0 && 点.y > 1.0));
+    }
+
+    #[test]
+    fn 拒绝多个根未闭合xml和越界起点() {
+        for 文本 in ["<svg/><svg/>", "<svg/ ><svg>"] {
+            assert!(解析xml(文本, "测试").is_err());
+        }
+        assert!(解析路径数据("M1e100 0", "测试").is_err());
+    }
+
+    #[test]
+    fn 损坏字体表返回错误而不越界访问() {
+        let mut 字节 = vec![0; 44];
+        字节[4..6].copy_from_slice(&2u16.to_be_bytes());
+        字节[12..16].copy_from_slice(b"OS/2");
+        字节[20..24].copy_from_slice(&100u32.to_be_bytes());
+        字节[24..28].copy_from_slice(&2u32.to_be_bytes());
+        字节[28..32].copy_from_slice(b"head");
+        assert!(修补os2版本(&mut 字节, 3).is_err());
     }
 
     #[test]
