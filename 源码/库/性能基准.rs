@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
-//! Linux 离线性能基准：临时副本中运行命令，输出耗时、CPU 时间与峰值 RSS。
-//!
-//! 与 Python 版方法一致：两个预热样本、保留系统文件缓存、每样本新进程，
-//! 采样 `/proc/<pid>/status` 的 `VmHWM`，CPU 时间取 `/proc/self/stat` 的子进程累计。
-//! 不依赖 libc/sha2：指纹使用内置 SHA-256。
+//! Linux 离线性能基准：默认只测墙钟；资源轮询按需启用。
+//! 两个预热样本、保留文件缓存、每个样本新进程；临时副本和进程组始终清理。
 
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -106,13 +103,15 @@ fn 子进程cpu秒() -> 结果<f64> {
     取值(13).and_then(|用户| 取值(14).map(|系统| (用户 + 系统) / 时钟滴答()))
 }
 
-/// 运行一个样本，返回墙钟毫秒、CPU 毫秒与峰值 RSS（MiB）。
-fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
+/// 运行一个样本，默认阻塞等待，只测墙钟；详细模式轮询 CPU/RSS，未测量或未采到的值为 null。
+fn 采样(命令: &[String], 目录: &Path, 详细资源: bool) -> 结果<Value> {
     let 输出暂存 = tempfile::NamedTempFile::new()?;
     let 输出路径 = 输出暂存.path();
     let 输出文件 = 输出暂存.reopen()?;
-    let 可执行 = std::fs::canonicalize(&命令[0])?;
-    let cpu起 = 子进程cpu秒()?;
+    let 可执行 = 详细资源
+        .then(|| std::fs::canonicalize(&命令[0]))
+        .transpose()?;
+    let cpu起 = 详细资源.then(子进程cpu秒).transpose()?;
     let 开始 = Instant::now();
     let mut 子进程 = crate::运行工具::受管进程(
         Command::new(&命令[0])
@@ -128,39 +127,41 @@ fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
     );
     let pid = 子进程.0.id();
     let mut 峰值 = 0u64;
-    let 状态 = loop {
-        if std::fs::read_link(format!("/proc/{pid}/exe"))
-            .ok()
-            .as_deref()
-            == Some(可执行.as_path())
-            && let Ok(状态文本) = std::fs::read_to_string(format!("/proc/{pid}/status"))
-        {
-            for 行 in 状态文本.lines() {
-                if let Some(值) = 行.strip_prefix("VmHWM:")
-                    && let Some(数字) = 值.split_whitespace().next()
-                    && let Ok(数字) = 数字.parse::<u64>()
-                {
-                    峰值 = 峰值.max(数字);
+    let 状态 = if !详细资源 {
+        子进程.0.wait()?
+    } else {
+        loop {
+            if std::fs::read_link(format!("/proc/{pid}/exe"))
+                .ok()
+                .as_deref()
+                == 可执行.as_deref()
+                && let Ok(状态文本) = std::fs::read_to_string(format!("/proc/{pid}/status"))
+            {
+                for 行 in 状态文本.lines() {
+                    if let Some(值) = 行.strip_prefix("VmHWM:")
+                        && let Some(数字) = 值.split_whitespace().next()
+                        && let Ok(数字) = 数字.parse::<u64>()
+                    {
+                        峰值 = 峰值.max(数字);
+                    }
                 }
             }
+            if let Some(状态) = 子进程.0.try_wait()? {
+                break 状态;
+            }
+            std::thread::sleep(Duration::from_micros(500));
         }
-        if let Some(状态) = 子进程.0.try_wait()? {
-            break 状态;
-        }
-        std::thread::sleep(Duration::from_micros(500));
     };
     let 墙钟 = 开始.elapsed().as_secs_f64() * 1000.0;
-    let cpu = (子进程cpu秒()? - cpu起) * 1000.0;
+    let cpu = cpu起
+        .map(|开始| 子进程cpu秒().map(|结束| (结束 - 开始) * 1000.0))
+        .transpose()?;
     if 状态.success() {
-        if 峰值 == 0 {
-            Err(工具错误::新("未采集到被测程序的 VmHWM"))
-        } else {
-            Ok(json!({
-                "wall_ms": 墙钟,
-                "cpu_ms": cpu,
-                "rss_mib": 峰值 as f64 / 1024.0,
-            }))
-        }
+        Ok(json!({
+            "wall_ms": 墙钟,
+            "cpu_ms": cpu,
+            "rss_mib": (详细资源 && 峰值 > 0).then_some(峰值 as f64 / 1024.0),
+        }))
     } else {
         let 内容 = std::fs::read_to_string(输出路径).unwrap_or_default();
         Err(工具错误::新(内容))
@@ -259,10 +260,14 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         return Err(工具错误::新("性能基准只支持 Linux"));
     }
     let mut 次数 = 20usize;
+    let mut 详细资源 = false;
     let mut 输出路径 = 根目录.join("builddir/performance.json");
     let mut 序号 = 0;
     while 序号 < 参数.len() {
         match 参数[序号].as_str() {
+            "--详细资源" if !详细资源 => {
+                详细资源 = true;
+            }
             "--次数" => {
                 序号 += 1;
                 次数 = 参数
@@ -293,7 +298,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 版本号 = 版本(根目录)?;
     let 修订 = crate::变更日志::执行git(根目录, &["rev-parse", "HEAD"])?;
     let mut result = json!({
-        "schema": 1,
+        "schema": 2,
         "revision": 修订.trim(),
         "version": 版本号,
         "environment": 环境信息(),
@@ -303,7 +308,8 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             "p95": "最近秩：第 ceil(0.95*n) 个有序样本",
             "cache": "保留操作系统文件缓存，每个样本使用新进程",
             "unit": "毫秒；RSS 为 MiB",
-            "rss": "exec 后每 0.5ms 采样 /proc/VmHWM；短进程可能漏掉最终峰值",
+            "resources": 详细资源,
+            "rss": if 详细资源 { "exec 后每0.5ms采样VmHWM；未采到为null，短进程可能漏掉最终峰值" } else { "未启用资源测量；cpu_ms与rss_mib为null" },
         },
         "commands": [],
     });
@@ -375,14 +381,18 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     ];
     for (标题, 命令) in &命令列表 {
         if *标题 == "默认主题校验" {
-            采样(&[可执行.display().to_string(), "主题".to_string()], &临时根)?;
+            采样(
+                &[可执行.display().to_string(), "主题".to_string()],
+                &临时根,
+                详细资源,
+            )?;
         }
         for _ in 0..2 {
-            采样(命令, &临时根)?;
+            采样(命令, &临时根, 详细资源)?;
         }
         let mut 样本 = Vec::new();
         for _ in 0..次数 {
-            样本.push(采样(命令, &临时根)?);
+            样本.push(采样(命令, &临时根, 详细资源)?);
         }
         let mut 汇总 = Map::new();
         for 键 in ["wall_ms", "cpu_ms", "rss_mib"] {
@@ -397,11 +407,12 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             .get("wall_ms")
             .and_then(|值| 值["p95"].as_f64())
             .unwrap_or(0.0);
-        let rss = 汇总
-            .get("rss_mib")
-            .and_then(|值| 值["max"].as_f64())
-            .unwrap_or(0.0);
-        println!("{标题}: 中位 {中位:.2} ms，P95 {p95:.2} ms，峰值 RSS {rss:.1} MiB");
+        let rss = 汇总.get("rss_mib").and_then(|值| 值["max"].as_f64());
+        let 资源文案 = rss.map_or_else(
+            || "RSS 未测量或未采集到".to_owned(),
+            |值| format!("观测峰值 RSS {值:.1} MiB"),
+        );
+        println!("{标题}: 中位 {中位:.2} ms，P95 {p95:.2} ms，{资源文案}");
         result["commands"]
             .as_array_mut()
             .expect("命令数组")
@@ -506,5 +517,35 @@ mod 测试 {
         assert!(汇总扩展样本(重复).is_err());
         assert!(汇总扩展样本(json!({"results": []})).is_err());
         assert!(汇总扩展样本(json!({})).is_err());
+    }
+    #[test]
+    fn 墙钟与详细资源模式保留失败处理和空值() {
+        let 临时 = tempfile::tempdir().unwrap();
+        let 命令 = vec![
+            "/bin/sh".to_owned(),
+            "-c".to_owned(),
+            "sleep 0.04".to_owned(),
+        ];
+        let 普通 = 采样(&命令, 临时.path(), false).unwrap();
+        assert!(普通["wall_ms"].as_f64().unwrap() >= 20.0);
+        assert_eq!(普通["cpu_ms"], Value::Null);
+        assert_eq!(普通["rss_mib"], Value::Null);
+        let 详细 = 采样(&命令, 临时.path(), true).unwrap();
+        assert!(详细["cpu_ms"].as_f64().unwrap() >= 0.0);
+        assert!(详细["rss_mib"].as_f64().unwrap() > 0.0);
+        let 错误 = vec![
+            "/bin/sh".to_owned(),
+            "-c".to_owned(),
+            "echo 采样失败 >&2; exit 7".to_owned(),
+        ];
+        for 模式 in [false, true] {
+            assert!(
+                采样(&错误, 临时.path(), 模式)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("采样失败")
+            );
+        }
+        assert!(入口(临时.path(), &["--详细资源".into(), "--详细资源".into()]).is_err());
     }
 }
