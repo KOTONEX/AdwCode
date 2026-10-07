@@ -9,8 +9,17 @@ use std::time::{Duration, Instant};
 pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let mut 编辑器: Option<PathBuf> = None;
     let mut 输出 = None;
+    let mut 禁用沙箱 = false;
     let mut 位置 = 0;
     while 位置 < 参数.len() {
+        if 参数[位置] == "--禁用沙箱" {
+            if 禁用沙箱 {
+                return Err(工具错误::新("宿主测试参数重复"));
+            }
+            禁用沙箱 = true;
+            位置 += 1;
+            continue;
+        }
         let 槽 = match 参数[位置].as_str() {
             "--编辑器程序" => &mut 编辑器,
             "--输出" => &mut 输出,
@@ -76,6 +85,9 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         .stdout(Stdio::from(日志.try_clone()?))
         .stderr(Stdio::from(日志))
         .process_group(0);
+    if 禁用沙箱 {
+        命令.arg("--no-sandbox");
+    }
     for 键 in [
         "ELECTRON_RUN_AS_NODE",
         "VSCODE_IPC_HOOK_CLI",

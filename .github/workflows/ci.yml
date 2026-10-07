@@ -51,4 +51,4 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/adwcode-host-tools" @vscode/test-electron
           node 测试/下载宿主.cjs "$RUNNER_TEMP/adwcode-host-tools" > "$RUNNER_TEMP/adwcode-host-path"
-          xvfb-run -a cargo run --quiet -- 宿主测试 --编辑器程序 "$(tail -n 1 "$RUNNER_TEMP/adwcode-host-path")"
+          xvfb-run -a cargo run --quiet -- 宿主测试 --禁用沙箱 --编辑器程序 "$(tail -n 1 "$RUNNER_TEMP/adwcode-host-path")"
