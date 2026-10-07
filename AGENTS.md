@@ -100,6 +100,7 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 `adwcode` 提供，开发期用 `cargo run --quiet -- <子命令>`，发布产物用
 `./target/release/adwcode <子命令>`。
 
+- 独立宿主测试（临时配置与工作区，不重载当前窗口）：`cargo run --quiet -- 宿主测试`
 - 完整检查（cargo fmt/clippy/test、校验、Node/tsc 与离线 JS 测试）：`cargo run --quiet -- 检查`
 - 格式化全部 Rust 源码：`cargo run --quiet -- 格式化`
 - 类型检查（cargo check 与 tsc）：`cargo run --quiet -- 类型检查`

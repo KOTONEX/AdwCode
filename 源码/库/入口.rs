@@ -66,3 +66,6 @@ pub mod 检查;
 
 #[path = "文件事务.rs"]
 pub mod 文件事务;
+
+#[path = "宿主测试.rs"]
+pub mod 宿主测试;

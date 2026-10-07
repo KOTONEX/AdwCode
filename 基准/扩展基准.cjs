@@ -17,12 +17,7 @@ let writes = 0;
 let processes = 0;
 let commands = 0;
 const disposable = () => ({ dispose() {} });
-function 加载服务(依赖) {
-  return require("../扩展/外观服务").创建外观服务({
-    vscode: 依赖.require("vscode"), fs: 依赖.require("fs"), os: 依赖.require("os"), path,
-    execFile: 依赖.require("child_process").execFile, 环境: 依赖.process.env || {},
-  });
-}
+const { 创建测试服务, 加载测试入口 } = require('../测试/扩展宿主.cjs');
 function load() {
   const channel = { replace() {}, show() {}, dispose() {} };
   const vscode = {
@@ -46,9 +41,9 @@ function load() {
       return require(name);
     },
   };
-  const 服务 = 加载服务(sandbox);
+  const 服务 = 创建测试服务(sandbox);
   Object.assign(sandbox, 服务);
-  sandbox.module.exports.activate = context => require('../扩展/命令').注册命令(vscode, 服务, context);
+  sandbox.module.exports = 加载测试入口(sandbox);
   return { sandbox, channel, context: { extensionPath: root, subscriptions: [] } };
 }
 function bench(name, prepare, invoke, count) {
@@ -76,7 +71,7 @@ try {
   fs.writeFileSync(html, '<!--' + 'x'.repeat(128 * 1024) + '-->' + content);
   assert.ok(runtime.sandbox.外观安装状态(runtime.context).every(row => row.copied === '已同步' && row.patched === '磁盘补丁已更新'));
   const results = [
-    bench('外观服务创建（模块实例）', () => undefined, () => load(), 200),
+    bench('扩展加载（显式宿主接口）', () => undefined, () => load(), 200),
     bench('扩展激活', load, input => { input.sandbox.module.exports.activate(input.context); }, 200),
     bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
     bench('外观状态输出生成（模拟输出通道）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),

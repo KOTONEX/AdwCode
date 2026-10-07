@@ -4,12 +4,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-function 加载服务(依赖) {
-  return require("../扩展/外观服务").创建外观服务({
-    vscode: 依赖.require("vscode"), fs: 依赖.require("fs"), os: 依赖.require("os"), path,
-    execFile: 依赖.require("child_process").execFile, 环境: 依赖.process.env || {},
-  });
-}
+const { 创建测试服务, 加载测试入口 } = require('../测试/扩展宿主.cjs');
 async function main() {
 const files = new Map();
 let imports = [];
@@ -39,7 +34,7 @@ const sandbox = {
     if (name === "vscode") return vscode;
     if (name === "child_process") return { execFile(_file, args, _options, callback) { if (callback) callback(null, args.includes("monospace-font-name") ? "'等距更纱黑体 SC 11'" : "'更纱黑体 UI SC 11'"); } };
     if (name === "os") return { homedir: () => "/user" };
-    if (name === "fs") return sandbox.mockFs = {
+    if (name === "fs") return sandbox.mockFs ||= {
       existsSync: (file) => files.has(file),
       readFileSync(file) {
         if (!files.has(file)) throw new Error("不可读");
@@ -51,7 +46,21 @@ const sandbox = {
   module: { exports: {} },
   process: { platform: "linux" },
 };
-Object.assign(sandbox, 加载服务(sandbox));
+Object.assign(sandbox, 创建测试服务(sandbox));
+// 真实入口必须注册全部且仅注册清单中的五个命令；注册回调不用执行写入命令。
+const 已注册 = new Map();
+let 已释放 = 0;
+vscode.commands = { registerCommand(id, callback) {
+  assert.ok(!已注册.has(id)); 已注册.set(id, callback);
+  return { dispose() { 已释放++; 已注册.delete(id); } };
+} };
+const 注册上下文 = { extensionPath: '/repo', subscriptions: [] };
+加载测试入口(sandbox).activate(注册上下文);
+assert.deepEqual([...已注册.keys()].sort(), require('../package.json').contributes.commands.map(x => x.command).sort());
+assert.equal(注册上下文.subscriptions.length, 5);
+for (const item of 注册上下文.subscriptions) item.dispose();
+assert.equal(已释放, 5);
+assert.equal(已注册.size, 0);
 const context = { extensionPath: "/repo", subscriptions: [] };
 let rows = sandbox.外观安装状态(context);
 assert.equal(rows[0].copied, "源文件不可读");
@@ -127,7 +136,7 @@ assert.equal(sandbox.识别加载文件(context, "https://example.org/GNOME外�
 const originalMockFs = sandbox.mockFs;
 for (const [xdg, expected] of [["/配置", "/配置/adwcode"], ["relative", "/user/.config/adwcode"], ["", "/user/.config/adwcode"]]) {
   const isolated = { ...sandbox, process: { platform: "linux", env: { XDG_CONFIG_HOME: xdg } }, module: { exports: {} } };
-  Object.assign(isolated, 加载服务(isolated));
+  Object.assign(isolated, 创建测试服务(isolated));
   assert.deepEqual(Array.from(isolated.合并加载引用(context, ["file:///user/.config/adwcode/GNOME外观.css"], ["GNOME外观.css"])), [`file://${expected}/GNOME外观.css`]);
 }
 sandbox.mockFs = originalMockFs;
@@ -200,6 +209,15 @@ await sandbox.选择外观组件(context);
 assert.deepEqual(Array.from(imports), ["file:///other/user.css", "file:///user/.config/adwcode/GNOME字体.css"]);
 await sandbox.执行外观事务(context, [], true);
 assert.deepEqual(Array.from(imports), ["file:///other/user.css"]);
+const 取消前 = [...imports];
+const 文件取消前 = [...files.entries()];
+vscode.window.showQuickPick = async () => undefined;
+await sandbox.选择外观组件(context);
+assert.deepEqual(imports, 取消前);
+assert.deepEqual([...files.entries()], 文件取消前);
+// 工厂实例的输出通道与操作队列不能互相污染。
+const 第二服务 = 创建测试服务(sandbox);
+assert.notEqual(第二服务.排队外观操作, sandbox.排队外观操作);
 imports = null;
 await assert.rejects(sandbox.选择外观组件(context), /必须是字符串数组/);
 assert.throws(() => sandbox.外观安装状态(context), /必须是字符串数组/);
