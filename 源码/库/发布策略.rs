@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::变更日志::{执行git, 是版本标签};
+use crate::变更日志::执行git;
 use crate::错误::{工具错误, 结果};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -34,8 +34,9 @@ pub fn 判断发布(目录: &Path, 引用: &str, 主线: &str) -> 结果<发布�
             .map_err(|错误| 工具错误::新(format!("package.json 解析失败：{错误}")))?;
     let 版本 = 清单["version"]
         .as_str()
-        .filter(|版本| 版本.is_ascii() && 是版本标签(&format!("v{版本}")))
         .ok_or_else(|| 工具错误::新("扩展版本无效"))?;
+    let 解析版本 = semver::Version::parse(版本)
+        .map_err(|错误| 工具错误::新(format!("扩展版本无效：{错误}")))?;
     let 标签 = 引用.starts_with("refs/tags/");
     if 标签 && 引用 != format!("refs/tags/v{版本}") {
         return Err(工具错误::新("标签与扩展版本不一致"));
@@ -68,7 +69,7 @@ pub fn 判断发布(目录: &Path, 引用: &str, 主线: &str) -> 结果<发布�
             )));
         }
     };
-    let 候选 = !主线包含 || 版本.split('+').next().unwrap_or(版本).contains('-');
+    let 候选 = !主线包含 || !解析版本.pre.is_empty();
     Ok(发布判断 {
         版本: 版本.to_string(),
         候选,

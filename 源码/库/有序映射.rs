@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //! 保持插入顺序的字符串映射；主题颜色等输出依赖该顺序。
 
+use indexmap::{IndexMap, map::Slice};
+
 #[derive(Default, Clone, Debug)]
 pub struct 有序映射 {
-    条目: Vec<(String, String)>,
+    条目: IndexMap<String, String>,
 }
 
 impl 有序映射 {
@@ -14,22 +16,12 @@ impl 有序映射 {
     }
 
     pub fn 放(&mut self, 键: impl Into<String>, 值: impl Into<String>) {
-        let 键 = 键.into();
-        let 值 = 值.into();
-        if let Some((_, 已有值)) = self.条目.iter_mut().find(|(已有键, _)| *已有键 == 键)
-        {
-            *已有值 = 值;
-        } else {
-            self.条目.push((键, 值));
-        }
+        self.条目.insert(键.into(), 值.into());
     }
 
     #[must_use]
     pub fn 取(&self, 键: &str) -> Option<&str> {
-        self.条目
-            .iter()
-            .find(|(已有, _)| 已有 == 键)
-            .map(|(_, 值)| 值.as_str())
+        self.条目.get(键).map(String::as_str)
     }
 
     /// 内部角色缺失说明生成逻辑有误，与 Python 的 KeyError 一致直接失败。
@@ -48,8 +40,8 @@ impl 有序映射 {
     }
 
     #[must_use]
-    pub fn 条目(&self) -> &[(String, String)] {
-        &self.条目
+    pub fn 条目(&self) -> &Slice<String, String> {
+        self.条目.as_slice()
     }
 
     #[must_use]
@@ -65,7 +57,7 @@ impl 有序映射 {
 
 impl PartialEq for 有序映射 {
     fn eq(&self, 其他: &Self) -> bool {
-        self.条目 == 其他.条目
+        self.条目.as_slice() == 其他.条目.as_slice()
     }
 }
 
@@ -94,6 +86,17 @@ mod 测试 {
         映射.放("第一", "新值");
         assert_eq!(映射.取("第一"), Some("新值"));
         assert_eq!(映射.数量(), 2);
-        assert_eq!(映射.条目()[0].0, "第一");
+        assert_eq!(映射.条目().get_index(0).unwrap().0, "第一");
+    }
+    #[test]
+    fn 相同内容的不同顺序仍不相等() {
+        let mut 前 = 有序映射::新();
+        前.放("第一", "一");
+        前.放("第二", "二");
+        let mut 后 = 有序映射::新();
+        后.放("第二", "二");
+        后.放("第一", "一");
+        assert_ne!(前, 后);
+        assert_eq!(前, 前.clone());
     }
 }

@@ -10,16 +10,6 @@ use regex::Regex;
 
 use crate::错误::{工具错误, 结果};
 
-/// 预发布标识的 SemVer 片段。
-const 预发布: &str = r"(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)";
-
-static 版本标签正则: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(
-        r"v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-{预发布}(?:\.{预发布})*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
-    ))
-    .expect("版本标签正则")
-});
-
 static 转义正则: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"([\\`*_\[\]<>])").expect("转义正则"));
 
@@ -29,9 +19,9 @@ static 仓库地址正则: LazyLock<Regex> =
 /// 整串完全匹配 SemVer 版本标签。
 #[must_use]
 pub fn 是版本标签(文本: &str) -> bool {
-    版本标签正则
-        .find(文本)
-        .is_some_and(|匹配| 匹配.as_str() == 文本)
+    文本
+        .strip_prefix('v')
+        .is_some_and(|版本| semver::Version::parse(版本).is_ok())
 }
 
 /// 中文提交类型分组。
@@ -317,8 +307,8 @@ pub fn 生成发布说明(根目录: &Path, version: &str, tag: Option<&str>) ->
             let 原始标签 = tag.unwrap_or_default();
             let 链接 = format!(
                 "{地址}/compare/{}...{}",
-                quote(&上一发布.tag),
-                quote(原始标签)
+                百分号编码(&上一发布.tag),
+                百分号编码(原始标签)
             );
             说明 += &format!("\n**完整变更**：[{} → {原始标签}]({链接})\n", 上一发布.tag);
         }
@@ -326,18 +316,16 @@ pub fn 生成发布说明(根目录: &Path, version: &str, tag: Option<&str>) ->
     Ok(说明)
 }
 
-/// 与 Python `urllib.parse.quote`（默认 safe="/"）一致的最小百分号编码。
+/// 保持 Python `urllib.parse.quote` 默认的安全字符，编码复用第三方库。
 #[must_use]
-pub fn quote(文本: &str) -> String {
-    let mut 结果 = String::new();
-    for 字节 in 文本.bytes() {
-        if 字节.is_ascii_alphanumeric() || b"/_.-~".contains(&字节) {
-            结果.push(字节 as char);
-        } else {
-            结果 += &format!("%{字节:02X}");
-        }
-    }
-    结果
+pub fn 百分号编码(文本: &str) -> String {
+    const 编码字符: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
+        .remove(b'/')
+        .remove(b'_')
+        .remove(b'.')
+        .remove(b'-')
+        .remove(b'~');
+    percent_encoding::utf8_percent_encode(文本, 编码字符).to_string()
 }
 
 /// `adwcode 变更日志` 与 `adwcode 发布说明` 的入口。
@@ -446,8 +434,24 @@ mod 测试 {
         assert!(!是版本标签("3.3.0"));
         assert!(!是版本标签("v01.0.0"));
         assert!(!是版本标签("v1.0.0ext"));
-        assert_eq!(quote("v3.3.0"), "v3.3.0");
-        assert_eq!(quote("a b/c+"), "a%20b/c%2B");
+        for 文本 in [
+            "v1.01.0",
+            "v1.0.00",
+            "v1.0.0-01",
+            "v1.0.0-rc..1",
+            "v1.0.0+",
+            "v1.0.0+build..1",
+            "v１.0.0",
+            "v1.0.0\n",
+        ] {
+            assert!(!是版本标签(文本), "{文本}");
+        }
+        assert!(是版本标签("v1.0.0+build.01"));
+        assert!(是版本标签("v1.0.0-rc-1"));
+        assert_eq!(百分号编码("v3.3.0"), "v3.3.0");
+        assert_eq!(百分号编码("a b/c+"), "a%20b/c%2B");
+        assert_eq!(百分号编码("中文/%?#\0"), "%E4%B8%AD%E6%96%87/%25%3F%23%00");
+        assert_eq!(百分号编码("/_.-~AZaz09"), "/_.-~AZaz09");
     }
 
     #[test]

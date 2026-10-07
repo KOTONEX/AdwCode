@@ -149,11 +149,7 @@ fn 递归收集(目录: &Path, 输出: &mut Vec<PathBuf>) -> 结果<()> {
 }
 
 fn xml转义(值: &str) -> String {
-    值.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
+    quick_xml::escape::escape(值).into_owned()
 }
 
 /// 构建 VSIX 到指定输出路径。
@@ -218,9 +214,7 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
     if !name
         .chars()
         .all(|字| 字.is_ascii_alphanumeric() || matches!(字, '-' | '_'))
-        || !regex::Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
-            .expect("版本正则")
-            .is_match(version)
+        || semver::Version::parse(version).is_err()
     {
         return Err(工具错误::新("清单 name 或 version 无效"));
     }

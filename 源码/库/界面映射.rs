@@ -239,7 +239,8 @@ pub fn 生成界面颜色(
     )
 }
 
-/// 收集颜色条目；None 表示普通主题中不定义的键，最后统一过滤。
+/// 规则操作记录；None 先占位，覆盖可恢复该位置，最后统一过滤。
+/// 此处保留重复操作，不能直接用映射替代，否则省略与覆盖的顺序会改变。
 struct 颜色表 {
     条目: Vec<(String, Option<String>)>,
 }
@@ -367,8 +368,14 @@ mod 测试 {
         .unwrap();
         let 结果 = 应用规则(&规则, &上下文).unwrap();
         assert_eq!(结果.条目().len(), 19);
-        assert_eq!(结果.条目()[0], ("首项".to_owned(), "#445566".to_owned()));
-        assert_eq!(结果.条目()[1], ("回退".to_owned(), "#112233".to_owned()));
+        assert_eq!(
+            结果.条目().get_index(0).unwrap(),
+            (&"首项".to_owned(), &"#445566".to_owned())
+        );
+        assert_eq!(
+            结果.条目().get_index(1).unwrap(),
+            (&"回退".to_owned(), &"#112233".to_owned())
+        );
         assert_eq!(结果.条目().last().unwrap().0, "末项");
         for (键, 值) in crate::调色板::终端颜色() {
             assert_eq!(结果.取(键), Some(值));

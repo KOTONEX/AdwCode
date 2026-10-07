@@ -14,6 +14,10 @@ publish = false
 
 [dependencies]
 tempfile = "3"
+indexmap = "2.14.2"
+jsonc-parser = { version = "0.34.0", features = ["serde"] }
+semver = "1.0.28"
+percent-encoding = "2.3.2"
 time = { version = "0.3.55", default-features = false, features = ["std"] }
 flo_curves = "0.8"
 kurbo = "0.13"

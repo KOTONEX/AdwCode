@@ -88,10 +88,9 @@ fn 最新版本(响应: &str) -> 结果<String> {
     版本
         .into_iter()
         .next()
-        .filter(|版本| {
-            regex::Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$")
-                .expect("稳定宿主版本正则")
-                .is_match(版本)
+        .filter(|文本| {
+            semver::Version::parse(文本)
+                .is_ok_and(|版本| 版本.pre.is_empty() && 版本.build.is_empty())
         })
         .ok_or_else(|| 工具错误::新("最新稳定宿主版本格式错误或列表为空"))
 }
@@ -251,6 +250,8 @@ mod 测试 {
             r#"["1.2.3\n运行=false"]"#,
             r#"["1.2"]"#,
             r#"["1.2.3-insider"]"#,
+            r#"["01.2.3"]"#,
+            r#"["1.2.3+build.1"]"#,
         ] {
             assert!(最新版本(文本).is_err());
         }

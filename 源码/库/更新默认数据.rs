@@ -39,88 +39,26 @@ static 带点键正则: LazyLock<Regex> = LazyLock::new(|| {
 static 单键正则: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^- `([a-zA-Z][a-zA-Z0-9]*)`:").expect("单键正则"));
 
-/// 移除 JSONC 注释，并在字符串之外移除尾逗号。
-#[must_use]
-pub fn 清理json注释(文本: &str) -> String {
-    let 字符: Vec<char> = 文本.chars().collect();
-    let 长度 = 字符.len();
-    let mut 输出: Vec<char> = Vec::new();
-    let (mut 位置, mut 在字符串, mut 转义) = (0, false, false);
-    while 位置 < 长度 {
-        let 当前 = 字符[位置];
-        if 在字符串 {
-            输出.push(当前);
-            if 转义 {
-                转义 = false;
-            } else if 当前 == '\\' {
-                转义 = true;
-            } else if 当前 == '"' {
-                在字符串 = false;
-            }
-            位置 += 1;
-            continue;
-        }
-        if 当前 == '"' {
-            在字符串 = true;
-            输出.push(当前);
-            位置 += 1;
-            continue;
-        }
-        if 当前 == '/' && 位置 + 1 < 长度 && 字符[位置 + 1] == '/' {
-            位置 = 字符[位置..]
-                .iter()
-                .position(|字符| *字符 == '\n')
-                .map_or(长度, |偏移| 位置 + 偏移);
-            continue;
-        }
-        if 当前 == '/' && 位置 + 1 < 长度 && 字符[位置 + 1] == '*' {
-            let Some(偏移) = 字符[位置..].windows(2).position(|窗口| 窗口 == ['*', '/'])
-            else {
-                // 保留非法输入，由 JSON 解析器报告未闭合注释。
-                return 文本.to_string();
-            };
-            let 结束 = 位置 + 偏移 + 2;
-            输出.extend(
-                字符[位置..结束]
-                    .iter()
-                    .map(|字符| if *字符 == '\n' { '\n' } else { ' ' }),
-            );
-            位置 = 结束;
-            continue;
-        }
-        输出.push(当前);
-        位置 += 1;
+/// 默认主题必须是 JSON 对象；只扩展注释与尾逗号，拒绝 JSON5 的其他语法。
+fn 解析jsonc(文本: &str) -> 结果<serde_json::Value> {
+    let 选项 = jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_trailing_commas: true,
+        allow_loose_object_property_names: false,
+        allow_missing_commas: false,
+        allow_single_quoted_strings: false,
+        allow_hexadecimal_numbers: false,
+        allow_unary_plus_numbers: false,
+        allow_bare_decimal_point_numbers: false,
+        allow_non_finite_numbers: false,
+        allow_extended_string_escapes: false,
+    };
+    let 值: serde_json::Value = jsonc_parser::parse_to_serde_value(文本, &选项)
+        .map_err(|错误| 工具错误::新(format!("默认主题 JSONC 解析失败：{错误}")))?;
+    if !值.is_object() {
+        return Err(工具错误::新("默认主题 JSONC 根节点必须是对象"));
     }
-    // 仅在字符串之外移除尾逗号，不能改写诸如 ",}" 的字符串值。
-    let mut 结果: Vec<char> = Vec::new();
-    let (mut 在字符串, mut 转义) = (false, false);
-    for (序号, 当前) in 输出.iter().enumerate() {
-        if 在字符串 {
-            结果.push(*当前);
-            if 转义 {
-                转义 = false;
-            } else if *当前 == '\\' {
-                转义 = true;
-            } else if *当前 == '"' {
-                在字符串 = false;
-            }
-            continue;
-        }
-        if *当前 == '"' {
-            在字符串 = true;
-        }
-        if *当前 == ',' {
-            let 后续 = 输出[序号 + 1..]
-                .iter()
-                .copied()
-                .find(|字符| !matches!(字符, ' ' | '\t' | '\n' | '\r'));
-            if matches!(后续, Some('}' | ']')) {
-                continue;
-            }
-        }
-        结果.push(*当前);
-    }
-    结果.into_iter().collect()
+    Ok(值)
 }
 
 fn 创建代理(超时秒: u64) -> 结果<ureq::Agent> {
@@ -164,7 +102,7 @@ fn 更新(根目录: &Path, 下载: &dyn Fn(&str, u64) -> 结果<String>) -> 结
     let mut 键: BTreeSet<String> = BTreeSet::new();
     for 名称 in 全部主题 {
         let 文本 = 下载(&format!("{主题源}/{名称}.json"), 30)?;
-        let 值: serde_json::Value = serde_json::from_str(&清理json注释(&文本))
+        let 值: serde_json::Value = 解析jsonc(&文本)
             .map_err(|错误| 工具错误::新(format!("{名称}.json 解析失败：{错误}")))?;
         let 颜色 = 值
             .get("colors")
@@ -230,28 +168,47 @@ mod 测试 {
     use super::*;
 
     #[test]
-    fn 注释不能连接数字或吞掉未闭合输入() {
-        for 文本 in ["{\"a\":1/*注释*/2}", "{\"a\":1}/*未闭合"] {
-            assert!(serde_json::from_str::<serde_json::Value>(&清理json注释(文本)).is_err());
-        }
-        assert_eq!(清理json注释("[1,/*行一\n行二*/2]").matches('\n').count(), 1);
-    }
-
-    #[test]
-    fn 清理注释与尾逗号() {
+    fn 只接受注释与尾逗号且保留字符串() {
         let 文本 = r#"{
-  // 行注释
-  "a": "值,}", /* 块
-  注释 */
-  "b": [1, 2,],
-}"#;
-        let 清理 = 清理json注释(文本);
-        assert!(!清理.contains("行注释"));
-        assert!(!清理.contains("块"));
-        assert!(清理.contains("\"值,}\""));
-        let 值: serde_json::Value = serde_json::from_str(&清理).expect("解析清理后的 JSON");
-        assert_eq!(值["a"], "值,}");
-        assert_eq!(值["b"].as_array().map(Vec::len), Some(2));
+          // 行注释
+          "符号": "值,} // /*",
+          "转义": "引号\"与反斜杠\\",
+          /* 块
+          注释 */
+          "a": "旧值", "b": [1, 2,],
+          "a": "https://example.invalid/值,}",
+        }"#;
+        let 值 = 解析jsonc(文本).unwrap();
+        assert_eq!(值["a"], "https://example.invalid/值,}");
+        assert_eq!(值["b"], serde_json::json!([1, 2]));
+        assert_eq!(值["符号"], "值,} // /*");
+        assert_eq!(值["转义"], "引号\"与反斜杠\\");
+        for 文本 in [
+            r#"{"a":1/*注释*/2}"#,
+            r#"{"a":1}/*未闭合"#,
+            r#"{a:1}"#,
+            r#"{'a':1}"#,
+            r#"{"a":1 "b":2}"#,
+            r#"{"a":[1 2]}"#,
+            r#"{"a":0x10}"#,
+            r#"{"a":+1}"#,
+            r#"{"a":.5}"#,
+            r#"{"a":5.}"#,
+            r#"{"a":NaN}"#,
+            r#"{"a":Infinity}"#,
+            r#"{"a":"\x41"}"#,
+            r#"{"a":"\v"}"#,
+            r#"{"a":01}"#,
+            r#"{"a":1e400}"#,
+            "",
+            "// 只有注释",
+            "[]",
+            "null",
+        ] {
+            assert!(解析jsonc(文本).is_err(), "{文本}");
+        }
+        let 错误 = 解析jsonc("{\n/* 行二\n行三 */\n\"a\":1 2}").unwrap_err();
+        assert!(错误.消息.contains("line 4"), "{}", 错误.消息);
     }
 
     #[test]

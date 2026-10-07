@@ -751,7 +751,7 @@ impl 调色板对象 {
     }
 
     #[must_use]
-    pub fn 角色表(&self) -> &[(String, String)] {
+    pub fn 角色表(&self) -> &indexmap::map::Slice<String, String> {
         self.角色.条目()
     }
 
