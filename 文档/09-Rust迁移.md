@@ -148,3 +148,8 @@ VS Code 扩展宿主只运行 JavaScript，工作台补丁脚本运行在页面 
 - 工作台基准的隔离配置显式关闭 `window.autoDetectColorScheme`：3.3.0 的
   `configurationDefaults` 会开启主题自动检测，否则基准无法用 `workbench.colorTheme`
   切换主题。
+
+### 4.8.0 工作台颜色规则
+
+大型界面映射转为 `源码/库/界面映射/规则.json` 与受限的 Rust 表达式解释器。
+没有迁移扩展入口、DOM 或页面测量到 Rust；JSON 在编译时嵌入，工具分发方式保持。
