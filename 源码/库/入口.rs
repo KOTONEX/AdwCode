@@ -34,8 +34,23 @@ pub mod 检查样式;
 #[path = "更新默认数据.rs"]
 pub mod 更新默认数据;
 
+#[path = "图标生成.rs"]
+pub mod 图标生成;
+
 #[path = "仓库.rs"]
 pub mod 仓库;
 
 #[path = "命令.rs"]
 pub mod 命令;
+
+#[path = "摘要.rs"]
+pub mod 摘要;
+
+#[path = "性能基准.rs"]
+pub mod 性能基准;
+
+#[path = "工作台基准.rs"]
+pub mod 工作台基准;
+
+#[path = "检查.rs"]
+pub mod 检查;

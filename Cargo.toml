@@ -13,10 +13,15 @@ publish = false
 [workspace]
 
 [dependencies]
+flo_curves = "0.8"
+kurbo = "0.13"
 quick-xml = "0.41.0"
 regex = "1.13.1"
 serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.11"
+svgtypes = "0.16"
 ureq = "3.4.2"
+write-fonts = "0.54"
 zip = { version = "7.2.0", default-features = false, features = ["deflate"] }
 
 [lib]
@@ -29,3 +34,7 @@ path = "源码/程序/主程序.rs"
 [profile.release]
 lto = true
 strip = true
+
+[dev-dependencies]
+skrifa = "0.48"
+tempfile = "3"

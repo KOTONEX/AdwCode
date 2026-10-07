@@ -67,34 +67,34 @@ Adwaita 通常将轮廓边缘内缩 0.18 个 SVG 像素，Builder 为 0.12；终
 
 ## 再生成
 
-从仓库或随附资产目录再生成导入字体，需要 fontTools 和 skia-pathops，
-后者用于描边展开、画布裁切与字重调整。
-不需要安装 GNOME
-Builder、MoreWaita 或系统图标主题，也不需要在构建时访问网络：
+再生成导入字体只需要 Rust 工具链（`cargo`），不需要 Python，也不需要安装
+GNOME Builder、MoreWaita 或系统图标主题，更不需要在构建时访问网络：
 
 ```sh
-uv venv --python 3.14 /tmp/adwcode-icons
-uv pip install --python /tmp/adwcode-icons/bin/python fonttools skia-pathops
-/tmp/adwcode-icons/bin/python 产品图标/生成导入字形.py
+cargo run --quiet -- 生成导入字形
 ```
 
-`生成导入字形.py` 根据来源记录校验 SVG 哈希，为不同许可证分别生成字体，
+`生成导入字形` 根据来源记录校验 SVG 哈希，为不同许可证分别生成字体，
 将署名与许可写入字体名称表，并导出 `渲染图标/` 中的陈列轮廓。
-字体使用固定时间戳；备用字体也可再生成。
-同一份输入应得到相同的字体。
+字体使用固定时间戳并输出确定；同一份输入应得到相同的字体。
 更新资产时先核对上游图标许可，再更新原文件、提交号、哈希与映射，最后再生成
 字体并检查 Git 差异。
 
-原布局字体的再生成方式保持原样（需要 nanoemoji，其中未使用的窗口字形仍保留）：
+备用自有字体通过以下命令再生成：
+
+```sh
+cargo run --quiet -- 生成自有字形
+```
+
+历史色彩字体 `adwaita-icons.ttf` 由 nanoemoji 一次性生成，当前不参与主题或
+产品图标加载；其再生成方式保持原样（需要 nanoemoji，其中未使用的窗口字形仍保留）：
 
 ```sh
 nanoemoji --color_format glyf_colr_1 --family adwaita-icons \
   --output_file 产品图标/adwaita-icons.ttf 产品图标/可缩放图标/*.svg
 ```
 
-备用自有字体通过 `生成自有字形.py` 再生成，同样仅依赖 fontTools。
-可选资产工具的 C 扩展可能重新启用 GIL；它们不属于 Meson 的自由线程开发检查。
-最终扩展直接读取随附的 TTF，不加载 Python 或字体生成依赖。
+扩展直接读取随附的 TTF，不加载 Python 或字体生成依赖。
 许可证登记见 [第三方许可证](../文档/01-第三方许可证.md)。
 
 自有 SVG、字体及映射的授权范围见 [自有字形许可](LICENSE)，生成脚本采用
