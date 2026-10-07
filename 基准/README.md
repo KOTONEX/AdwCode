@@ -5,22 +5,22 @@
 
 ## 命令行与扩展逻辑
 
-需要完整 Git 历史与版本标签、Python 3.14 自由线程版本、Node.js、GNOME 的 `gsettings` 和可自动定位的
-本机 VS Code 样式表。找不到样式表时基准会失败，不把跳过校验记为成功样本：
+需要完整 Git 历史与版本标签、Rust 工具链（`cargo build`）、Node.js、GNOME 的
+`gsettings` 和可自动定位的本机 VS Code 样式表。找不到样式表时基准会失败，
+不把跳过校验记为成功样本：
 
 ```sh
-meson setup --reconfigure builddir
-meson compile -C builddir 性能基准
+cargo run --quiet -- 性能基准
 ```
 
 默认每个命令预热 2 次，采集 20 个新进程样本，保留操作系统文件缓存。
 结果写入 `builddir/performance.json`。也可以增加样本数：
 
 ```sh
-python3.14t 基准/运行基准.py --次数 50 --输出 builddir/performance.json
+cargo run --quiet -- 性能基准 --次数 50 --输出 builddir/performance.json
 ```
 
-`运行基准.py` 在临时副本中生成主题和 VSIX，不改动已跟踪的仓库产物；采集墙钟时间、子进程
+`性能基准` 在临时副本中运行 `adwcode` 的主题、校验、检查样式与打包，不改动已跟踪的仓库产物；采集墙钟时间、子进程
 CPU 时间与 exec 后的内存高水位。内存每 0.5 ms 采样，短进程可能漏掉最后的峰值。
 准备阶段从 Git 生成固定的 `builddir/CHANGELOG.md`，临时副本显式使用该日志打包。
 生成日志的耗时不计入 VSIX 打包样本，临时副本也不复制 Git 仓库。
@@ -36,7 +36,7 @@ CPU 时间与 exec 后的内存高水位。内存每 0.5 ms 采样，短进程�
 
 ```sh
 npm install --prefix /tmp/adwcode-performance-tools playwright-core
-python3.14t 基准/工作台基准.py \
+cargo run --quiet -- 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --输出 builddir/performance-ui.json
 ```
@@ -58,7 +58,7 @@ python3.14t 基准/工作台基准.py \
 
 ```sh
 git show c36fdb5:extras/gnome-look.css > builddir/修改前外观.css
-python3.14t 基准/工作台基准.py \
+cargo run --quiet -- 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --参考样式 builddir/修改前外观.css \
   --输出 builddir/performance-fixed-ui.json
@@ -69,7 +69,7 @@ python3.14t 基准/工作台基准.py \
 如需确认非活动样式这一组规则的开销：
 
 ```sh
-python3.14t 基准/工作台基准.py \
+cargo run --quiet -- 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --仅选择器 --输出 builddir/performance-selectors.json
 ```
