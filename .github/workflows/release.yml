@@ -98,14 +98,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: 安装 Node.js
-        if: steps.reuse.outputs['产物'] == ''
         uses: actions/setup-node@v7
         with:
           node-version: "22"
 
       - name: 安装 TypeScript
-        if: steps.reuse.outputs['产物'] == ''
-        run: npm install -g typescript
+        run: npm install -g typescript@7.0.2
 
       - name: 完整检查
         if: steps.reuse.outputs['产物'] == ''

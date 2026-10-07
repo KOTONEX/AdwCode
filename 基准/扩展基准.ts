@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
+// SPDX-FileCopyrightText: 2026 AdwCode 贡献者
+// 离线扩展基准：真实临时文件，模拟 VS Code API，禁止外部命令与配置写入。
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { performance } from "perf_hooks";
+import * as assert from "assert/strict";
+const root = path.resolve(process.argv[2]);
+const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), "adwcode-extension-performance-"),
+);
+const cssDir = path.join(temporary, ".config/adwcode");
+const appRoot = path.join(temporary, "app");
+const html = path.join(
+    appRoot,
+    "out/vs/code/electron-browser/workbench/workbench.esm.html",
+);
+fs.mkdirSync(cssDir, { recursive: true });
+fs.mkdirSync(path.dirname(html), { recursive: true });
+let writes = 0;
+let processes = 0;
+let commands = 0;
+const disposable = () => ({ dispose() {} });
+import { 创建测试服务, 加载测试入口, 创建测试上下文 } from "../测试/扩展宿主";
+function 创建基准宿主() {
+    const channel = { replace() {}, show() {}, dispose() {} };
+    const vscode = {
+        env: { appRoot },
+        extensions: {
+            getExtension() {
+                return {};
+            },
+        },
+        Uri: {
+            parse(value: string) {
+                const url = new URL(value);
+                return {
+                    scheme: url.protocol.slice(0, -1),
+                    fsPath: decodeURIComponent(url.pathname),
+                };
+            },
+        },
+        workspace: {
+            getConfiguration() {
+                return {
+                    get(_key: string, fallback: unknown) {
+                        return fallback;
+                    },
+                    async update() {
+                        writes++;
+                        throw Error("禁止配置写入");
+                    },
+                };
+            },
+        },
+        window: {
+            createOutputChannel() {
+                return channel;
+            },
+        },
+        commands: {
+            registerCommand: disposable,
+            async executeCommand() {
+                commands++;
+                throw Error("禁止命令执行");
+            },
+        },
+    };
+    const sandbox = {
+        module: { exports: {} },
+        process: { platform: "linux" },
+        require(name: string): unknown {
+            if (name === "vscode") return vscode;
+            if (name === "os") return { homedir: () => temporary };
+            if (name === "child_process")
+                return {
+                    execFile() {
+                        processes++;
+                        throw Error("禁止子进程");
+                    },
+                };
+            return require(name);
+        },
+    };
+    const 服务 = 创建测试服务(sandbox);
+    const 宿主 = Object.assign(sandbox, 服务, {
+        module: { exports: 加载测试入口(sandbox) },
+    });
+    return { sandbox: 宿主, channel, context: 创建测试上下文(root) };
+}
+function 采样<输入>(
+    name: string,
+    prepare: () => 输入,
+    invoke: (input: 输入) => unknown,
+    count: number,
+) {
+    for (let i = 0; i < 10; i++) invoke(prepare());
+    global.gc?.();
+    const samples = [];
+    for (let i = 0; i < count; i++) {
+        const input = prepare();
+        const start = performance.now();
+        invoke(input);
+        samples.push(performance.now() - start);
+    }
+    // 保留报告的原始样本协议；摘要统一由 Rust 计算。
+    return { name, unit: "ms", count, samples };
+}
+try {
+    const runtime = 创建基准宿主();
+    let content = "<!-- !! VSCODE-CUSTOM-CSS-START !! -->";
+    for (const name of Object.keys(runtime.sandbox.组件标记)) {
+        const css = runtime.sandbox.样式源码(runtime.context, name);
+        fs.writeFileSync(path.join(cssDir, name), css);
+        content += name.endsWith(".js")
+            ? `<script>${css}</script>`
+            : `<style>${css}</style>`;
+    }
+    content += "<!-- !! VSCODE-CUSTOM-CSS-END !! -->";
+    fs.writeFileSync(html, "<!--" + "x".repeat(128 * 1024) + "-->" + content);
+    assert.ok(
+        runtime.sandbox
+            .外观安装状态(runtime.context)
+            .every(
+                (row) =>
+                    row.copied === "已同步" && row.patched === "磁盘补丁已更新",
+            ),
+    );
+    const results = [
+        采样(
+            "扩展加载（显式宿主接口）",
+            () => undefined,
+            () => 创建基准宿主(),
+            200,
+        ),
+        采样(
+            "扩展激活",
+            创建基准宿主,
+            (input) => {
+                input.sandbox.module.exports.activate(input.context);
+            },
+            200,
+        ),
+        采样(
+            "外观安装状态读取（真实文件）",
+            () => runtime,
+            (input) => input.sandbox.外观安装状态(input.context),
+            500,
+        ),
+        采样(
+            "外观状态输出生成（模拟输出通道）",
+            () => runtime,
+            (input) => {
+                input.sandbox.显示外观安装状态(input.context);
+                input.context.subscriptions.length = 0;
+            },
+            200,
+        ),
+    ];
+    assert.equal(writes, 0);
+    assert.equal(processes, 0);
+    assert.equal(commands, 0);
+    console.log(
+        JSON.stringify({
+            node: process.version,
+            limitations: "模拟宿主 API；不等于真实扩展宿主启动时间",
+            results,
+            writes,
+            processes,
+            commands,
+        }),
+    );
+} finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+}

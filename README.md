@@ -65,7 +65,7 @@ code --install-extension AdwCode-<版本>.vsix
 ```
 
 也可以从源码构建（仓库中不包含 VSIX，构建产物会被 `.gitignore` 忽略；
-`adwcode 打包` 会打印生成的文件名）：
+`adwcode 打包` 会打印生成的文件名；需要 Node.js 与 TypeScript 7.0.2）：
 
 ```sh
 cargo run --quiet -- 主题              # 固定蓝色
@@ -119,7 +119,8 @@ GNOME 扩展
 减少全工作台样式重算。检测到加载器时，安装命令将本次组件的已知源码和副本引用统一为单份安装副本，
 保留其他加载项；状态命令会提示重复引用或重复注入。
 
-扩展不监视文件，也不会自动重载窗口。改动 `附加外观/*.css`、`附加外观/*.js`、
+源码改动后先运行 `cargo run --quiet -- 编译脚本`，安装 VSIX 后使用其中的编译产物。
+扩展不监视文件，也不会自动重载窗口。改动 `附加外观/*.css`、`附加外观/*.ts`、
 `主题/*.json` 或扩展代码后，重新执行 **AdwCode: 安装 GNOME 外观（CSS）**
 同步副本，再由操作者手动应用。VS Code 升级后补丁会被覆盖：重新执行加载器的
 **Reload Custom CSS and JS**，或再跑一次安装命令。
@@ -204,7 +205,7 @@ AdwCode/
 │   └── VSCode默认数据/         VS Code 颜色键表（MIT）
 ├── 基准/                  按需性能基准与独立工作台验证
 ├── 测试/                       离线测试与 Rust 算例数据
-├── 类型声明/                   扩展 JS 的手写最小类型面
+├── 类型声明/                   全部 TS 的手写最小类型面
 ├── 主题/                      生成的主题 JSON（自动生成，请勿手工编辑；已提交）
 ├── 产品图标/               产品图标主题（Adwaita 符号字形与字体）
 ├── 附加外观/                      通过 Custom CSS 加载的样式表与窗口状态脚本
@@ -220,7 +221,7 @@ AdwCode/
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
 | Rust | 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt） | 构建、校验与打包 |
 | Git | 完整项目历史与版本标签 | 自动生成变更日志及打包；使用预先生成日志的源码导出副本可不带 Git |
-| Node.js 与 TypeScript 编译器 | 语法与类型检查、离线测试 | 扩展 JS 的静态检查与测试，最终扩展无额外运行时库依赖 |
+| Node.js 与 TypeScript 7.0.2 | 源码编译、打包与测试 | 安装已打包的扩展不需要另装编译器，扩展无额外运行时库依赖 |
 | VS Code 安装目录写权限 | — | Custom CSS and JS Loader 注入自定义 CSS 的要求 |
 
 GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与产品图标可独立使用。
@@ -262,8 +263,8 @@ cargo run --quiet -- 检查             # 格式化、clippy、单元测试与�
 ```
 
 首次运行 `cargo build` 获取固定工具链并编译。Node.js 与 TypeScript 编译器用于
-扩展 JavaScript 的语法与类型检查及离线测试，可在安装 Node.js 后执行
-`npm install -g typescript` 获取；完整检查为：
+全部 TypeScript 的严格编译、打包及离线测试，可在安装 Node.js 后执行
+`npm install -g typescript@7.0.2` 获取；完整检查为：
 
 ```sh
 cargo run --quiet -- 检查
@@ -271,8 +272,8 @@ cargo run --quiet -- 检查
 
 生成主题使用 `cargo run --quiet -- 主题`，打包使用
 `cargo run --quiet -- 打包`；`cargo build --release` 后的产物入口为
-`./target/release/adwcode <子命令>`。cargo 不编译扩展 JavaScript，扩展是
-无构建步骤的纯 JavaScript。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+`./target/release/adwcode <子命令>`。扩展、附加脚本、测试与基准均使用 TypeScript，运行
+`cargo run --quiet -- 编译脚本` 生成 `builddir/脚本/` 中的 JavaScript；打包自动重新编译。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 变更日志从 Git 提交标题和版本标签自动生成，无需维护手写文件。运行
 `cargo run --quiet -- 变更日志` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
@@ -284,9 +285,8 @@ VSIX。当前版本的说明可通过 `cargo run --quiet -- 发布说明` 预览
 全部 Rust 源码使用 `cargo fmt` 与 `cargo clippy` 检查和格式化，含图标生成器与
 性能基准。运行 `cargo run --quiet -- 格式化` 应用格式化；`cargo run --quiet -- 检查`
 聚合 `cargo fmt --check`、clippy、单元测试、主题校验、Node.js 语法检查、
-清单设置验证、tsc 与离线 JS 测试。发布策略与清单验证已在 4.1.0 迁入 Rust，
-实现与回归范围见 [Rust 迁移](文档/09-Rust迁移.md#410-后续迁移)。cargo 不处理 JavaScript 或 CSS，相关验证分别由 tsc、
-Node.js 和 CSS 检查器提供。
+清单设置验证、严格 TS 编译与离线测试。发布策略与清单验证已在 4.1.0 迁入 Rust，
+实现与回归范围见 [Rust 迁移](文档/09-Rust迁移.md#410-后续迁移)。Rust 调用 tsc 编译全部脚本，再以 Node.js 检查和执行产物；CSS 由样式检查器验证。
 
 `cargo run --quiet -- 校验` 检查主题和产品图标的注册及文件完整性，要求界面、
 TextMate 和语义颜色使用六位或八位十六进制写法。未知颜色键会导致失败，未覆盖的

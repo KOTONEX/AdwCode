@@ -171,7 +171,17 @@ fn 采样(命令: &[String], 目录: &Path, 详细资源: bool) -> 结果<Value>
 /// 对源码、主题、字体、扩展、附加外观与清单生成 SHA-256 指纹。
 pub fn 指纹(根目录: &Path) -> 结果<Map<String, Value>> {
     let mut 结果 = Map::new();
-    for 目录 in ["源码", "主题", "产品图标", "扩展", "附加外观"] {
+    for 目录 in [
+        "源码",
+        "主题",
+        "产品图标",
+        "扩展",
+        "附加外观",
+        "测试",
+        "基准",
+        "类型声明",
+        "builddir/脚本",
+    ] {
         let 起点 = 根目录.join(目录);
         let mut 文件: Vec<PathBuf> = Vec::new();
         递归收集(&起点, &mut 文件)?;
@@ -186,11 +196,10 @@ pub fn 指纹(根目录: &Path) -> 结果<Map<String, Value>> {
             结果.insert(相对, Value::String(sha256十六进制(&内容)));
         }
     }
-    let 清单 = std::fs::read(根目录.join("package.json"))?;
-    结果.insert(
-        "package.json".to_string(),
-        Value::String(sha256十六进制(&清单)),
-    );
+    for 名称 in ["package.json", "tsconfig.json"] {
+        let 内容 = std::fs::read(根目录.join(名称))?;
+        结果.insert(名称.to_string(), Value::String(sha256十六进制(&内容)));
+    }
     Ok(结果)
 }
 
@@ -290,6 +299,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     if 次数 < 5 {
         return Err(工具错误::新("--次数 至少为 5"));
     }
+    crate::脚本构建::编译(根目录)?;
     let before = 指纹(根目录)?;
     let 可执行 = std::env::current_exe()?;
     let 可执行名 = 可执行
@@ -317,6 +327,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 临时副本 = tempfile::tempdir()?;
     let 临时根 = 临时副本.path().to_path_buf();
     for 名称 in [
+        "builddir/脚本",
         "源码",
         "测试",
         "类型声明",
@@ -433,7 +444,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     }
     let 扩展输出 = Command::new("node")
         .arg("--expose-gc")
-        .arg(根目录.join("基准/扩展基准.cjs"))
+        .arg(根目录.join("builddir/脚本/基准/扩展基准.js"))
         .arg(&临时根)
         .output()
         .map_err(|错误| 工具错误::带来源("无法运行扩展基准".to_string(), 错误))?;

@@ -150,13 +150,13 @@ pub fn 校验(根目录: &Path, 显式: Option<&Path>, 详细: bool) -> 结果<i
     // 附加脚本创建的状态类不属于 VS Code；只认可显式的 classList 创建操作。
     let 附加目录 = 根目录.join("附加外观");
     let mut project_classes: HashSet<String> = HashSet::new();
-    let mut 样式表: Vec<PathBuf> = std::fs::read_dir(&附加目录)?
+    let mut 附加脚本: Vec<PathBuf> = std::fs::read_dir(&附加目录)?
         .flatten()
         .map(|条目| 条目.path())
-        .filter(|路径| 路径.extension().is_some_and(|扩展| 扩展 == "js"))
+        .filter(|路径| 路径.extension().is_some_and(|扩展| 扩展 == "ts"))
         .collect();
-    样式表.sort();
-    for script in 样式表 {
+    附加脚本.sort();
+    for script in 附加脚本 {
         let 文本 = std::fs::read_to_string(&script)?;
         project_classes.extend(
             创建类名正则
@@ -261,6 +261,31 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
 #[cfg(test)]
 mod 测试 {
     use super::*;
+
+    #[test]
+    fn 附加类名必须由ts源码显式创建() {
+        let 临时 = tempfile::tempdir().unwrap();
+        let 根 = 临时.path();
+        std::fs::create_dir_all(根.join("源码/VSCode默认数据")).unwrap();
+        std::fs::write(根.join("源码/VSCode默认数据/registry_keys.json"), "[]").unwrap();
+        std::fs::create_dir(根.join("附加外观")).unwrap();
+        std::fs::write(
+            根.join("附加外观/样式.css"),
+            ".adwcode-window-inactive { color: red; }",
+        )
+        .unwrap();
+        let 脚本 = 根.join("附加外观/窗口状态.ts");
+        std::fs::write(
+            &脚本,
+            "part.classList.toggle('adwcode-window-inactive', inactive);",
+        )
+        .unwrap();
+        let 工作台 = 根.join("workbench.css");
+        std::fs::write(&工作台, "").unwrap();
+        assert_eq!(校验(根, Some(&工作台), false).unwrap(), 0);
+        std::fs::write(&脚本, "part.classList.remove('adwcode-window-inactive');").unwrap();
+        assert_eq!(校验(根, Some(&工作台), false).unwrap(), 1);
+    }
 
     #[test]
     fn 拆分选择器与声明() {

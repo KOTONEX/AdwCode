@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //! 把扩展打包为 .vsix（带 VS Code 清单的 zip）。
 //!
-//! 无需 Node.js：归档结构与 `vsce package` 生成的一致。
+//! TypeScript 脚本先严格编译，归档结构与 `vsce package` 生成的一致。
 //! 默认从完整 Git 历史生成日志；无 Git 的源码副本可显式提供预先生成的日志。
 
 use std::io::Write;
@@ -17,7 +17,7 @@ const 内容类型: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="json" ContentType="application/json"/>
   <Default Extension="js" ContentType="application/javascript"/>
-  <Default Extension="py" ContentType="text/x-python"/>
+  <Default Extension="ts" ContentType="text/plain"/>
   <Default Extension="css" ContentType="text/css"/>
   <Default Extension="svg" ContentType="image/svg+xml"/>
   <Default Extension="png" ContentType="image/png"/>
@@ -159,7 +159,30 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
         .map_err(|错误| 工具错误::新(format!("package.json 解析失败：{错误}")))?;
     let name = manifest["name"].as_str().unwrap_or("");
     let version = manifest["version"].as_str().unwrap_or("");
-    let 文件 = 收集文件(根目录)?;
+    let mut 文件 = 收集文件(根目录)?;
+    for 源文件 in crate::脚本构建::源文件(根目录)? {
+        if !文件.contains(&源文件) {
+            return Err(工具错误::新(format!(
+                "TypeScript 源文件未纳入打包范围：{}",
+                源文件.strip_prefix(根目录).unwrap().display()
+            )));
+        }
+    }
+    let 运行脚本 = crate::脚本构建::编译(根目录)?;
+    文件.extend(运行脚本);
+    文件.sort();
+    文件.dedup();
+    if let Some(入口) = manifest.get("main").and_then(Value::as_str) {
+        let 入口 = Path::new(入口);
+        if 入口.is_absolute()
+            || 入口.components().any(|部件| 部件.as_os_str() == "..")
+            || !文件.contains(&根目录.join(入口))
+        {
+            return Err(工具错误::新(
+                "扩展入口必须是已纳入打包范围的仓库内运行脚本",
+            ));
+        }
+    }
     let mut 图标元数据 = String::new();
     let mut 图标资产 = String::new();
     if let Some(icon) = manifest.get("icon").and_then(Value::as_str) {
@@ -365,7 +388,8 @@ mod 测试 {
             "extension.vsixmanifest",
             "extension/CHANGELOG.md",
             "extension/package.json",
-            "extension/扩展/扩展.js",
+            "extension/builddir/脚本/扩展/扩展.js",
+            "extension/builddir/脚本/附加外观/窗口状态.js",
             "extension/产品图标/adwcode.json",
             "extension/主题/adwcode-深色.json",
             "extension/许可声明.md",
@@ -412,6 +436,41 @@ mod 测试 {
         仓库.写清单(r#"{"name":"AdwCode","version":"","publisher":"测试"}"#);
         assert!(构建(&仓库.目录, &输出, Some(&日志)).is_err());
         assert_eq!(第一份, std::fs::read(&输出).unwrap());
+    }
+
+    #[test]
+    fn 未跟踪脚本拒绝进入归档且保留已有包() {
+        let 仓库 = 临时仓库::新建("未跟踪脚本");
+        仓库.写清单(r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","engines":{"vscode":"^1.100.0"}}"#);
+        assert!(
+            std::process::Command::new("git")
+                .arg("init")
+                .arg("--quiet")
+                .current_dir(&仓库.目录)
+                .status()
+                .unwrap()
+                .success()
+        );
+        assert!(
+            std::process::Command::new("git")
+                .args(["add", "package.json"])
+                .current_dir(&仓库.目录)
+                .status()
+                .unwrap()
+                .success()
+        );
+        std::fs::create_dir(仓库.目录.join("扩展")).unwrap();
+        std::fs::write(仓库.目录.join("扩展/私有.ts"), "const 私有 = '禁止打包';").unwrap();
+        let 输出 = 仓库.目录.join("已有.vsix");
+        std::fs::write(&输出, "旧包").unwrap();
+        assert!(
+            构建(&仓库.目录, &输出, None)
+                .unwrap_err()
+                .消息
+                .contains("TypeScript 源文件未纳入打包范围")
+        );
+        assert_eq!(std::fs::read(&输出).unwrap(), "旧包".as_bytes());
+        assert!(!仓库.目录.join("builddir/脚本").exists());
     }
 
     #[cfg(unix)]

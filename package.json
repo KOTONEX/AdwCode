@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "4.14.0",
+  "version": "4.15.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -38,8 +38,9 @@
     "type": "git",
     "url": "https://github.com/KOTONEX/AdwCode.git"
   },
-  "main": "./扩展/扩展.js",
+  "main": "./builddir/脚本/扩展/扩展.js",
   "scripts": {
+    "编译脚本": "cargo run --quiet -- 编译脚本",
     "构建": "cargo run --quiet -- 主题",
     "校验": "cargo run --quiet -- 校验",
     "检查样式": "cargo run --quiet -- 检查样式",

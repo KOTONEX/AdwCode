@@ -40,8 +40,7 @@
 VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生成。
 目标是让 VS Code 看起来像原生 GNOME 应用（尤其是 GNOME Builder）。
 
-需要 Rust 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt）；扩展 JS 的语法与
-类型检查、离线测试需要 Node.js 与 TypeScript 编译器。
+需要 Rust 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt）；TypeScript 脚本编译、产物语法检查和离线测试需要 Node.js 与 TypeScript 7.0.2。
 
 ## 目录
 
@@ -58,8 +57,8 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 - `源码/VSCode默认数据/` —— 随附的 VS Code 默认数据与键表（MIT）
 - `主题/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
 - `资产/` —— 原创扩展图标 PNG、来源与设计说明；制作方式见 `资产/README.md`
-- `产品图标/`、`附加外观/`、`扩展/`；`附加外观/窗口状态.js` 只同步窗口状态
-- `类型声明/`、`tsconfig.json` —— 扩展 JS 的类型检查配置与手写最小类型面
+- `产品图标/`、`附加外观/`、`扩展/`；`附加外观/窗口状态.ts` 只同步窗口状态
+- `类型声明/`、`tsconfig.json` —— 全部 TS 的严格编译配置与手写最小类型面
 - `Cargo.toml`、`rust-toolchain.toml` —— Rust 工作区与固定工具链
 - `基准/` —— Linux 性能基准，运行方式见其 README，测量结果见
   [性能测试](文档/07-性能测试.md)
@@ -74,10 +73,11 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
   它们会到处多出描边（VS Code 的 CSS 以 `unset` / `transparent` 作为回退）。
 - 新增颜色键必须存在于 `源码/VSCode默认数据/registry_keys.json`，或在
   `主题生成::补充颜色键` 中，否则 `校验` 会失败。
-- 扩展为无构建步骤、无依赖的纯 JavaScript；模块工厂见 `扩展/外观服务.js`，入口只装配与注册；JS 类型检查由 `// @ts-check` +
-  `类型声明/` 手写最小类型面提供，不引入 `@types` 依赖。
+- 扩展、附加脚本、测试与基准使用 TypeScript；模块工厂见 `扩展/外观服务.ts`。
+  `cargo run --quiet -- 编译脚本` 严格编译到 `builddir/脚本/`，打包会重新编译并收录
+  源码和运行产物。扩展不引入第三方运行时库；`类型声明/` 保持手写最小类型面，不引入 `@types` 依赖。
 - `主题/` 是生成产物，不要手工编辑。
-- `附加外观/*.css` 和 `附加外观/窗口状态.js` 通过「Custom CSS and JS Loader」扩展生效。
+- `附加外观/*.css` 和编译后的 `builddir/脚本/附加外观/窗口状态.js` 通过「Custom CSS and JS Loader」扩展生效。
   非活动状态由脚本同步到导航容器，不恢复工作台祖先上的 `:has()` 规则；
   安装命令把已知源码与副本引用统一为一份副本，保留其他用户加载项。
   VS Code 1.140 在约 250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*`
@@ -101,7 +101,7 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 `./target/release/adwcode <子命令>`。
 
 - 独立宿主测试（临时配置与工作区，不重载当前窗口）：`cargo run --quiet -- 宿主测试`
-- 完整检查（cargo fmt/clippy/test、校验、Node/tsc 与离线 JS 测试）：`cargo run --quiet -- 检查`
+- 完整检查（cargo fmt/clippy/test、校验、TS 编译、Node 语法与离线测试）：`cargo run --quiet -- 检查`
 - 格式化全部 Rust 源码：`cargo run --quiet -- 格式化`
 - 类型检查（cargo check 与 tsc）：`cargo run --quiet -- 类型检查`
 - 校验（产物注册、颜色格式、键覆盖、对比度和产品图标）：`cargo run --quiet -- 校验`
@@ -114,7 +114,7 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 - 按需运行离线性能基准：`cargo run --quiet -- 性能基准`（不属于常规完整检查；
   独立工作台基准 `cargo run --quiet -- 工作台基准 --浏览器工具 <playwright 目录>`
   另见 `基准/README.md`）
-- 打包 VSIX（无需 Node.js）：`cargo run --release --quiet -- 打包`
+- 打包 VSIX（需要 Node.js 与 TypeScript 7.0.2）：`cargo run --release --quiet -- 打包`
 - 自动生成变更日志：`cargo run --quiet -- 变更日志`
 - 预览当前版本发布说明：`cargo run --quiet -- 发布说明`
 - 刷新随附的 VS Code 数据与键表：`cargo run --quiet -- 更新默认数据`

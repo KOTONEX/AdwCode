@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //! 启动独立 VS Code 窗口，比较外观 CSS 开关；不安装加载器、不执行重载。
 //!
-//! 测量逻辑仍在 `基准/工作台基准.cjs`（Node + Playwright），本模块只负责
+//! 测量逻辑仍在 `builddir/脚本/基准/工作台基准.js`（Node + Playwright），本模块只负责
 //! 隔离环境、启动调试端口、执行测量并清理本次创建的进程组。
 
 use std::net::TcpListener;
@@ -108,6 +108,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     std::fs::create_dir_all(配置.join("User"))?;
     std::fs::create_dir_all(&工作区)?;
 
+    crate::脚本构建::编译(根目录)?;
     let 清单文本 = std::fs::read_to_string(根目录.join("package.json"))?;
     let manifest: Value = serde_json::from_str(&清单文本)
         .map_err(|错误| 工具错误::新(format!("package.json 解析失败：{错误}")))?;
@@ -118,7 +119,14 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         manifest["version"].as_str().unwrap_or("")
     ));
     std::fs::create_dir_all(&扩展路径)?;
-    for 名称 in ["扩展", "主题", "附加外观", "产品图标", "资产"] {
+    for 名称 in [
+        "扩展",
+        "主题",
+        "附加外观",
+        "产品图标",
+        "资产",
+        "builddir/脚本",
+    ] {
         let 来源 = 根目录.join(名称);
         if 来源.exists() {
             复制目录(&来源, &扩展路径.join(名称), |_| false)?;
@@ -229,7 +237,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
 
     let mut 测量 = 受管进程(
         Command::new(&node)
-            .arg(根目录.join("基准/工作台基准.cjs"))
+            .arg(根目录.join("builddir/脚本/基准/工作台基准.js"))
             .arg(&session路径)
             .arg(std::fs::canonicalize(&浏览器工具)?)
             .arg(&输出路径)

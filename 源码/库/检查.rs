@@ -40,54 +40,18 @@ fn 要求程序(根目录: &Path, 程序: &str) -> 结果<()> {
     运行(根目录, 程序, &["--version"]).map(|_| ())
 }
 
-/// 收集需要语法检查的 JavaScript 文件。
+/// 列出 TypeScript 编译后的运行脚本。
 pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
-    let mut 文件 = vec![
-        "测试/验证状态.cjs".to_string(),
-        "基准/扩展基准.cjs".to_string(),
-        "基准/工作台基准.cjs".to_string(),
-    ];
-    收集模块(&根目录.join("扩展"), 根目录, &mut 文件)?;
-    收集模块(&根目录.join("测试"), 根目录, &mut 文件)?;
-    let 附加目录 = 根目录.join("附加外观");
-    let mut 附加: Vec<String> = std::fs::read_dir(&附加目录)?
-        .collect::<std::io::Result<Vec<_>>>()?
+    Ok(crate::脚本构建::产物文件(根目录)?
         .into_iter()
-        .filter(|条目| {
-            条目
-                .path()
-                .extension()
-                .is_some_and(|扩展| 扩展 == "js" || 扩展 == "cjs")
+        .map(|路径| {
+            路径
+                .strip_prefix(根目录)
+                .unwrap()
+                .to_string_lossy()
+                .into_owned()
         })
-        .map(|条目| format!("附加外观/{}", 条目.file_name().to_string_lossy()))
-        .collect();
-    附加.sort();
-    文件.extend(附加);
-    Ok(文件)
-}
-
-fn 收集模块(目录: &Path, 根目录: &Path, 文件: &mut Vec<String>) -> 结果<()> {
-    for 条目 in std::fs::read_dir(目录)? {
-        let 路径 = 条目?.path();
-        crate::文件事务::校验普通路径(&路径)?;
-        if 路径.is_dir() {
-            收集模块(&路径, 根目录, 文件)?;
-        } else if 路径
-            .extension()
-            .is_some_and(|扩展| 扩展 == "js" || 扩展 == "cjs")
-        {
-            文件.push(
-                路径
-                    .strip_prefix(根目录)
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
-            );
-        }
-    }
-    文件.sort();
-    文件.dedup();
-    Ok(())
+        .collect())
 }
 
 /// `adwcode 检查`：完整离线检查。
@@ -109,15 +73,15 @@ pub fn 检查(根目录: &Path) -> 结果<()> {
     if 失败 != 0 {
         return Err(工具错误::新(format!("校验失败：{失败} 项")));
     }
+    println!("严格编译全部 TypeScript");
+    crate::脚本构建::编译(根目录)?;
     要求程序(根目录, "node")?;
     for 文件 in 脚本文件(根目录)? {
         println!("node --check {文件}");
         运行(根目录, "node", &["--check", &文件])?;
     }
-    println!("tsc --noEmit");
-    运行(根目录, "tsc", &["--noEmit"])?;
-    println!("离线 JS 测试");
-    运行(根目录, "node", &["测试/验证状态.cjs"])?;
+    println!("离线脚本测试");
+    运行(根目录, "node", &["builddir/脚本/测试/验证状态.js"])?;
     println!("全部检查通过");
     Ok(())
 }
@@ -147,10 +111,10 @@ mod 测试 {
         let 根 = Path::new(env!("CARGO_MANIFEST_DIR"));
         let 文件 = 脚本文件(根).expect("收集脚本");
         for 必需 in [
-            "扩展/扩展.js",
-            "附加外观/窗口状态.js",
-            "测试/验证状态.cjs",
-            "基准/扩展基准.cjs",
+            "builddir/脚本/扩展/扩展.js",
+            "builddir/脚本/附加外观/窗口状态.js",
+            "builddir/脚本/测试/验证状态.js",
+            "builddir/脚本/基准/扩展基准.js",
         ] {
             assert!(文件.contains(&必需.to_string()), "缺少 {必需}");
         }

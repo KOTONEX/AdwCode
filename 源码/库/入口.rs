@@ -78,3 +78,6 @@ mod 发布执行;
 
 #[path = "持续集成.rs"]
 pub mod 持续集成;
+
+#[path = "脚本构建.rs"]
+pub mod 脚本构建;

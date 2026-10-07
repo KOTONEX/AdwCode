@@ -48,6 +48,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     } else {
         编辑器
     };
+    crate::脚本构建::编译(根目录)?;
     let 临时 = tempfile::Builder::new()
         .prefix("adwcode-宿主测试-")
         .tempdir()?;
@@ -75,7 +76,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         .arg(format!("--extensionDevelopmentPath={}", 根目录.display()))
         .arg(format!(
             "--extensionTestsPath={}",
-            根目录.join("测试/真实宿主.cjs").display()
+            根目录.join("builddir/脚本/测试/真实宿主.js").display()
         ))
         .arg(&工作区)
         .env("ADWCODE_测试目录", 目录)

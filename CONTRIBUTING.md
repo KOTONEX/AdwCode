@@ -9,7 +9,7 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 | 依赖 | 用途 |
 | --- | --- |
 | Rust 1.99（`rust-toolchain.toml` 固定） | 生成主题、校验、打包与基准 |
-| Node.js 与 TypeScript 编译器 | 扩展 JS 的语法与类型检查、离线测试 |
+| Node.js 与 TypeScript 编译器 | 全部 TS 的严格编译、产物语法检查与离线测试 |
 | VS Code | 供 `cargo run --quiet -- 检查样式` 对照已安装的构建检查 `附加外观/*.css` |
 
 ## 常用命令
@@ -18,11 +18,11 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 1.99.0 与 clippy/rustfmt），再安装 Node.js 与 TypeScript 编译器：
 
 ```sh
-npm install -g typescript
+npm install -g typescript@7.0.2
 cargo build
 
 cargo run --quiet -- 主题          # 生成主题并同步清单
-cargo run --quiet -- 检查          # 完整检查：fmt/clippy/test、校验、tsc 与离线 JS 测试
+cargo run --quiet -- 检查          # 完整检查：fmt/clippy/test、校验、TS 编译与离线测试
 cargo run --quiet -- 格式化        # cargo fmt
 cargo run --quiet -- 校验          # 主题与产品图标校验
 cargo run --quiet -- 打包          # 打包 VSIX
@@ -48,7 +48,8 @@ cargo run --quiet -- 发布说明      # 预览当前版本发布说明
   CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `调色板::规范颜色格式`。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
   它们会到处多出描边。
-- 扩展为无构建步骤、无依赖的纯 JavaScript，不要引入运行时依赖。
+- 扩展、附加脚本、测试与基准均以 TypeScript 维护，不引入第三方运行时依赖。
+  `cargo run --quiet -- 编译脚本` 输出到 `builddir/脚本/`；打包自动重新编译，源码与 JS 产物一起分发。
 
 ## 提交与 PR
 

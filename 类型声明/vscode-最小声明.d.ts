@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //
-// VS Code 扩展 API 的最小类型面：只声明 扩展/扩展.js 用到的成员。
+// VS Code 扩展 API 的最小类型面：只声明扩展与真实宿主测试用到的成员。
 // 官方 @types/vscode 不在本仓库依赖中；本文件由 `cargo run --quiet -- 类型检查` 的 tsc 与
 // 编辑器共同消费，真实签名见 VS Code 安装目录的
 // resources/app/out/vscode-dts/vscode.d.ts。
@@ -38,9 +38,18 @@ declare module "vscode" {
         update(
             section: string,
             value: unknown,
-            configurationTarget?: ConfigurationTarget | boolean | null
+            configurationTarget?: ConfigurationTarget | boolean | null,
         ): Thenable<void>;
-        inspect<T>(section: string): { defaultValue?: T; globalValue?: T; workspaceValue?: T; workspaceFolderValue?: T } | undefined;
+        inspect<T>(
+            section: string,
+        ):
+            | {
+                  defaultValue?: T;
+                  globalValue?: T;
+                  workspaceValue?: T;
+                  workspaceFolderValue?: T;
+              }
+            | undefined;
     }
 
     export interface Memento {
@@ -59,7 +68,11 @@ declare module "vscode" {
     }
 
     export namespace workspace {
-        function getConfiguration(section?: string): WorkspaceConfiguration;
+        const workspaceFolders: readonly { uri: Uri }[] | undefined;
+        function getConfiguration(
+            section?: string,
+            scope?: Uri,
+        ): WorkspaceConfiguration;
     }
 
     export interface OutputChannel {
@@ -69,7 +82,10 @@ declare module "vscode" {
     }
 
     export namespace window {
-        function showQuickPick<T extends { label: string; picked?: boolean }>(items: T[], options: { canPickMany: true; placeHolder?: string }): Thenable<T[] | undefined>;
+        function showQuickPick<T extends { label: string; picked?: boolean }>(
+            items: T[],
+            options: { canPickMany: true; placeHolder?: string },
+        ): Thenable<T[] | undefined>;
         function createOutputChannel(name: string): OutputChannel;
         function showInformationMessage(
             message: string,
@@ -90,17 +106,32 @@ declare module "vscode" {
         ): Thenable<string | undefined>;
     }
 
+    export const version: string;
     export namespace commands {
+        function getCommands(filterInternal?: boolean): Thenable<string[]>;
         function registerCommand(
             command: string,
-            callback: (...args: any[]) => any,
-            thisArg?: any
+            callback: (...args: unknown[]) => unknown,
+            thisArg?: unknown,
         ): Disposable;
-        function executeCommand<T>(command: string, ...rest: any[]): Thenable<T | undefined>;
+        function executeCommand<T>(
+            command: string,
+            ...rest: unknown[]
+        ): Thenable<T | undefined>;
     }
 
     export namespace extensions {
-        function getExtension<T>(extensionId: string): { readonly packageJSON: any } | undefined;
+        function getExtension<T>(
+            extensionId: string,
+        ):
+            | {
+                  readonly packageJSON: {
+                      version: string;
+                      contributes: { commands: { command: string }[] };
+                  };
+                  activate(): Thenable<T>;
+              }
+            | undefined;
     }
 
     export namespace env {

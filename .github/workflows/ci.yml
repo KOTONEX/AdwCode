@@ -35,7 +35,7 @@ jobs:
           node-version: "22"
 
       - name: 安装 TypeScript
-        run: npm install -g typescript
+        run: npm install -g typescript@7.0.2
 
       - name: 完整检查
         run: cargo run --quiet -- 检查
@@ -85,7 +85,7 @@ jobs:
           HOST_VERSION: ${{ steps.host-version.outputs['版本'] }}
         run: |
           npm install --prefix "$RUNNER_TEMP/adwcode-host-tools" @vscode/test-electron
-          node 测试/下载宿主.cjs "$RUNNER_TEMP/adwcode-host-tools" "$HOST_VERSION" "$RUNNER_TEMP/adwcode-编辑器" > "$RUNNER_TEMP/adwcode-host-path"
+          node builddir/脚本/测试/下载宿主.js "$RUNNER_TEMP/adwcode-host-tools" "$HOST_VERSION" "$RUNNER_TEMP/adwcode-编辑器" > "$RUNNER_TEMP/adwcode-host-path"
           xvfb-run -a cargo run --quiet -- 宿主测试 --禁用沙箱 --编辑器程序 "$(tail -n 1 "$RUNNER_TEMP/adwcode-host-path")"
 
       - name: 记录本周成功宿主验收
