@@ -254,6 +254,7 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 
 ```sh
 cargo run --quiet -- 校验             # 产物注册、颜色格式、键覆盖与对比度
+cargo run --quiet -- 验证设置         # 清单默认设置、Linux 命令与工作区能力
 cargo run --quiet -- 检查样式         # 自定义 CSS 与已安装 VS Code 的比对
 cargo run --quiet -- 主题 --监视      # 给主题加 _watch，编辑 JSON 即时生效
 cargo run --quiet -- 更新默认数据      # 刷新 VS Code 默认主题数据与键表
@@ -283,7 +284,8 @@ VSIX。当前版本的说明可通过 `cargo run --quiet -- 发布说明` 预览
 全部 Rust 源码使用 `cargo fmt` 与 `cargo clippy` 检查和格式化，含图标生成器与
 性能基准。运行 `cargo run --quiet -- 格式化` 应用格式化；`cargo run --quiet -- 检查`
 聚合 `cargo fmt --check`、clippy、单元测试、主题校验、Node.js 语法检查、
-tsc 与离线 JS 测试。cargo 不处理 JavaScript 或 CSS，相关验证分别由 tsc、
+清单设置验证、tsc 与离线 JS 测试。发布策略与清单验证已在 4.1.0 迁入 Rust，
+实现与回归范围见 [Rust 迁移](文档/09-Rust迁移.md#410-后续迁移)。cargo 不处理 JavaScript 或 CSS，相关验证分别由 tsc、
 Node.js 和 CSS 检查器提供。
 
 `cargo run --quiet -- 校验` 检查主题和产品图标的注册及文件完整性，要求界面、

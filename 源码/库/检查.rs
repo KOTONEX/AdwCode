@@ -3,7 +3,7 @@
 //! 静态检查、类型检查与离线测试的聚合入口，取代 Meson 目标。
 //!
 //! - `检查`：cargo fmt/clippy/test、主题与图标校验、JavaScript 语法检查、
-//!   TypeScript 类型检查与离线 JS 测试。
+//!   清单默认设置验证、TypeScript 类型检查与离线 JS 测试。
 //! - `格式化`：`cargo fmt`。
 //! - `类型检查`：`cargo check --all-targets` 与 `tsc --noEmit`。
 
@@ -45,9 +45,6 @@ pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
     let mut 文件 = vec![
         "扩展/扩展.js".to_string(),
         "测试/验证状态.cjs".to_string(),
-        "测试/验证设置.cjs".to_string(),
-        "测试/发布策略.cjs".to_string(),
-        "测试/验证发布.cjs".to_string(),
         "基准/扩展基准.cjs".to_string(),
         "基准/工作台基准.cjs".to_string(),
     ];
@@ -75,6 +72,8 @@ pub fn 检查(根目录: &Path) -> 结果<()> {
     )?;
     println!("cargo test");
     运行(根目录, "cargo", &["test", "--quiet"])?;
+    println!("验证设置");
+    crate::验证设置::验证设置(根目录)?;
     println!("校验");
     let 失败 = crate::主题生成::校验(根目录)?;
     if 失败 != 0 {
@@ -89,8 +88,6 @@ pub fn 检查(根目录: &Path) -> 结果<()> {
     运行(根目录, "tsc", &["--noEmit"])?;
     println!("离线 JS 测试");
     运行(根目录, "node", &["测试/验证状态.cjs"])?;
-    运行(根目录, "node", &["测试/验证设置.cjs"])?;
-    运行(根目录, "node", &["测试/验证发布.cjs"])?;
     println!("全部检查通过");
     Ok(())
 }
@@ -123,7 +120,7 @@ mod 测试 {
             "扩展/扩展.js",
             "附加外观/窗口状态.js",
             "测试/验证状态.cjs",
-            "测试/验证设置.cjs",
+            "基准/扩展基准.cjs",
         ] {
             assert!(文件.contains(&必需.to_string()), "缺少 {必需}");
         }

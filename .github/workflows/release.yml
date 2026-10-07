@@ -44,7 +44,7 @@ jobs:
 
       - name: 判断候选与市场发布权限
         id: policy
-        run: node 测试/发布策略.cjs . "$GITHUB_REF"
+        run: cargo run --quiet -- 发布策略 --引用 "$GITHUB_REF" --输出 "$GITHUB_OUTPUT"
 
       - name: 完整检查
         run: cargo run --quiet -- 检查
@@ -66,8 +66,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PRERELEASE: ${{ steps.policy.outputs['候选'] }}
           LATEST: ${{ steps.policy.outputs['候选'] != 'true' }}
+          VERSION: ${{ steps.policy.outputs['版本'] }}
         run: |
-          vsix="AdwCode-$(node -p "require('./package.json').version").vsix"
+          vsix="AdwCode-$VERSION.vsix"
           # 从当前标签的提交范围生成说明，标签必须严格对应 HEAD 与清单版本。
           ./target/release/adwcode 发布说明 --标签 "$GITHUB_REF_NAME"
           # 标签对应固定提交；重复发布保留已有附件，只补齐缺失附件并更新说明。
@@ -102,9 +103,10 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VERSION: ${{ steps.policy.outputs['版本'] }}
         run: |
-          vsix="AdwCode-$(node -p "require('./package.json').version").vsix"
-          version="$(node -p "require('./package.json').version")"
+          vsix="AdwCode-$VERSION.vsix"
+          version="$VERSION"
 
           if [ -z "$VSCE_PAT" ]; then
             printf '%s\n' '（未配置 VSCE_PAT，跳过 VS Code 扩展市场）'

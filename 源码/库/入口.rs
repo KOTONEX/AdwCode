@@ -25,6 +25,12 @@ pub mod 主题生成;
 #[path = "变更日志.rs"]
 pub mod 变更日志;
 
+#[path = "发布策略.rs"]
+pub mod 发布策略;
+
+#[path = "验证设置.rs"]
+pub mod 验证设置;
+
 #[path = "打包.rs"]
 pub mod 打包;
 

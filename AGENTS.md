@@ -50,6 +50,7 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 - `源码/库/语法映射.rs` —— GtkSourceView 样式名到 TextMate 作用域的映射
 - `源码/库/主题生成.rs` / `源码/库/打包.rs` / `源码/库/更新默认数据.rs`
 - `源码/库/变更日志.rs` —— 从 Git 版本标签和提交标题生成变更日志与发布说明
+- `源码/库/发布策略.rs`、`源码/库/验证设置.rs` —— 发布权限与清单设置验证，回归由 Cargo 执行
 - `源码/库/命令.rs`、`源码/程序/主程序.rs` —— `adwcode` 子命令与二进制入口
 - 单元测试与模块内联，运行 `cargo test`
 - `源码/GtkSourceView方案/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
@@ -102,6 +103,8 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 - 格式化全部 Rust 源码：`cargo run --quiet -- 格式化`
 - 类型检查（cargo check 与 tsc）：`cargo run --quiet -- 类型检查`
 - 校验（产物注册、颜色格式、键覆盖、对比度和产品图标）：`cargo run --quiet -- 校验`
+- 验证清单默认设置、命令和工作区能力：`cargo run --quiet -- 验证设置`
+- 判断发布权限：`cargo run --quiet -- 发布策略 --引用 refs/tags/v<版本>`（CI 添加 `--输出 "$GITHUB_OUTPUT"`）
 - 构建主题并同步 `package.json`：`cargo run --quiet -- 主题`（`--监视` 添加调试标记）
 - 对照已安装的 VS Code 检查自定义 CSS：`cargo run --quiet -- 检查样式`
 - 按需运行离线性能基准：`cargo run --quiet -- 性能基准`（不属于常规完整检查；

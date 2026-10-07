@@ -50,8 +50,8 @@ VS Code 扩展宿主只运行 JavaScript，工作台补丁脚本运行在页面 
 ## 测试与 CI
 
 - `cargo test` 承接 `测试/test_主题.py`、`test_变更日志.py`、`test_发布流程.py`
-  的行为；`测试/验证状态.cjs`、`测试/验证设置.cjs` 保持 JavaScript，
-  由 `adwcode 检查` 调用 Node 执行。
+  的行为；`测试/验证状态.cjs` 保持 JavaScript，由 `adwcode 检查` 调用 Node 执行。
+  4.1.0 将清单设置验证和发布策略及其真实 Git 回归测试迁入 Rust，见下文。
 - 阶段⑥改造 CI：安装 Rust（读取 `rust-toolchain.toml`）、缓存 cargo、
   `cargo fmt --check`、`cargo clippy -- -D warnings`、`cargo test`、
   生成主题并 diff、打包与发布；移除 Python、ruff、ty 与 Meson 步骤。
@@ -91,6 +91,28 @@ VS Code 扩展宿主只运行 JavaScript，工作台补丁脚本运行在页面 
 | `产品图标/生成自有字形.py`、`生成导入字形.py` | `源码/库/图标生成.rs` |
 
 ## 实施记录
+
+### 4.1.0 后续迁移
+
+| 移除的 JavaScript 工具 | Rust 替代 |
+| --- | --- |
+| `测试/发布策略.cjs` | `源码/库/发布策略.rs`，入口 `adwcode 发布策略 --引用 refs/...` |
+| `测试/验证发布.cjs` | 发布策略模块内的 Cargo 测试，使用真实临时 Git 仓库 |
+| `测试/验证设置.cjs` | `源码/库/验证设置.rs`，入口 `adwcode 验证设置`，纳入完整检查 |
+
+发布策略复用现有 SemVer 标签校验，拒绝非法版本与标签不匹配；缺少主线、
+不完整历史或 Git 错误时失败。仅标签提交已进入 main 且无预发布标识时允许
+市场发布；手动分支运行不授予市场发布权限，构建元数据中的连字符不算预发布。
+使用 `--输出 "$GITHUB_OUTPUT"` 追加版本、候选和市场三个输出，发布工作流直接
+复用 Rust 输出的版本号，不再通过 Node 读取清单。
+
+清单验证保留原有默认主题、产品图标、字体、菜单、五个 Linux 命令及工作区能力
+约束，并覆盖错误类型、缺失字段、重复命令等失败路径。完整检查读取当前磁盘的
+清单；Cargo 测试包含合法清单与逐项破坏约束的回归。
+主题、字体、CSS 和扩展运行逻辑没有变化；完整检查仍需要 Node.js 与 tsc，
+用于执行真实 JS 的语法、类型和模拟宿主回归，工作台测量仍使用 Playwright。
+
+### 首次迁移记录
 
 - 非 ASCII 模块名必须用 `#[path]` 声明；标识符用纯中文或小写 ASCII，
   中文中间夹大写英文词会触发 Rust 的 `non_snake_case`。
