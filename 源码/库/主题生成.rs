@@ -729,4 +729,87 @@ mod 测试 {
             "package.json 序列化与提交内容不一致"
         );
     }
+
+    /// 最小校验仓库：键表、清单、主题与产品图标都可按用例改写。
+    struct 校验仓库 {
+        目录: PathBuf,
+    }
+
+    impl 校验仓库 {
+        fn 新建(名称: &str) -> Self {
+            let 目录 =
+                std::env::temp_dir().join(format!("adwcode-校验-{名称}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&目录);
+            std::fs::create_dir_all(目录.join("主题")).expect("创建主题目录");
+            std::fs::create_dir_all(目录.join("源码/VSCode默认数据")).expect("创建数据目录");
+            std::fs::write(目录.join("源码/VSCode默认数据/builtin_keys.json"), "[]")
+                .expect("写入内置键");
+            std::fs::write(目录.join("源码/VSCode默认数据/registry_keys.json"), "[]")
+                .expect("写入注册表键");
+            Self { 目录 }
+        }
+
+        fn 写清单(&self, 内容: &str) {
+            std::fs::write(self.目录.join("package.json"), 内容).expect("写入清单");
+        }
+
+        fn 写主题(&self, 名字: &str, 内容: &str) {
+            std::fs::write(self.目录.join("主题").join(名字), 内容).expect("写入主题");
+        }
+    }
+
+    impl Drop for 校验仓库 {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.目录);
+        }
+    }
+
+    fn 有效主题(colors: &str) -> String {
+        format!(
+            r#"{{"$schema":"vscode://schemas/color-theme","name":"AdwCode 深色","type":"dark","semanticHighlighting":true,"colors":{colors},"tokenColors":[],"semanticTokenColors":{{}}}}"#
+        )
+    }
+
+    #[test]
+    fn 缺少键表时校验失败() {
+        let 仓库 = 校验仓库::新建("缺键表");
+        std::fs::remove_file(仓库.目录.join("源码/VSCode默认数据/builtin_keys.json")).unwrap();
+        仓库.写主题("adwcode-深色.json", &有效主题("{}"));
+        仓库.写清单(r#"{"contributes":{"themes":[]}}"#);
+        assert_eq!(校验(&仓库.目录).expect("执行校验"), 1);
+    }
+
+    #[test]
+    fn 未注册与非法颜色被拒绝() {
+        let 仓库 = 校验仓库::新建("非法");
+        仓库.写主题(
+            "adwcode-深色.json",
+            &有效主题(r#"{"editor.background":"rgb(0 0 0)"}"#),
+        );
+        // 主题文件存在但未在清单注册，同时颜色不是十六进制。
+        仓库.写清单(
+            r#"{"contributes":{"themes":[],"productIconThemes":[{"id":"adwcode","path":"./产品图标/adwcode.json"}]}}"#,
+        );
+        仓库.写主题("adwcode-浅色.json", &有效主题("{}"));
+        let 失败 = 校验(&仓库.目录).expect("执行校验");
+        assert!(失败 >= 2, "应同时报告未注册与非法颜色，实际 {失败}");
+    }
+
+    #[test]
+    fn 产品图标缺失来源被拒绝() {
+        let 仓库 = 校验仓库::新建("图标");
+        仓库.写主题("adwcode-深色.json", &有效主题("{}"));
+        let 图标目录 = 仓库.目录.join("产品图标");
+        std::fs::create_dir_all(&图标目录).unwrap();
+        std::fs::write(
+            图标目录.join("adwcode.json"),
+            r#"{"fonts":[{"id":"adwcode","src":[{"path":"缺失.ttf"}]}],"iconDefinitions":{"adwcode.icon":{"fontId":"adwcode","fontCharacter":"\\e001"}}}"#,
+        )
+        .unwrap();
+        仓库.写清单(
+            r#"{"contributes":{"themes":[{"label":"AdwCode 深色","uiTheme":"vs-dark","path":"./主题/adwcode-深色.json"}],"productIconThemes":[{"id":"adwcode","path":"./产品图标/adwcode.json"}]}}"#,
+        );
+        let 失败 = 校验(&仓库.目录).expect("执行校验");
+        assert!(失败 >= 1, "应报告缺失字体来源，实际 {失败}");
+    }
 }
