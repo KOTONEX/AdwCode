@@ -139,12 +139,24 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     if !参数.is_empty() {
         return Err(工具错误::新(format!("未知参数：{}", 参数[0])));
     }
+    let 主题代理 = 创建代理(30)?;
+    let 文档代理 = 创建代理(60)?;
+    更新(根目录, &|地址, 超时秒| {
+        if 超时秒 <= 30 {
+            获取(&主题代理, 地址)
+        } else {
+            获取(&文档代理, 地址)
+        }
+    })
+}
+
+/// 更新逻辑主体；下载器可注入以便离线测试。
+fn 更新(根目录: &Path, 下载: &dyn Fn(&str, u64) -> 结果<String>) -> 结果<()> {
     let 输出目录 = 根目录.join("源码/VSCode默认数据");
     // 所有下载和解析成功后再写文件，避免中途失败留下混合版本的数据。
-    let 代理 = 创建代理(30)?;
     let mut 键: BTreeSet<String> = BTreeSet::new();
     for 名称 in 全部主题 {
-        let 文本 = 获取(&代理, &format!("{主题源}/{名称}.json"))?;
+        let 文本 = 下载(&format!("{主题源}/{名称}.json"), 30)?;
         let 值: serde_json::Value = serde_json::from_str(&清理json注释(&文本))
             .map_err(|错误| 工具错误::新(format!("{名称}.json 解析失败：{错误}")))?;
         if let Some(颜色) = 值.get("colors").and_then(serde_json::Value::as_object) {
@@ -154,8 +166,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 内置文本 = 写字符串数组(&键);
     let mut 消息 = vec![format!("内置颜色键： {}", 键.len())];
 
-    let 文档代理 = 创建代理(60)?;
-    let markdown = 获取(&文档代理, 文档源)?;
+    let markdown = 下载(文档源, 60)?;
     let mut 注册表: BTreeSet<String> = BTreeSet::new();
     for 捕获 in 带点键正则.captures_iter(&markdown) {
         if let Some(匹配) = 捕获.get(1) {
@@ -223,5 +234,70 @@ mod 测试 {
             let 集合: BTreeSet<String> = 列表.into_iter().collect();
             assert_eq!(写字符串数组(&集合), 文本, "{名字} 序列化不一致");
         }
+    }
+
+    #[test]
+    fn 下载失败保留既有数据且成功时正确并集() {
+        let 根 = std::env::temp_dir().join(format!("adwcode-默认数据-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&根);
+        std::fs::create_dir_all(根.join("源码/VSCode默认数据")).expect("创建数据目录");
+        std::fs::write(
+            根.join("源码/VSCode默认数据/builtin_keys.json"),
+            "[\"旧\"]\n",
+        )
+        .expect("写入旧数据");
+        std::fs::write(
+            根.join("源码/VSCode默认数据/registry_keys.json"),
+            "[\"旧\"]\n",
+        )
+        .expect("写入旧数据");
+
+        // 失败：最后一个主题下载报错，既有文件保持原样。
+        let 失败下载 = |地址: &str, _: u64| -> 结果<String> {
+            if 地址.ends_with("hc_light.json") {
+                Err(工具错误::新("网络失败"))
+            } else {
+                Ok("{\"colors\":{}}".to_string())
+            }
+        };
+        assert!(更新(&根, &失败下载).is_err());
+        assert_eq!(
+            std::fs::read_to_string(根.join("源码/VSCode默认数据/builtin_keys.json")).unwrap(),
+            "[\"旧\"]\n"
+        );
+
+        // 成功：并集、JSONC 清理、正则提取与前缀过滤。
+        let 成功下载 = |地址: &str, _: u64| -> 结果<String> {
+            if 地址 == 文档源 {
+                Ok("`editor.background`\n`workbench.colorCustomizations`\n- `foreground`:\n- `editorBracketMatch.background`:\n`vscode.x`\n`configuration.y`\n`editor.tokenColorCustomizations`\n"
+                    .to_string())
+            } else if 地址.ends_with("dark_vs.json") {
+                Ok(
+                    "{\n // 注释\n \"colors\": {\"a.b\": \"#000\", \"c\": \"#111\",},\n}"
+                        .to_string(),
+                )
+            } else {
+                Ok("{\"colors\": {\"a.b\": \"#000\", \"d\": \"#222\"}}".to_string())
+            }
+        };
+        更新(&根, &成功下载).expect("更新成功");
+        let 内置: Vec<String> = serde_json::from_str(
+            &std::fs::read_to_string(根.join("源码/VSCode默认数据/builtin_keys.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(内置, vec!["a.b", "c", "d"]);
+        let 注册表: Vec<String> = serde_json::from_str(
+            &std::fs::read_to_string(根.join("源码/VSCode默认数据/registry_keys.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            注册表,
+            vec![
+                "editor.background",
+                "editorBracketMatch.background",
+                "foreground"
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&根);
     }
 }
