@@ -8,35 +8,30 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 
 | 依赖 | 用途 |
 | --- | --- |
-| Python 3.9+ | 生成主题、校验与打包（CI 与本地开发使用 3.14 自由线程版本） |
-| [fontTools](https://github.com/fonttools/fonttools) | 仅重新生成导入的单色字体或备用自有字体时需要，见产品图标说明 |
-| [skia-pathops](https://github.com/fonttools/skia-pathops) | 仅再生成资产时处理描边、裁切与字重内缩 |
-| [nanoemoji](https://github.com/googlefonts/nanoemoji) | 仅重新生成 `产品图标/adwaita-icons.ttf` 时需要 |
-| VS Code | 供 `python3.14t 源码/检查样式.py` 对照已安装的构建检查 `附加外观/*.css` |
+| Rust 1.99（`rust-toolchain.toml` 固定） | 生成主题、校验、打包与基准 |
+| Node.js 与 TypeScript 编译器 | 扩展 JS 的语法与类型检查、离线测试 |
+| VS Code | 供 `cargo run --quiet -- 检查样式` 对照已安装的构建检查 `附加外观/*.css` |
 
 ## 常用命令
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 与 Node.js，
-再安装自由线程 Python、Meson、Ninja、Ruff、ty 和 TypeScript 编译器：
+先按 [rustup](https://rustup.rs/) 安装 Rust（`rust-toolchain.toml` 会自动拉取
+1.99.0 与 clippy/rustfmt），再安装 Node.js 与 TypeScript 编译器：
 
 ```sh
-uv python install 3.14t
-python3.14t -m pip install meson ninja ty ruff==0.16.9
 npm install -g typescript
-meson setup builddir
-meson compile -C builddir 主题    # 生成主题并同步清单
-meson compile -C builddir 静态检查      # Ruff 检查、格式检查及类型检查
-meson compile -C builddir 格式化    # Ruff 格式化全部 Python 文件
-meson compile -C builddir 校验     # 主题校验
-meson test -C builddir --print-errorlogs  # 完整检查及离线测试
-meson compile -C builddir 打包   # 打包 VSIX
-meson compile -C builddir 变更日志 # 自动生成变更日志
-meson compile -C builddir 发布说明 # 预览当前版本发布说明
-meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
+cargo build
+
+cargo run --quiet -- 主题          # 生成主题并同步清单
+cargo run --quiet -- 检查          # 完整检查：fmt/clippy/test、校验、tsc 与离线 JS 测试
+cargo run --quiet -- 格式化        # cargo fmt
+cargo run --quiet -- 校验          # 主题与产品图标校验
+cargo run --quiet -- 打包          # 打包 VSIX
+cargo run --quiet -- 变更日志      # 自动生成变更日志
+cargo run --quiet -- 发布说明      # 预览当前版本发布说明
 ```
 
 `package.json` 中保留了等价别名，`npm run 构建`、`npm run 校验`、`npm test`、
-`npm run 打包` 等与上面的目标一一对应。
+`npm run 打包` 等与上面的命令一一对应。
 
 ## 改动流程
 
@@ -45,12 +40,12 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
 自动化测试应使用独立环境，避免重载正在使用的工作窗口。扩展不监视文件，
 也不会自动重载。
 
-- `主题/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行 `meson compile -C builddir 主题`，
-  并让生成结果随提交一起入库。
+- `主题/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行
+  `cargo run --quiet -- 主题`，并让生成结果随提交一起入库。
 - 新增颜色键必须存在于 `源码/VSCode默认数据/registry_keys.json`，或在
-  `build.LEGACY_KEYS` 中，否则 `meson compile -C builddir 校验` 会失败。
+  `主题生成::补充颜色键` 中，否则 `cargo run --quiet -- 校验` 会失败。
 - 主题 JSON 中的颜色必须是十六进制（`#rrggbb` / `#rrggbbaa`）：VS Code 会忽略
-  CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `palette.as_hex()`。
+  CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `调色板::规范颜色格式`。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
   它们会到处多出描边。
 - 扩展为无构建步骤、无依赖的纯 JavaScript，不要引入运行时依赖。
@@ -79,7 +74,7 @@ meson compile -C builddir --clean   # 清理 Meson 构建目录中的产物
   | `杂务:` | 构建、依赖、CI、清理等 | chore |
   | `初始化:` | 仓库 / 模块的初始提交 | init |
 
-- 提交前必须运行 `meson test -C builddir --print-errorlogs`，Ruff 静态与格式检查、类型、主题和离线测试均应通过。
+- 提交前必须运行 `cargo run --quiet -- 检查`，格式、clippy、测试、校验与离线 JS 测试均应通过。
 - 提交标题是变更日志的输入，请写清具体变化；无需编辑 `CHANGELOG.md`。
   主线版本标签划分发布范围，生成文件位于 `builddir/CHANGELOG.md`，不提交到仓库；
   完整 Git 历史与标签是生成所需输入。未分类的旧标题归入“其他”，合并提交不重复列出。

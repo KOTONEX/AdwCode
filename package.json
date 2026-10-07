@@ -40,17 +40,18 @@
   },
   "main": "./扩展/扩展.js",
   "scripts": {
-    "配置": "meson setup builddir",
-    "构建": "meson compile -C builddir 主题",
-    "校验": "meson compile -C builddir 校验",
-    "检查样式": "meson compile -C builddir 检查样式",
-    "test": "meson test -C builddir --print-errorlogs",
-    "打包": "meson compile -C builddir 打包",
-    "变更日志": "meson compile -C builddir 变更日志",
-    "发布说明": "meson compile -C builddir 发布说明",
-    "静态检查": "meson compile -C builddir 静态检查",
-    "格式化": "meson compile -C builddir 格式化",
-    "类型检查": "meson compile -C builddir 类型检查"
+    "构建": "cargo run --quiet -- 主题",
+    "校验": "cargo run --quiet -- 校验",
+    "检查样式": "cargo run --quiet -- 检查样式",
+    "检查": "cargo run --quiet -- 检查",
+    "test": "cargo run --quiet -- 检查",
+    "格式化": "cargo run --quiet -- 格式化",
+    "类型检查": "cargo run --quiet -- 类型检查",
+    "打包": "cargo run --quiet -- 打包",
+    "变更日志": "cargo run --quiet -- 变更日志",
+    "发布说明": "cargo run --quiet -- 发布说明",
+    "性能基准": "cargo run --quiet -- 性能基准",
+    "工作台基准": "cargo run --quiet -- 工作台基准"
   },
   "contributes": {
     "configurationDefaults": {
