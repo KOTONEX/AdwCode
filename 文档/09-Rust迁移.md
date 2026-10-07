@@ -1,4 +1,8 @@
-# Rust 迁移（`rust` 分支）
+# Rust 迁移记录
+
+本文前半记录最初在 `rust` 分支实施的迁移方案和阶段状态，并非当前目录清单。
+4.15.0 已将全部手写脚本迁移 TypeScript，JavaScript 运行产物位于 `builddir/脚本/`；
+当前架构见 [架构说明](03-架构与实现状态.md)。
 
 本分支把构建期 Python 代码迁移到 Rust，并以 cargo 与统一 CLI 取代 Meson。
 运行时 JavaScript（`扩展/扩展.js`、`附加外观/窗口状态.js`）与 CSS 不在迁移范围：

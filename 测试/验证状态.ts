@@ -34,6 +34,7 @@ interface 模拟编辑器 {
         createOutputChannel(): import("vscode").OutputChannel;
         showInformationMessage(): Promise<undefined>;
         showWarningMessage(message: string): Promise<void>;
+        showErrorMessage(message: string): Promise<undefined>;
         showQuickPick(): Promise<{ label: string }[] | undefined>;
     };
     commands: {
@@ -345,7 +346,7 @@ async function 运行测试() {
 
     // 安装命令应调用去重逻辑；拒绝补丁按钮时不执行任何外部命令。
     let updates = 0;
-    let workspaceImports: string[] | undefined;
+    let workspaceImports: string[] | null | undefined;
     imports = [
         "file:///repo/附加外观/GNOME外观.css",
         "file:///user/.config/adwcode/GNOME外观.css",
@@ -353,7 +354,9 @@ async function 运行测试() {
     vscode.ConfigurationTarget = { Global: 1 };
     vscode.workspace.getConfiguration = () => ({
         get: (key: string, fallback: unknown) =>
-            key === "imports" ? workspaceImports || imports : fallback,
+            key === "imports"
+                ? workspaceImports === undefined ? imports : workspaceImports
+                : fallback,
         inspect: () => ({
             defaultValue: [],
             globalValue: imports,
@@ -489,7 +492,19 @@ async function 运行测试() {
     imports = null;
     await assert.rejects(sandbox.选择外观组件(context), /必须是字符串数组/);
     assert.throws(() => sandbox.外观安装状态(context), /必须是字符串数组/);
+    const 非法配置前文件 = [...files.entries()];
+    const 非法配置前更新 = updates;
+    await assert.rejects(sandbox.安装样式(context, ["GNOME外观.css"]), /必须是字符串数组/);
+    assert.equal(imports, null);
+    assert.deepEqual([...files.entries()], 非法配置前文件);
+    assert.equal(updates, 非法配置前更新);
     imports = [];
+    workspaceImports = null;
+    await assert.rejects(sandbox.安装样式(context, ["GNOME外观.css"]), /必须是字符串数组/);
+    assert.deepEqual(imports, []);
+    assert.deepEqual([...files.entries()], 非法配置前文件);
+    assert.equal(updates, 非法配置前更新);
+    workspaceImports = undefined;
     let 顺序: number[] = [];
     await Promise.all([
         sandbox.排队外观操作(async () => {
@@ -502,6 +517,12 @@ async function 运行测试() {
         }),
     ]);
     assert.deepEqual(顺序, [1, 2, 3]);
+    vscode.window.showErrorMessage = async () => { throw Error("错误提示失败"); };
+    const 失败操作 = sandbox.排队外观操作(async () => { throw Error("原操作失败"); });
+    const 后续操作 = sandbox.排队外观操作(async () => { 顺序.push(4); });
+    await assert.rejects(失败操作, /错误提示失败/);
+    await 后续操作;
+    assert.deepEqual(顺序, [1, 2, 3, 4]);
     console.log("外观管理：选择、移除、失败回滚及串行操作测试通过");
 
     assert.equal(

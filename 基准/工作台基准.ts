@@ -38,7 +38,7 @@ const state = JSON.parse(
 ) as 工作台状态;
 const output = path.resolve(process.argv[4]);
 const runs = Number(process.argv[5] || 6);
-const selectorsOnly = process.argv[6] === "True";
+const selectorsOnly = process.argv[6] === "true";
 const root = path.resolve(__dirname, "../../..");
 const ownProcess = fs.readFileSync(`/proc/${state.pid}/cmdline`, "utf8");
 assert.ok(

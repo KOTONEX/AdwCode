@@ -32,7 +32,8 @@ function 创建事务(
                 `AdwCode：外观操作失败：${String(错误)}`,
             );
         });
-        外观操作队列 = 本次;
+        // 提示 API 也可能拒绝；保留本次错误，但下一项仍能执行。
+        外观操作队列 = 本次.catch(() => {});
         return 本次;
     }
 
@@ -49,8 +50,12 @@ function 创建事务(
         const inspected = config.inspect("imports");
         const 原全局配置 = inspected?.globalValue;
         const imports = 校验加载引用(
-            原全局配置 ?? inspected?.defaultValue ?? [],
+            原全局配置 === undefined
+                ? (inspected?.defaultValue ?? [])
+                : 原全局配置,
         );
+        // 有效引用可能来自工作区，必须在任何磁盘或配置写入之前校验。
+        if (loader) 校验加载引用(config.get("imports", []));
         const merged = 合并加载引用(
             context,
             替换全部

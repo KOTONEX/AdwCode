@@ -57,11 +57,15 @@ pub fn 自有入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 目录 = 根目录.join("产品图标").join("符号图标");
     let mut 源文件: Vec<PathBuf> = std::fs::read_dir(&目录)
         .map_err(|错误| 工具错误::带来源(format!("无法读取 {}", 目录.display()), 错误))?
-        .filter_map(|项| 项.ok())
+        .collect::<std::io::Result<Vec<_>>>()?
+        .into_iter()
         .map(|项| 项.path())
         .filter(|路径| 路径.extension().is_some_and(|扩展| 扩展 == "svg"))
         .collect();
     源文件.sort_by_key(|路径| 路径.file_name().map(|名| 名.to_os_string()));
+    if 源文件.is_empty() {
+        return Err(工具错误::新("自有字形来源不能为空"));
+    }
     let mut 名称表 = vec![".notdef".to_string()];
     let mut 轮廓表: Vec<Vec<子路径>> = vec![Vec::new()];
     let mut 码点表: Vec<(u16, usize)> = Vec::new();
@@ -76,6 +80,9 @@ pub fn 自有入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         let 根 = 解析xml(&文本, &文件名)?;
         let mut 轮廓 = Vec::new();
         收集path元素(&根, &文件名, &mut 轮廓)?;
+        if 轮廓.iter().all(|项| 项.段.is_empty()) {
+            return Err(工具错误::新(format!("字形为空：{文件名}")));
+        }
         let 词干 = 文件
             .file_stem()
             .map_or_else(String::new, |名| 名.to_string_lossy().to_string());

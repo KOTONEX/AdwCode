@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "4.15.0",
+  "version": "4.15.1",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {

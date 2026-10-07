@@ -99,6 +99,17 @@ pub fn 编译(根目录: &Path) -> 结果<Vec<PathBuf>> {
             .arg("--outDir")
             .arg(临时.path()),
     )?;
+    let mut 实际文件 = Vec::new();
+    收集(临时.path(), &mut 实际文件)?;
+    for 路径 in &实际文件 {
+        let 相对 = 路径.strip_prefix(临时.path()).unwrap();
+        if !文件.contains(&根目录.join(产物目录).join(相对)) {
+            return Err(工具错误::新(format!(
+                "编译器生成了未登记的产物：{}；请将源码放入脚本目录并同步构建清单",
+                相对.display()
+            )));
+        }
+    }
     let mut 操作 = Vec::new();
     for 路径 in &文件 {
         let 相对 = 路径.strip_prefix(根目录.join(产物目录)).unwrap();
@@ -136,6 +147,15 @@ mod 测试 {
         std::fs::write(根.join("builddir/脚本/过时.js"), "过时").unwrap();
         std::fs::write(根.join("扩展/扩展.ts"), "const 名称: string = 123;\n").unwrap();
         assert!(编译(根).unwrap_err().消息.contains("TypeScript 编译失败"));
+        assert_eq!(std::fs::read(&文件[0]).unwrap(), 旧内容);
+        assert!(根.join("builddir/脚本/过时.js").exists());
+        std::fs::write(根.join("遗漏.ts"), "export const 名称 = '遗漏';\n").unwrap();
+        std::fs::write(
+            根.join("扩展/扩展.ts"),
+            "import { 名称 } from '../遗漏';\nconsole.log(名称);\n",
+        )
+        .unwrap();
+        assert!(编译(根).unwrap_err().消息.contains("未登记的产物：遗漏.js"));
         assert_eq!(std::fs::read(&文件[0]).unwrap(), 旧内容);
         assert!(根.join("builddir/脚本/过时.js").exists());
         std::fs::write(根.join("扩展/扩展.ts"), "const 名称: string = '更新';\n").unwrap();

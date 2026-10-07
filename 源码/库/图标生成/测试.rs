@@ -78,6 +78,25 @@ fn 损坏字体表返回错误而不越界访问() {
 }
 
 #[test]
+fn 自有来源为空或空字形不得覆盖字体() {
+    let 临时 = tempfile::tempdir().unwrap();
+    let 目录 = 临时.path().join("产品图标/符号图标");
+    std::fs::create_dir_all(&目录).unwrap();
+    let 输出 = 临时.path().join("产品图标/adwcode-符号.ttf");
+    std::fs::write(&输出, "原字体").unwrap();
+    assert!(自有入口(临时.path(), &[]).is_err());
+    for 数据 in ["", "M2 2"] {
+        std::fs::write(
+            目录.join("f001.svg"),
+            format!(r#"<svg xmlns="{SVG命名空间}"><path d="{数据}"/></svg>"#),
+        )
+        .unwrap();
+        assert!(自有入口(临时.path(), &[]).is_err());
+        assert_eq!(std::fs::read_to_string(&输出).unwrap(), "原字体");
+    }
+}
+
+#[test]
 fn 自有字形数量与映射正确() {
     let 根 = 测试根();
     自有入口(根.path(), &[]).expect("生成自有字形");
