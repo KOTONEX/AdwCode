@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,30 +29,98 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 查找同提交成功CI的工具
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import json, os, subprocess
+          from pathlib import Path
+          提交 = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          仓库 = os.environ['GITHUB_REPOSITORY']
+          def 请求(路径):
+              return json.loads(subprocess.check_output(['gh', 'api', 路径], text=True, timeout=60))
+          记录 = 请求(f'repos/{仓库}/actions/workflows/ci.yml/runs?head_sha={提交}&event=push&status=success&per_page=100')
+          运行, 产物 = '', ''
+          for 项 in 记录['workflow_runs']:
+              if (项['head_sha'] != 提交 or 项['head_branch'] not in ['main', 'rust']
+                  or 项['event'] != 'push' or 项['conclusion'] != 'success'
+                  or 项['head_repository']['full_name'] != 仓库):
+                  continue
+              附件 = 请求(f"repos/{仓库}/actions/runs/{项['id']}/artifacts?per_page=100")['artifacts']
+              匹配 = [包 for 包 in 附件 if 包['name'] == f'adwcode-工具-{提交}' and not 包['expired']]
+              if len(匹配) > 1:
+                  raise RuntimeError('同提交工具产物不唯一')
+              if 匹配:
+                  运行, 产物 = str(项['id']), str(匹配[0]['id'])
+                  break
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as 输出:
+              输出.write(f'运行={运行}\n产物={产物}\n')
+          print('复用同提交CI工具' if 产物 else '无可复用工具，执行完整构建')
+
+      - name: 下载同提交工具
+        if: steps.reuse.outputs['产物'] != ''
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.reuse.outputs['产物'] }}
+          run-id: ${{ steps.reuse.outputs['运行'] }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/adwcode-工具/
+          digest-mismatch: error
+
+      - name: 校验并恢复工具
+        if: steps.reuse.outputs['产物'] != ''
+        shell: python
+        run: |
+          import hashlib, json, os, shutil, subprocess
+          from pathlib import Path
+          目录 = Path(os.environ['RUNNER_TEMP']) / 'adwcode-工具'
+          程序 = 目录 / 'adwcode'
+          元数据 = json.loads((目录 / '元数据.json').read_text(encoding='utf-8'))
+          提交 = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if (元数据.get('提交') != 提交 or 元数据.get('平台') != 'linux-x64'
+              or 元数据.get('sha256') != hashlib.sha256(程序.read_bytes()).hexdigest()):
+              raise RuntimeError('CI工具提交、平台或摘要不匹配')
+          目标 = Path('target/release/adwcode')
+          目标.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(程序, 目标)
+          目标.chmod(0o755)
+
       - name: 安装 Rust 工具链
+        if: steps.reuse.outputs['产物'] == ''
         uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
 
       - name: 缓存 cargo
+        if: steps.reuse.outputs['产物'] == ''
         uses: Swatinem/rust-cache@v2
 
       - name: 安装 Node.js
+        if: steps.reuse.outputs['产物'] == ''
         uses: actions/setup-node@v7
         with:
           node-version: "22"
 
       - name: 安装 TypeScript
+        if: steps.reuse.outputs['产物'] == ''
         run: npm install -g typescript
+
+      - name: 完整检查
+        if: steps.reuse.outputs['产物'] == ''
+        run: cargo run --quiet -- 检查
+
+      - name: 构建备用工具
+        if: steps.reuse.outputs['产物'] == ''
+        run: cargo build --release --quiet
 
       - name: 判断候选与市场发布权限
         id: policy
-        run: cargo run --quiet -- 发布策略 --引用 "$GITHUB_REF" --输出 "$GITHUB_OUTPUT"
+        run: ./target/release/adwcode 发布策略 --引用 "$GITHUB_REF" --输出 "$GITHUB_OUTPUT"
 
-      - name: 完整检查
-        run: cargo run --quiet -- 检查
-
-      - name: 生成/构建校验
+      - name: 生成产物并校验无差异
         run: |
-          cargo build --release --quiet
           ./target/release/adwcode 主题
           ./target/release/adwcode 生成自有字形
           ./target/release/adwcode 生成导入字形

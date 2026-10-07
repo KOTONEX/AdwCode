@@ -22,6 +22,8 @@ jobs:
 
       - name: 安装 Rust 工具链
         uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
 
       - name: 缓存 cargo
         uses: Swatinem/rust-cache@v2
@@ -52,3 +54,27 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/adwcode-host-tools" @vscode/test-electron
           node 测试/下载宿主.cjs "$RUNNER_TEMP/adwcode-host-tools" > "$RUNNER_TEMP/adwcode-host-path"
           xvfb-run -a cargo run --quiet -- 宿主测试 --禁用沙箱 --编辑器程序 "$(tail -n 1 "$RUNNER_TEMP/adwcode-host-path")"
+
+      - name: 构建并记录同提交发布工具
+        if: github.event_name == 'push'
+        shell: python
+        run: |
+          import hashlib, json, os, shutil, subprocess
+          from pathlib import Path
+          subprocess.run(['cargo', 'build', '--release', '--quiet'], check=True)
+          目录 = Path(os.environ['RUNNER_TEMP']) / 'adwcode-工具'
+          目录.mkdir()
+          程序 = 目录 / 'adwcode'
+          shutil.copyfile('target/release/adwcode', 程序)
+          提交 = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          元数据 = {'提交': 提交, '平台': 'linux-x64', 'sha256': hashlib.sha256(程序.read_bytes()).hexdigest()}
+          (目录 / '元数据.json').write_text(json.dumps(元数据, ensure_ascii=False), encoding='utf-8')
+
+      - name: 保存同提交发布工具
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: adwcode-工具-${{ github.sha }}
+          path: ${{ runner.temp }}/adwcode-工具/
+          if-no-files-found: error
+          retention-days: 30
