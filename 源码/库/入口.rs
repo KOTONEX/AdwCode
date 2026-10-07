@@ -43,7 +43,7 @@ pub mod 检查样式;
 #[path = "更新默认数据.rs"]
 pub mod 更新默认数据;
 
-#[path = "图标生成.rs"]
+#[path = "图标生成/mod.rs"]
 pub mod 图标生成;
 
 #[path = "仓库.rs"]
