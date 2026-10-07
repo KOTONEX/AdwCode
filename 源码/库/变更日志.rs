@@ -162,7 +162,7 @@ pub fn 提交列表(
     if 字段.last() == Some(&"") {
         字段.pop();
     }
-    if 字段.len() % 3 != 0 {
+    if !字段.len().is_multiple_of(3) {
         return Err(工具错误::新("Git 提交记录格式不完整"));
     }
     Ok(字段

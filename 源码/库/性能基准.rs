@@ -29,7 +29,7 @@ pub fn 摘要(值: &[f64]) -> Value {
     let mut 有序 = 值.to_vec();
     有序.sort_by(|左, 右| 左.partial_cmp(右).unwrap_or(std::cmp::Ordering::Equal));
     let 数量 = 有序.len();
-    let 中位 = if 数量 % 2 == 0 {
+    let 中位 = if 数量.is_multiple_of(2) {
         (有序[数量 / 2 - 1] + 有序[数量 / 2]) / 2.0
     } else {
         有序[数量 / 2]

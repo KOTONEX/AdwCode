@@ -92,9 +92,9 @@ pub fn sha256(数据: &[u8]) -> [u8; 32] {
     消息.extend_from_slice(&位长.to_be_bytes());
 
     let mut 状态 = 初始状态;
-    for 块 in 消息.chunks_exact(64) {
+    for 块 in 消息.as_chunks::<64>().0 {
         let mut 字 = [0u32; 64];
-        for (序号, 字节) in 块.chunks_exact(4).enumerate() {
+        for (序号, 字节) in 块.as_chunks::<4>().0.iter().enumerate() {
             字[序号] = u32::from_be_bytes([字节[0], 字节[1], 字节[2], 字节[3]]);
         }
         for 序号 in 16..64 {
