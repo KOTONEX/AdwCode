@@ -166,9 +166,12 @@ fn 更新(根目录: &Path, 下载: &dyn Fn(&str, u64) -> 结果<String>) -> 结
         let 文本 = 下载(&format!("{主题源}/{名称}.json"), 30)?;
         let 值: serde_json::Value = serde_json::from_str(&清理json注释(&文本))
             .map_err(|错误| 工具错误::新(format!("{名称}.json 解析失败：{错误}")))?;
-        if let Some(颜色) = 值.get("colors").and_then(serde_json::Value::as_object) {
-            键.extend(颜色.keys().cloned());
-        }
+        let 颜色 = 值
+            .get("colors")
+            .and_then(serde_json::Value::as_object)
+            .filter(|颜色| !颜色.is_empty())
+            .ok_or_else(|| 工具错误::新(format!("{名称}.json 缺少非空 colors 对象")))?;
+        键.extend(颜色.keys().cloned());
     }
     let 内置文本 = 写字符串数组(&键);
     let mut 消息 = vec![format!("内置颜色键： {}", 键.len())];
@@ -191,6 +194,11 @@ fn 更新(根目录: &Path, 下载: &dyn Fn(&str, u64) -> 结果<String>) -> 结
             && !键.starts_with("configuration.")
             && !键.starts_with("vscode.")
     });
+    if 注册表.is_empty() {
+        return Err(工具错误::新(
+            "主题颜色文档未解析到任何注册键，保留原数据",
+        ));
+    }
     let 注册表文本 = 写字符串数组(&注册表);
     消息.push(format!("注册表颜色键： {}", 注册表.len()));
     crate::文件事务::写入批次(&[
@@ -279,7 +287,7 @@ mod 测试 {
             if 地址.ends_with("hc_light.json") {
                 Err(工具错误::新("网络失败"))
             } else {
-                Ok("{\"colors\":{}}".to_string())
+                Ok("{\"colors\":{\"a.b\":\"#000\"}}".to_string())
             }
         };
         assert!(更新(&根, &失败下载).is_err());
@@ -321,5 +329,26 @@ mod 测试 {
             ]
         );
         let _ = std::fs::remove_dir_all(&根);
+    }
+    #[test]
+    fn 空主题和空文档不覆盖数据() {
+        let 目录 = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(目录.path().join("源码/VSCode默认数据")).unwrap();
+        let 路径 = 目录.path().join("源码/VSCode默认数据/builtin_keys.json");
+        std::fs::write(&路径, "旧数据").unwrap();
+        for 空主题 in [true, false] {
+            let 下载 = |地址: &str, _: u64| {
+                Ok(if 地址 == 文档源 {
+                    "没有颜色键"
+                } else if 空主题 {
+                    "{}"
+                } else {
+                    r##"{"colors":{"editor.background":"#fff"}}"##
+                }
+                .to_string())
+            };
+            assert!(更新(目录.path(), &下载).is_err());
+            assert_eq!(std::fs::read_to_string(&路径).unwrap(), "旧数据");
+        }
     }
 }

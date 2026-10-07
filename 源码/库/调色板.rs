@@ -316,8 +316,17 @@ pub fn 转为十六进制(r: f64, g: f64, b: f64, alpha: f64) -> String {
     }
 }
 
+fn 校验比例(比例: f64) -> 结果<()> {
+    if 比例.is_finite() && (0.0..=1.0).contains(&比例) {
+        Ok(())
+    } else {
+        Err(工具错误::新("颜色比例必须是 0 至 1 之间的有限数值"))
+    }
+}
+
 /// 在颜色原有的透明度上乘以 `alpha`。
 pub fn 合成透明颜色(颜色: &str, alpha: f64) -> 结果<String> {
+    校验比例(alpha)?;
     let (r, g, b, 原alpha) = 解析颜色(颜色)?;
     Ok(转为十六进制(
         f64::from(r),
@@ -340,6 +349,7 @@ pub fn 规范颜色格式(颜色: &str) -> 结果<String> {
 
 /// 把 `weight` 份的 `color_a` 混入 `color_b`（两者都必须不透明）。
 pub fn 混色(色a: &str, 色b: &str, weight: f64) -> 结果<String> {
+    校验比例(weight)?;
     let (ra, ga, ba, aa) = 解析颜色(色a)?;
     let (rb, gb, bb, ab) = 解析颜色(色b)?;
     if aa < 1.0 || ab < 1.0 {
@@ -356,7 +366,10 @@ pub fn 混色(色a: &str, 色b: &str, weight: f64) -> 结果<String> {
 /// 把（可能半透明的）颜色合成到不透明背景之上。
 pub fn 叠加颜色(颜色: &str, 背景: &str) -> 结果<String> {
     let (r, g, b, alpha) = 解析颜色(颜色)?;
-    let (br, bg, bb, _) = 解析颜色(背景)?;
+    let (br, bg, bb, 背景透明度) = 解析颜色(背景)?;
+    if 背景透明度 < 1.0 {
+        return Err(工具错误::新("叠加颜色要求背景不透明"));
+    }
     if alpha >= 1.0 {
         return Ok(转为十六进制(
             f64::from(r),
@@ -819,5 +832,13 @@ mod 测试 {
     fn 校验参数() {
         assert!(调色板对象::新("综合", "blue", false, 编辑器方案::default()).is_err());
         assert!(调色板对象::新("dark", "紫色", false, 编辑器方案::default()).is_err());
+    }
+    #[test]
+    fn 颜色运算拒绝非法比例及半透明背景() {
+        for 比例 in [f64::NAN, f64::INFINITY, -0.1, 1.1] {
+            assert!(合成透明颜色("#fff", 比例).is_err());
+            assert!(混色("#fff", "#000", 比例).is_err());
+        }
+        assert!(叠加颜色("#fff", "#0000").is_err());
     }
 }

@@ -200,7 +200,8 @@
           "icons": [
             "info"
           ],
-          "weight_inset": 0.1
+          "weight_inset": 0.1,
+          "半透明处理": "不透明轮廓"
         },
         {
           "file": "导入图标/adwaita/folder-symbolic.svg",

@@ -551,6 +551,10 @@ fn 多边形包含(多边形: &[Point], 点: Point) -> bool {
 /// 与 skia-pathops `simplify()` 语义一致：以原始轮廓的全局绕数判定
 /// 填充区域，再按嵌套深度规范朝向（外轮廓顺时针、内孔逆时针）。
 fn 简化轮廓(轮廓: &[子路径], 精度: f64) -> Vec<子路径> {
+    按填充规则简化(轮廓, 精度, false)
+}
+
+fn 按填充规则简化(轮廓: &[子路径], 精度: f64, 奇偶: bool) -> Vec<子路径> {
     if 轮廓.is_empty() {
         return Vec::new();
     }
@@ -573,8 +577,12 @@ fn 简化轮廓(轮廓: &[子路径], 精度: f64) -> Vec<子路径> {
             continue;
         }
         let 法线 = Coord2(-切线.y() / 长度, 切线.x() / 长度);
-        let 左 = 索引.绕数(点自坐标(位置 + 法线 * 偏移)) != 0;
-        let 右 = 索引.绕数(点自坐标(位置 - 法线 * 偏移)) != 0;
+        let 填充 = |点| {
+            let 绕数 = 索引.绕数(点);
+            if 奇偶 { 绕数 % 2 != 0 } else { 绕数 != 0 }
+        };
+        let 左 = 填充(点自坐标(位置 + 法线 * 偏移));
+        let 右 = 填充(点自坐标(位置 - 法线 * 偏移));
         图.set_edge_kind(
             边引用,
             if 左 != 右 {
@@ -935,6 +943,17 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                 y,
             } => {
                 let 目标 = 取值(abs, 当前, x, y);
+                if [rx, ry, x_axis_rotation]
+                    .iter()
+                    .any(|值| !值.is_finite() || 值.abs() > 坐标上限)
+                    || rx < 0.0
+                    || ry < 0.0
+                {
+                    return Err(工具错误::新(format!("{文件名} 的圆弧参数越界")));
+                }
+                if !段坐标有效(&线段::直线(目标)) {
+                    return Err(工具错误::新(format!("{文件名} 的圆弧终点越界")));
+                }
                 let 圆弧 = SvgArc {
                     from: 当前,
                     to: 目标,
@@ -1330,7 +1349,7 @@ fn 处理轮廓(
     }
     if 特效 {
         return Err(工具错误::新(format!(
-            "{文件名} 存在可见遮罩或裁切，不能直接转换为轮廓字体"
+            "{文件名} 存在可见遮罩、裁切或半透明效果，不能直接转换为轮廓字体"
         )));
     }
     if 左.min(上) < -0.0625 || 右.max(下) > 16.0625 {
@@ -1345,6 +1364,8 @@ fn 访问元素(
     节点: &节点,
     变换: Affine,
     特效: bool,
+    继承: &BTreeMap<String, String>,
+    允许半透明: bool,
     文件名: &str,
     收集: &mut Vec<子路径>,
 ) -> 结果<()> {
@@ -1357,6 +1378,38 @@ fn 访问元素(
     ) {
         return Ok(());
     }
+    let mut 属性 = 合并属性(节点);
+    for 键 in [
+        "fill",
+        "stroke",
+        "fill-rule",
+        "fill-opacity",
+        "stroke-opacity",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "stroke-miterlimit",
+        "stroke-dasharray",
+        "stroke-dashoffset",
+        "visibility",
+        "color",
+    ] {
+        if 属性
+            .get(键)
+            .is_none_or(|值| 值 == "inherit" || 值 == "unset")
+        {
+            if let Some(值) = 继承.get(键) {
+                属性.insert(键.to_string(), 值.clone());
+            } else {
+                属性.remove(键);
+            }
+        }
+    }
+    if 属性.get("display").is_some_and(|值| 值 == "none")
+        || 透明度属性(&属性, "opacity", 文件名)? == 0.0
+    {
+        return Ok(());
+    }
     let 自身 = 解析变换(
         节点.属性.get("transform").map_or("", String::as_str),
         文件名,
@@ -1365,15 +1418,39 @@ fn 访问元素(
     let 特效 = 特效
         || ["mask", "clip-path", "filter"]
             .iter()
-            .any(|键| 节点.属性.contains_key(*键));
+            .any(|键| 属性.get(*键).is_some_and(|值| 值 != "none"))
+        || (!允许半透明 && 透明度属性(&属性, "opacity", 文件名)? != 1.0);
     if 节点.本地名 == "svg" || 节点.本地名 == "g" {
         for 子 in &节点.子 {
-            访问元素(子, 变换, 特效, 文件名, 收集)?;
+            访问元素(子, 变换, 特效, &属性, 允许半透明, 文件名, 收集)?;
         }
         return Ok(());
     }
+    if 属性
+        .get("visibility")
+        .is_some_and(|值| 值 == "hidden" || 值 == "collapse")
+    {
+        return Ok(());
+    }
+    for (键, 透明度键) in [("fill", "fill-opacity"), ("stroke", "stroke-opacity")] {
+        if 透明度属性(&属性, 透明度键, 文件名)? == 0.0
+            || 属性.get(键).is_some_and(|值| 值 == "transparent")
+        {
+            属性.insert(键.to_string(), "none".to_string());
+        }
+    }
     let 子路径列表 = 元素子路径(节点, 文件名)?;
-    let 属性 = 合并属性(节点);
+    let 特效 = 特效
+        || [("fill", "fill-opacity"), ("stroke", "stroke-opacity")]
+            .iter()
+            .any(|(键, 透明度键)| {
+                属性.get(*键).map_or(*键 == "fill", |值| 值 != "none")
+                    && ((!允许半透明
+                        && 透明度属性(&属性, 透明度键, 文件名).is_ok_and(|值| 值 != 1.0))
+                        || 属性.get(*键).is_some_and(|值| {
+                            值.contains("url(") || (!允许半透明 && 调色板透明(值))
+                        }))
+            });
     let 描边 = 属性.get("stroke").is_some_and(|值| 值 != "none");
     if 属性.get("fill").is_some_and(|值| 值 == "none") && !描边 {
         return Ok(());
@@ -1435,23 +1512,92 @@ fn 访问元素(
         }
         return Ok(());
     }
+    let 奇偶 = match 属性.get("fill-rule").map_or("nonzero", String::as_str) {
+        "nonzero" => false,
+        "evenodd" => true,
+        其他 => {
+            return Err(工具错误::新(
+                format!("{文件名} 的 fill-rule 无效：{其他}"),
+            ));
+        }
+    };
+    let mut 可见 = Vec::new();
     for 子 in 子路径列表 {
         let mut 子 = 子.变换(变换);
         子.隐式闭合();
-        处理轮廓(子, 特效, 文件名, 收集)?;
+        if 奇偶 {
+            if 子
+                .包围盒()
+                .is_some_and(|(左, 上, 右, 下)| 右 > 0.0 && 下 > 0.0 && 左 < 16.0 && 上 < 16.0)
+            {
+                可见.push(子);
+            }
+        } else {
+            处理轮廓(子, 特效, 文件名, 收集)?;
+        }
+    }
+    if 奇偶 {
+        for 子 in 按填充规则简化(&可见, 0.01, true) {
+            处理轮廓(子, 特效, 文件名, 收集)?;
+        }
     }
     Ok(())
 }
 
+fn 调色板透明(文本: &str) -> bool {
+    crate::调色板::解析颜色(文本).is_ok_and(|(_, _, _, 透明度)| 透明度 < 1.0)
+}
+
+fn 透明度属性(属性: &BTreeMap<String, String>, 键: &str, 文件名: &str) -> 结果<f64> {
+    let Some(文本) = 属性.get(键) else {
+        return Ok(1.0);
+    };
+    let 值 = 文本
+        .strip_suffix('%')
+        .unwrap_or(文本)
+        .parse::<f64>()
+        .ok()
+        .map(|值| {
+            if 文本.ends_with('%') {
+                值 / 100.0
+            } else {
+                值
+            }
+        });
+    值.filter(|值| 值.is_finite() && (0.0..=1.0).contains(值))
+        .ok_or_else(|| 工具错误::新(format!("{文件名} 的 {键} 无效")))
+}
+
 /// 读取 SVG 并校验画布，收集可见轮廓（SVG 用户坐标）。
+#[cfg(test)]
 fn 绘制svg(文本: &str, 文件名: &str, 收集: &mut Vec<子路径>) -> 结果<()> {
+    绘制svg策略(文本, 文件名, 收集, false)
+}
+
+fn 绘制svg策略(
+    文本: &str,
+    文件名: &str,
+    收集: &mut Vec<子路径>,
+    允许半透明: bool,
+) -> 结果<()> {
     let 根 = 解析xml(文本, 文件名)?;
+    if 根.本地名 != "svg" || 根.外部命名空间 {
+        return Err(工具错误::新(format!("{文件名} 的根元素必须是 SVG")));
+    }
     let 画布文本 = 根.属性.get("viewBox").map_or("0 0 16 16", String::as_str);
     let 画布 = 解析数值列表(画布文本, 文件名, " viewBox")?;
     if 画布.as_slice() != [0.0, 0.0, 16.0, 16.0] {
         return Err(工具错误::新(format!("{文件名} 需要 16 × 16 画布")));
     }
-    访问元素(&根, Affine::IDENTITY, false, 文件名, 收集)
+    访问元素(
+        &根,
+        Affine::IDENTITY,
+        false,
+        &BTreeMap::new(),
+        允许半透明,
+        文件名,
+        收集,
+    )
 }
 
 /// 递归收集 SVG 命名空间下所有 path 元素（自有字形按整棵树取用）。
@@ -1494,6 +1640,17 @@ fn 生成字体字节(
     if 名称表.len() != 轮廓表.len() || 名称表.first().map(String::as_str) != Some(".notdef")
     {
         return Err(工具错误::新("字形表与名称表不一致"));
+    }
+    let mut 唯一码点 = std::collections::HashSet::new();
+    for &(码点, 字形) in 码点表 {
+        if char::from_u32(u32::from(码点)).is_none()
+            || 码点 == 0xffff
+            || !唯一码点.insert(码点)
+            || 字形 == 0
+            || 字形 >= 轮廓表.len()
+        {
+            return Err(工具错误::新("字体码点重复、无效或映射字形越界"));
+        }
     }
     let mut 构建器 = GlyfLocaBuilder::new();
     let mut 包围盒列表: Vec<Option<(i16, i16, i16, i16)>> = Vec::with_capacity(轮廓表.len());
@@ -1874,6 +2031,7 @@ pub fn 自有入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         let 文件名 = 文件
             .file_name()
             .map_or_else(String::new, |名| 名.to_string_lossy().to_string());
+        crate::文件事务::校验普通路径(文件)?;
         let 文本 = std::fs::read_to_string(文件).map_err(|错误| {
             工具错误::带来源(format!("无法读取 {}", 文件.display()), 错误)
         })?;
@@ -1919,10 +2077,17 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 字体列表 = 来源["fonts"]
         .as_array()
         .ok_or_else(|| 工具错误::新("产品图标/来源.json 缺少 fonts"))?;
+    if 字体列表.is_empty() {
+        return Err(工具错误::新("来源.json 的 fonts 不能为空"));
+    }
+    let mut 字体标识 = std::collections::HashSet::new();
     let mut 操作 = Vec::new();
     let mut 消息 = Vec::new();
     for 字体 in 字体列表 {
         let id = 字符串字段(字体, "id")?;
+        if !字体标识.insert(id.clone()) {
+            return Err(工具错误::新("来源.json 字体标识重复"));
+        }
         let id路径 = 校验相对路径(&id, "fonts[].id")?;
         let 族名 = 字符串字段(字体, "family")?;
         let 输出 = 字符串字段(字体, "output")?;
@@ -1934,12 +2099,16 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         let 字形条目 = 字体["glyphs"]
             .as_array()
             .ok_or_else(|| 工具错误::新(format!("字体 {id} 缺少 glyphs")))?;
+        if 字形条目.is_empty() {
+            return Err(工具错误::新(format!("字体 {id} 的 glyphs 不能为空")));
+        }
         let mut 名称表 = vec![".notdef".to_string()];
         let mut 轮廓表: Vec<Vec<子路径>> = vec![Vec::new()];
         let mut 码点表: Vec<(u16, usize)> = Vec::new();
         for 条目 in 字形条目 {
             let 文件 = 字符串字段(条目, "file")?;
             let 源路径 = 图标目录.join(校验相对路径(&文件, "glyphs[].file")?);
+            crate::文件事务::校验普通路径(&源路径)?;
             let 数据 = std::fs::read(&源路径).map_err(|错误| {
                 工具错误::带来源(format!("无法读取 {}", 源路径.display()), 错误)
             })?;
@@ -1959,7 +2128,12 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
                 .file_name()
                 .map_or_else(String::new, |名| 名.to_string_lossy().to_string());
             let mut 轮廓 = Vec::new();
-            绘制svg(&文本, &文件名, &mut 轮廓)?;
+            let 允许半透明 = match 条目.get("半透明处理").and_then(Value::as_str) {
+                None if 条目.get("半透明处理").is_none() => false,
+                Some("不透明轮廓") => true,
+                _ => return Err(工具错误::新(format!("{文件名} 的半透明处理策略无效"))),
+            };
+            绘制svg策略(&文本, &文件名, &mut 轮廓, 允许半透明)?;
             if 轮廓.is_empty() {
                 return Err(工具错误::新(format!("字形为空：{文件名}")));
             }
@@ -2038,6 +2212,8 @@ fn 导出预览(
     std::fs::create_dir_all(&预览目录).map_err(|错误| {
         工具错误::带来源(format!("无法创建 {}", 预览目录.display()), 错误)
     })?;
+    let 许可 = 许可.replace("--", "- -");
+    let 署名 = 署名.replace("--", "- -");
     let 预览变换 = 字体变换().inverse();
     let mut 期望: Vec<String> = Vec::new();
     for (序号, 条目) in 字形条目.iter().enumerate() {
@@ -2074,8 +2250,9 @@ fn 导出预览(
 fn 字符串字段(值: &Value, 键: &str) -> 结果<String> {
     值[键]
         .as_str()
+        .filter(|文本| !文本.trim().is_empty())
         .map(str::to_string)
-        .ok_or_else(|| 工具错误::新(format!("来源.json 缺少字段：{键}")))
+        .ok_or_else(|| 工具错误::新(format!("来源.json 字段缺失或为空：{键}")))
 }
 
 /// 校验来源.json 中的相对路径：只允许普通组件，拒绝绝对路径与 `..`。
@@ -2368,5 +2545,62 @@ mod 测试 {
         ] {
             assert_eq!(索引.绕数(点), 逐边绕数(&多边形列表, 点), "{点:?}");
         }
+    }
+    #[test]
+    fn svg继承隐藏透明与奇偶规则() {
+        let 绘制 = |内部: &str| {
+            let mut 轮廓 = Vec::new();
+            绘制svg(
+                &format!(r#"<svg xmlns="http://www.w3.org/2000/svg">{内部}</svg>"#),
+                "测试.svg",
+                &mut 轮廓,
+            )
+            .map(|_| 轮廓)
+        };
+        let 方块 = r#"<path d="M2 2H14V14H2Z"/>"#;
+        assert!(
+            绘制(&format!(r#"<g fill="none">{方块}</g>"#))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            绘制(&format!(r#"<g style="display:none">{方块}</g>"#))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            绘制(&format!(r#"<g opacity="0">{方块}</g>"#))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(绘制(&format!(r#"<g opacity="0.5">{方块}</g>"#)).is_err());
+        assert!(
+            !绘制(r#"<g visibility="hidden"><path visibility="visible" d="M2 2H14V14H2Z"/></g>"#)
+                .unwrap()
+                .is_empty()
+        );
+        let 轮廓 = 绘制(r#"<path fill-rule="evenodd" d="M2 2H14V14H2Z M4 4H12V12H4Z"/>"#).unwrap();
+        let 索引 = 绕数索引::新建(&轮廓.iter().map(|项| 项.展平(0.01)).collect::<Vec<_>>());
+        assert_eq!(索引.绕数(字体变换() * Point::new(8.0, 8.0)), 0);
+        assert_ne!(索引.绕数(字体变换() * Point::new(3.0, 3.0)), 0);
+        let mut 输出 = Vec::new();
+        assert!(绘制svg("<g/>", "错误.svg", &mut 输出).is_err());
+        assert!(解析路径数据("M0 0 A1e100 1 0 0 0 1 1", "错误.svg").is_err());
+    }
+    #[test]
+    fn 后续字体码点失败不覆盖早先字体() {
+        let 临时 = 测试根();
+        let 来源路径 = 临时.path().join("产品图标/来源.json");
+        let mut 来源: Value = serde_json::from_slice(&std::fs::read(&来源路径).unwrap()).unwrap();
+        let 字体 = 来源["fonts"].as_array_mut().unwrap();
+        let 首输出 = 临时
+            .path()
+            .join("产品图标")
+            .join(字体[0]["output"].as_str().unwrap());
+        std::fs::write(&首输出, "原字体").unwrap();
+        字体.last_mut().unwrap()["glyphs"][0]["codepoint"] = Value::String("ffff".to_string());
+        std::fs::write(来源路径, serde_json::to_vec(&来源).unwrap()).unwrap();
+        assert!(导入入口(临时.path(), &[]).is_err());
+        assert_eq!(std::fs::read_to_string(首输出).unwrap(), "原字体");
     }
 }
