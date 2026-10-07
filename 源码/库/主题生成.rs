@@ -911,4 +911,26 @@ mod 测试 {
         assert!(对比度("#00000080", "#ffffff").unwrap() < 对比度("#000000", "#ffffff").unwrap());
         assert!(对比度("#000", "#fff0").is_err());
     }
+    #[test]
+    fn 多光标在编辑器背景上可辨识() {
+        for 请求 in 构建计划(&["blue"]) {
+            let 主题 = 生成主题对象(根目录(), &请求).unwrap();
+            let 颜色 = &主题["colors"];
+            for 键 in [
+                "editorMultiCursor.primary.foreground",
+                "editorMultiCursor.secondary.foreground",
+            ] {
+                assert!(
+                    对比度(
+                        颜色[键].as_str().unwrap(),
+                        颜色["editor.background"].as_str().unwrap()
+                    )
+                    .unwrap()
+                        >= 3.0,
+                    "{} 的 {键} 必须可辨识",
+                    请求.mode
+                );
+            }
+        }
+    }
 }

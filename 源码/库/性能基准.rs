@@ -6,9 +6,9 @@
 //! 采样 `/proc/<pid>/status` 的 `VmHWM`，CPU 时间取 `/proc/self/stat` 的子进程累计。
 //! 不依赖 libc/sha2：指纹使用内置 SHA-256。
 
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
@@ -16,16 +16,12 @@ use serde_json::{Map, Value, json};
 use crate::摘要::sha256十六进制;
 use crate::错误::{工具错误, 结果};
 
-static 临时序号: AtomicU64 = AtomicU64::new(0);
-
-fn 临时文件(前缀: &str) -> PathBuf {
-    let 编号 = 临时序号.fetch_add(1, Ordering::SeqCst);
-    std::env::temp_dir().join(format!("adwcode-{前缀}-{}-{编号}", std::process::id()))
-}
-
 /// 中位数、最近秩 P95、最小值与最大值。
 #[must_use]
 pub fn 摘要(值: &[f64]) -> Value {
+    if 值.is_empty() || 值.iter().any(|值| !值.is_finite()) {
+        return Value::Null;
+    }
     let mut 有序 = 值.to_vec();
     有序.sort_by(|左, 右| 左.partial_cmp(右).unwrap_or(std::cmp::Ordering::Equal));
     let 数量 = 有序.len();
@@ -77,19 +73,25 @@ fn 子进程cpu秒() -> 结果<f64> {
 
 /// 运行一个样本，返回墙钟毫秒、CPU 毫秒与峰值 RSS（MiB）。
 fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
-    let 输出路径 = 临时文件("基准输出");
-    let 输出文件 = std::fs::File::create(&输出路径)?;
+    let 输出暂存 = tempfile::NamedTempFile::new()?;
+    let 输出路径 = 输出暂存.path();
+    let 输出文件 = 输出暂存.reopen()?;
     let 可执行 = std::fs::canonicalize(&命令[0])?;
     let cpu起 = 子进程cpu秒()?;
     let 开始 = Instant::now();
-    let mut 子进程 = Command::new(&命令[0])
-        .args(&命令[1..])
-        .current_dir(目录)
-        .stdout(Stdio::from(输出文件.try_clone()?))
-        .stderr(Stdio::from(输出文件))
-        .spawn()
-        .map_err(|错误| 工具错误::带来源(format!("无法启动 {}：{错误}", 命令[0]), 错误))?;
-    let pid = 子进程.id();
+    let mut 子进程 = crate::工作台基准::受管进程(
+        Command::new(&命令[0])
+            .args(&命令[1..])
+            .current_dir(目录)
+            .stdout(Stdio::from(输出文件.try_clone()?))
+            .stderr(Stdio::from(输出文件))
+            .process_group(0)
+            .spawn()
+            .map_err(|错误| {
+                工具错误::带来源(format!("无法启动 {}：{错误}", 命令[0]), 错误)
+            })?,
+    );
+    let pid = 子进程.0.id();
     let mut 峰值 = 0u64;
     let 状态 = loop {
         if std::fs::read_link(format!("/proc/{pid}/exe"))
@@ -107,14 +109,14 @@ fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
                 }
             }
         }
-        if let Some(状态) = 子进程.try_wait()? {
+        if let Some(状态) = 子进程.0.try_wait()? {
             break 状态;
         }
         std::thread::sleep(Duration::from_micros(500));
     };
     let 墙钟 = 开始.elapsed().as_secs_f64() * 1000.0;
     let cpu = (子进程cpu秒()? - cpu起) * 1000.0;
-    let 结果 = if 状态.success() {
+    if 状态.success() {
         if 峰值 == 0 {
             Err(工具错误::新("未采集到被测程序的 VmHWM"))
         } else {
@@ -125,17 +127,15 @@ fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
             }))
         }
     } else {
-        let 内容 = std::fs::read_to_string(&输出路径).unwrap_or_default();
+        let 内容 = std::fs::read_to_string(输出路径).unwrap_or_default();
         Err(工具错误::新(内容))
-    };
-    let _ = std::fs::remove_file(&输出路径);
-    结果
+    }
 }
 
-/// 对 `主题/`、`扩展/`、`附加外观/` 与 `package.json` 生成 SHA-256 指纹。
+/// 对源码、主题、字体、扩展、附加外观与清单生成 SHA-256 指纹。
 pub fn 指纹(根目录: &Path) -> 结果<Map<String, Value>> {
     let mut 结果 = Map::new();
-    for 目录 in ["主题", "扩展", "附加外观"] {
+    for 目录 in ["源码", "主题", "产品图标", "扩展", "附加外观"] {
         let 起点 = 根目录.join(目录);
         let mut 文件: Vec<PathBuf> = Vec::new();
         递归收集(&起点, &mut 文件)?;
@@ -159,11 +159,9 @@ pub fn 指纹(根目录: &Path) -> 结果<Map<String, Value>> {
 }
 
 fn 递归收集(目录: &Path, 输出: &mut Vec<PathBuf>) -> 结果<()> {
-    let Ok(条目列表) = std::fs::read_dir(目录) else {
-        return Ok(());
-    };
-    for 条目 in 条目列表.flatten() {
-        let 路径 = 条目.path();
+    for 条目 in std::fs::read_dir(目录)? {
+        let 路径 = 条目?.path();
+        crate::文件事务::校验普通路径(&路径)?;
         if 路径.is_dir() {
             递归收集(&路径, 输出)?;
         } else if 路径.is_file() {
@@ -185,6 +183,7 @@ fn 复制目录(来源: &Path, 目标: &Path) -> 结果<()> {
     for 条目 in std::fs::read_dir(来源)? {
         let 条目 = 条目?;
         let 来源路径 = 条目.path();
+        crate::文件事务::校验普通路径(&来源路径)?;
         if 忽略项(&来源路径) {
             continue;
         }
@@ -293,11 +292,13 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         "commands": [],
     });
 
-    let 临时根 = 临时目录();
-    let _ = std::fs::remove_dir_all(&临时根);
-    std::fs::create_dir_all(&临时根)?;
+    let 临时副本 = tempfile::tempdir()?;
+    let 临时根 = 临时副本.path().to_path_buf();
     for 名称 in [
         "源码",
+        "测试",
+        "类型声明",
+        "基准",
         "主题",
         "产品图标",
         "扩展",
@@ -313,6 +314,10 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     }
     for 名称 in [
         "package.json",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "tsconfig.json",
         "README.md",
         "LICENSE",
         "许可声明.md",
@@ -414,21 +419,19 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     result["扩展"] = serde_json::from_slice(&扩展输出.stdout)
         .map_err(|错误| 工具错误::新(format!("扩展基准输出解析失败：{错误}")))?;
     println!("扩展离线基准完成");
-    let _ = std::fs::remove_dir_all(&临时根);
+    drop(临时副本);
     if before != 指纹(根目录)? {
         return Err(工具错误::新("基准意外改动了源码或主题"));
     }
     if let Some(父目录) = 输出路径.parent() {
         std::fs::create_dir_all(父目录)?;
     }
-    std::fs::write(&输出路径, crate::主题生成::写json(&result))?;
+    crate::文件事务::写入批次(&[(
+        输出路径.clone(),
+        Some(crate::主题生成::写json(&result).into_bytes()),
+    )])?;
     println!("原始结果：{}", 输出路径.display());
     Ok(())
-}
-
-fn 临时目录() -> PathBuf {
-    let 编号 = 临时序号.fetch_add(1, Ordering::SeqCst);
-    std::env::temp_dir().join(format!("adwcode-performance-{}-{编号}", std::process::id()))
 }
 
 #[cfg(test)]
@@ -437,6 +440,8 @@ mod 测试 {
 
     #[test]
     fn 摘要求中位数与最近秩p95() {
+        assert_eq!(摘要(&[]), Value::Null);
+        assert_eq!(摘要(&[f64::NAN]), Value::Null);
         let 值: Vec<f64> = (1..=20).map(f64::from).collect();
         let 结果 = 摘要(&值);
         assert_eq!(结果["median"], 10.5);

@@ -6,28 +6,36 @@ use std::path::{Path, PathBuf};
 
 use crate::错误::{工具错误, 结果};
 
-/// 根目录必须同时包含 `package.json` 与 `主题/`。
+fn 是项目根目录(目录: &Path) -> bool {
+    目录.join("主题").is_dir()
+        && std::fs::read(目录.join("package.json"))
+            .ok()
+            .and_then(|字节| serde_json::from_slice::<serde_json::Value>(&字节).ok())
+            .is_some_and(|清单| {
+                清单["name"]
+                    .as_str()
+                    .is_some_and(|名称| 名称.eq_ignore_ascii_case("adwcode"))
+            })
+}
+
+/// 根目录必须有 AdwCode 清单与主题目录，不能误用其他扩展仓库。
 #[must_use]
 pub fn 向上查找(起始: &Path) -> Option<PathBuf> {
-    let mut 当前 = Some(起始);
-    while let Some(目录) = 当前 {
-        if 目录.join("package.json").is_file() && 目录.join("主题").is_dir() {
-            return Some(目录.to_path_buf());
-        }
-        当前 = 目录.parent();
-    }
-    None
+    起始
+        .ancestors()
+        .find(|目录| 是项目根目录(目录))
+        .map(Path::to_path_buf)
 }
 
 /// 定位仓库根目录；`ADWCODE根目录` 可显式指定。
 pub fn 根目录() -> 结果<PathBuf> {
     if let Ok(值) = std::env::var("ADWCODE根目录") {
         let 路径 = PathBuf::from(值);
-        if 路径.is_dir() {
+        if 是项目根目录(&路径) {
             return Ok(路径);
         }
         return Err(工具错误::新(format!(
-            "ADWCODE根目录 不是有效目录：{}",
+            "ADWCODE根目录 不是有效的 AdwCode 项目目录：{}",
             路径.display()
         )));
     }
@@ -55,5 +63,19 @@ mod 测试 {
     fn 从仓库根目录可以定位() {
         let 根 = Path::new(env!("CARGO_MANIFEST_DIR"));
         assert_eq!(向上查找(根), Some(根.to_path_buf()));
+    }
+    #[test]
+    fn 不接受其他项目或破损清单() {
+        let 根 = tempfile::tempdir().unwrap();
+        std::fs::create_dir(根.path().join("主题")).unwrap();
+        for 内容 in [r#"{"name":"其他项目"}"#, "{"] {
+            std::fs::write(根.path().join("package.json"), 内容).unwrap();
+            assert_eq!(向上查找(根.path()), None);
+        }
+        std::fs::write(根.path().join("package.json"), r#"{"name":"AdwCode"}"#).unwrap();
+        assert_eq!(
+            向上查找(&根.path().join("源码/库")),
+            Some(根.path().to_path_buf())
+        );
     }
 }

@@ -46,7 +46,18 @@ fn 执行批次(
     let mut 准备 = Vec::new();
     let mut 已见 = std::collections::HashSet::new();
     for (路径, 内容) in 操作 {
-        let 路径 = std::path::absolute(路径)?;
+        let 原路径 = std::path::absolute(路径)?;
+        校验普通路径(&原路径)?;
+        let mut 路径 = PathBuf::new();
+        for 部件 in 原路径.components() {
+            match 部件 {
+                std::path::Component::ParentDir => {
+                    路径.pop();
+                }
+                std::path::Component::CurDir => (),
+                其他 => 路径.push(其他.as_os_str()),
+            }
+        }
         if !已见.insert(路径.clone()) {
             return Err(工具错误::新("批次包含重复路径"));
         }
@@ -82,7 +93,11 @@ fn 执行批次(
                         .map(|_| ())
                         .map_err(|错误| 错误.to_string())
                 } else {
-                    std::fs::remove_file(&*路径).map_err(|错误| 错误.to_string())
+                    match std::fs::remove_file(&*路径) {
+                        Ok(()) => Ok(()),
+                        Err(错误) if 错误.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                        Err(错误) => Err(错误.to_string()),
+                    }
                 };
                 if let Err(失败) = 恢复 {
                     恢复失败.push(失败);
@@ -128,6 +143,25 @@ mod 测试 {
         assert_eq!(std::fs::read_dir(根.path()).unwrap().count(), 1);
     }
     #[test]
+    fn 删除不存在的文件不会让回滚误报失败() {
+        let 根 = tempfile::tempdir().unwrap();
+        let 操作 = vec![
+            (根.path().join("未存在"), None),
+            (根.path().join("故障"), None),
+        ];
+        let 错误 = 执行批次(&操作, &|序号| {
+            if 序号 == 1 {
+                Err(工具错误::新("注入故障"))
+            } else {
+                Ok(())
+            }
+        })
+        .unwrap_err();
+        assert!(错误.to_string().ends_with("已恢复原文件"));
+        assert_eq!(std::fs::read_dir(根.path()).unwrap().count(), 0);
+    }
+
+    #[test]
     fn 预检失败不修改先前文件() {
         let 根 = tempfile::tempdir().unwrap();
         let 路径 = 根.path().join("原文件");
@@ -147,5 +181,20 @@ mod 测试 {
         let 根 = tempfile::tempdir().unwrap();
         std::os::unix::fs::symlink(根.path(), 根.path().join("链接")).unwrap();
         assert!(校验普通路径(&根.path().join("链接/文件")).is_err());
+    }
+    #[test]
+    fn 路径别名不能重复提交同一目标() {
+        let 根 = tempfile::tempdir().unwrap();
+        std::fs::create_dir(根.path().join("子目录")).unwrap();
+        let 路径 = 根.path().join("文件");
+        std::fs::write(&路径, "原值").unwrap();
+        assert!(
+            写入批次(&[
+                (路径.clone(), Some(vec![1])),
+                (根.path().join("子目录/../文件"), Some(vec![2]))
+            ])
+            .is_err()
+        );
+        assert_eq!(std::fs::read_to_string(路径).unwrap(), "原值");
     }
 }

@@ -46,7 +46,7 @@ impl Drop for 隔离环境 {
 }
 
 /// 子进程一启动即接管；错误返回也会清理其独立进程组。
-struct 受管进程(Child);
+pub(crate) struct 受管进程(pub(crate) Child);
 
 impl Drop for 受管进程 {
     fn drop(&mut self) {
@@ -69,6 +69,7 @@ fn 复制目录(来源: &Path, 目标: &Path) -> 结果<()> {
     for 条目 in std::fs::read_dir(来源)? {
         let 条目 = 条目?;
         let 来源路径 = 条目.path();
+        crate::文件事务::校验普通路径(&来源路径)?;
         let 目标路径 = 目标.join(条目.file_name());
         if 来源路径.is_dir() {
             复制目录(&来源路径, &目标路径)?;

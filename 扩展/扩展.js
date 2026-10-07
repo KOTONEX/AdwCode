@@ -160,13 +160,21 @@ function 样式补丁状态(markers) {
   return markers.every((marker) => patch.includes(marker)) ? "enabled" : "stale";
 }
 
+/** @param {unknown} 值 @returns {string[]} */
+function 校验加载引用(值) {
+  if (!Array.isArray(值) || !值.every(项 => typeof 项 === "string")) {
+    throw Error("vscode_custom_css.imports 必须是字符串数组");
+  }
+  return 值;
+}
+
 /**
  * 只读取安装状态；磁盘补丁与当前窗口的加载状态分别报告。
  * @param {import("vscode").ExtensionContext} context
  * @returns {{name: string, copied: string, imported: boolean, importCount: number, patched: string}[]}
  */
 function 外观安装状态(context) {
-  const imports = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
+  const imports = 校验加载引用(vscode.workspace.getConfiguration("vscode_custom_css").get("imports", []));
   const htmlPath = 工作台HTML路径();
   let html;
   try {
@@ -292,10 +300,7 @@ async function 执行外观事务(context, names, 替换全部) {
   const config = vscode.workspace.getConfiguration("vscode_custom_css");
   const inspected = config.inspect("imports");
   const 原全局配置 = inspected?.globalValue;
-  const imports = 原全局配置 ?? inspected?.defaultValue ?? [];
-  if (!Array.isArray(imports) || !imports.every(value => typeof value === "string")) {
-    throw Error("vscode_custom_css.imports 必须是字符串数组");
-  }
+  const imports = 校验加载引用(原全局配置 ?? inspected?.defaultValue ?? []);
   const merged = 合并加载引用(context, 替换全部 ? imports.filter(value => !识别加载文件(context, value)) : imports, names);
   /** @type {{target: string, temporary: string, before: string | undefined}[]} */
   const 文件快照 = [];
@@ -337,7 +342,6 @@ async function 执行外观事务(context, names, 替换全部) {
     throw Error(`${String(错误)}${恢复错误.length ? `；恢复未完成：${恢复错误.join("；")}` : "；原文件和配置已恢复"}`);
   }
   const installed = names.map(name => path.join(CSS_DIR, name));
-  const uris = installed.map(file => vscode.Uri.file(file).toString());
   const markers = names.map(name => CSS_FILES[name]);
   const state = 样式补丁状态(markers);
   if (替换全部 && !names.length) {
@@ -348,7 +352,7 @@ async function 执行外观事务(context, names, 替换全部) {
   if (loader) {
     const activeConfig = vscode.workspace.getConfiguration("vscode_custom_css");
     const activeScope = activeConfig.inspect("imports");
-    const effective = activeConfig.get("imports", /** @type {string[]} */ ([]));
+    const effective = 校验加载引用(activeConfig.get("imports", []));
     const normalized = 合并加载引用(context, effective, names);
     if ((activeScope?.workspaceValue !== undefined || activeScope?.workspaceFolderValue !== undefined) &&
         (normalized.length !== effective.length || normalized.some((value, index) => value !== effective[index]))) {
@@ -380,7 +384,7 @@ async function 执行外观事务(context, names, 替换全部) {
   }
 
   await vscode.env.clipboard.writeText(
-    `"vscode_custom_css.imports": ${JSON.stringify(uris, null, 2)}`
+    `"vscode_custom_css.imports": ${JSON.stringify(merged, null, 2)}`
   );
   const open = "打开外观目录";
   const choice = await vscode.window.showInformationMessage(
@@ -395,7 +399,7 @@ async function 执行外观事务(context, names, 替换全部) {
 
 /** @param {import("vscode").ExtensionContext} context @returns {Promise<void>} */
 async function 选择外观组件(context) {
-  const 当前 = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
+  const 当前 = 校验加载引用(vscode.workspace.getConfiguration("vscode_custom_css").get("imports", []));
   const 选项 = Object.keys(CSS_FILES).map(name => ({ label: name, picked: 当前.some(value => 识别加载文件(context, value) === name) }));
   const 选择 = await vscode.window.showQuickPick(选项, { canPickMany: true, placeHolder: "选择要加载的外观组件；清空选择可移除全部自有引用" });
   if (选择 !== undefined) await 执行外观事务(context, 选择.map(item => item.label), true);
@@ -407,7 +411,7 @@ async function 选择外观组件(context) {
  */
 function activate(context) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("adwcode.查看外观安装状态", async () => { await 读取系统字体(); 显示外观安装状态(context); }),
+    vscode.commands.registerCommand("adwcode.查看外观安装状态", () => 排队外观操作(async () => { await 读取系统字体(); 显示外观安装状态(context); })),
     vscode.commands.registerCommand("adwcode.安装GNOME外观", () =>
       排队外观操作(() => 安装样式(context, Object.keys(CSS_FILES)))
     ),

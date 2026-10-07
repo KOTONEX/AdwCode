@@ -1043,6 +1043,16 @@ fn 段坐标有效(段: &线段) -> bool {
     }
 }
 
+/// 在轮廓布尔算法之前拒绝变换产生的非法坐标。
+fn 校验变换轮廓(轮廓: &子路径, 文件名: &str) -> 结果<()> {
+    if !段坐标有效(&线段::直线(轮廓.起点)) || !轮廓.段.iter().all(段坐标有效) {
+        return Err(工具错误::新(format!(
+            "{文件名} 的变换轮廓包含非有限或超幅坐标"
+        )));
+    }
+    Ok(())
+}
+
 /// 解析元素变换；只接受 matrix/translate/scale，其余明确报错。
 fn 解析变换(值: &str, 文件名: &str) -> 结果<Affine> {
     if 值.trim().is_empty() {
@@ -1415,6 +1425,15 @@ fn 访问元素(
         文件名,
     )?;
     let 变换 = 变换 * 自身;
+    if 变换
+        .as_coeffs()
+        .iter()
+        .any(|值| !值.is_finite() || 值.abs() > 坐标上限)
+    {
+        return Err(工具错误::新(format!(
+            "{文件名} 的组合变换包含非有限或超幅系数"
+        )));
+    }
     let 特效 = 特效
         || ["mask", "clip-path", "filter"]
             .iter()
@@ -1500,6 +1519,9 @@ fn 访问元素(
             描边轮廓.extend(bezipath转轮廓(&结果));
         }
         let 描边轮廓: Vec<子路径> = 描边轮廓.iter().map(|项| 项.变换(变换)).collect();
+        for 轮廓 in &描边轮廓 {
+            校验变换轮廓(轮廓, 文件名)?;
+        }
         let 简化 = 简化轮廓(&描边轮廓, 0.01);
         let 简化flo: Vec<SimpleBezierPath> = 简化.iter().map(轮廓转flo).collect();
         let 视口flo = 轮廓转flo(&视口路径());
@@ -1524,6 +1546,7 @@ fn 访问元素(
     let mut 可见 = Vec::new();
     for 子 in 子路径列表 {
         let mut 子 = 子.变换(变换);
+        校验变换轮廓(&子, 文件名)?;
         子.隐式闭合();
         if 奇偶 {
             if 子
@@ -2586,6 +2609,13 @@ mod 测试 {
         let mut 输出 = Vec::new();
         assert!(绘制svg("<g/>", "错误.svg", &mut 输出).is_err());
         assert!(解析路径数据("M0 0 A1e100 1 0 0 0 1 1", "错误.svg").is_err());
+        assert!(绘制(r#"<g transform="scale(10000)"><g transform="scale(10000)"><path fill-rule="evenodd" d="M0 0H1V1H0Z"/></g></g>"#).is_err());
+        assert!(
+            绘制(
+                r#"<g transform="scale(10000)"><path fill-rule="evenodd" d="M0 0H2V2H0Z"/></g>"#
+            )
+            .is_err()
+        );
     }
     #[test]
     fn 后续字体码点失败不覆盖早先字体() {

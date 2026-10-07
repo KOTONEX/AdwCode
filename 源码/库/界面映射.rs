@@ -2182,19 +2182,19 @@ pub fn 生成界面颜色(
     // --- 光标 / 操作列表 / 评论 ---
     颜色.放(
         "editorMultiCursor.primary.background",
-        取(调色板, "editor_cursor"),
+        取(调色板, "editor_bg"),
     );
     颜色.放(
         "editorMultiCursor.primary.foreground",
-        取(调色板, "editor_bg"),
+        取(调色板, "editor_cursor"),
     );
     颜色.放(
         "editorMultiCursor.secondary.background",
-        取(调色板, "accent_standalone"),
+        取(调色板, "editor_bg"),
     );
     颜色.放(
         "editorMultiCursor.secondary.foreground",
-        取(调色板, "editor_bg"),
+        取(调色板, "accent_standalone"),
     );
     颜色.放("editorActionList.background", 取(调色板, "bg_popover"));
     颜色.放("editorActionList.foreground", 取(调色板, "fg_popover"));
