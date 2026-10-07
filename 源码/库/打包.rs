@@ -81,7 +81,6 @@ const 包含清单: [&str; 14] = [
 ];
 
 const 跳过后缀: [&str; 2] = [".pyc", ".py"];
-const 资产生成脚本: [&str; 2] = ["生成自有字形.py", "生成导入字形.py"];
 
 /// 收集打包文件：字体连同对应 SVG、来源记录与再生成脚本一起分发。
 pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
@@ -97,7 +96,6 @@ pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
             文件.extend(目录内);
         }
     }
-    let 产品目录 = 根目录.join("产品图标");
     Ok(文件
         .into_iter()
         .filter(|路径| {
@@ -109,14 +107,7 @@ pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
             let 后缀 = 路径
                 .extension()
                 .map_or_else(String::new, |扩展| format!(".{}", 扩展.to_string_lossy()));
-            if 跳过后缀.contains(&后缀.as_str()) {
-                let 名字 = 路径
-                    .file_name()
-                    .map_or_else(String::new, |名字| 名字.to_string_lossy().to_string());
-                路径.parent() == Some(产品目录.as_path()) && 资产生成脚本.contains(&名字.as_str())
-            } else {
-                true
-            }
+            !跳过后缀.contains(&后缀.as_str())
         })
         .collect())
 }
@@ -331,12 +322,9 @@ mod 测试 {
             assert!(条目.contains(&必需.to_string()), "缺少 {必需}");
         }
         assert!(
-            !条目
-                .iter()
-                .any(|名字| 名字.ends_with(".py") && !名字.contains("产品图标")),
-            "不应包含源码 Python 文件"
+            !条目.iter().any(|名字| 名字.ends_with(".py")),
+            "打包不应包含 Python 文件"
         );
-        assert!(条目.contains(&"extension/产品图标/生成导入字形.py".to_string()));
         let mut 清单 = String::new();
         use std::io::Read;
         归档

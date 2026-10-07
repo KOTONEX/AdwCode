@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
 //
 // JSDoc 类型使用 `import("vscode")` / `import("child_process")` 等写法；
-// 检查由 tsconfig.json + 类型声明/ 下的手写最小类型面完成（meson compile -C builddir 类型检查），
+// 检查由 tsconfig.json + 类型声明/ 下的手写最小类型面完成（cargo run --quiet -- 类型检查），
 // 扩展本身仍是无构建步骤、无依赖的纯 JavaScript。
 // @ts-check
 /** @typedef {"unknown" | "not-enabled" | "enabled" | "stale"} CssPatchState */

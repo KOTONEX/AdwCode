@@ -28,8 +28,8 @@ AdwCode 使用原创的 GNOME 风格编辑器图标：暖白色圆角窗口、�
 ## 验证
 
 ```sh
-meson test -C builddir --print-errorlogs
-meson compile -C builddir 打包
+cargo run --quiet -- 检查
+cargo run --quiet -- 打包
 ```
 
 检查透明通道、浅色与深色背景，以及 128、64、32、16 像素下的辨识度；核对
