@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
-//! 工作台颜色有序规则和受限表达式解释器；规则在编译时嵌入，不执行外部代码。
+//! 工作台颜色有序映射表；复杂计算使用固定的 Rust 函数。
+
+#[path = "界面映射/计算.rs"]
+mod 计算;
 
 use crate::有序映射::有序映射;
 use crate::语法映射::{加载样式方案, 样式信息};
 use crate::调色板::{叠加颜色, 合成透明颜色, 色阶, 解析颜色, 调色板对象};
 use crate::错误::{工具错误, 结果};
-use serde_json::{Map, Value};
+#[cfg(test)]
+use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -15,7 +19,7 @@ const 规则文本: &str = include_str!("界面映射/规则.json");
 const 许可: &str = "AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later";
 static 已解析规则: OnceLock<std::result::Result<Vec<规则>, String>> = OnceLock::new();
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, serde::Deserialize)]
 enum 条件 {
     深色,
     高对比度,
@@ -23,15 +27,6 @@ enum 条件 {
     彩色状态栏,
 }
 impl 条件 {
-    fn 解析(文本: &str) -> 结果<Self> {
-        match 文本 {
-            "深色" => Ok(Self::深色),
-            "高对比度" => Ok(Self::高对比度),
-            "浅色标签" => Ok(Self::浅色标签),
-            "彩色状态栏" => Ok(Self::彩色状态栏),
-            _ => Err(工具错误::新(format!("未知界面条件：{文本}"))),
-        }
-    }
     fn 满足(self, 上下文: &上下文<'_>) -> bool {
         let 深色 = 上下文.调色板.mode == "dark";
         match self {
@@ -43,15 +38,10 @@ impl 条件 {
     }
 }
 
-enum 表达式 {
-    空,
+enum 颜色值 {
     常量(String),
     角色(String),
-    透明(Box<Self>, f64),
-    叠加(Box<Self>, f64, String),
-    色调(String, usize, usize),
-    样式(String, bool, Box<Self>),
-    条件(条件, Box<Self>, Box<Self>),
+    计算(fn(&上下文<'_>) -> 结果<Option<String>>),
 }
 struct 上下文<'a> {
     调色板: &'a 调色板对象,
@@ -65,59 +55,17 @@ fn 角色值(调色板: &调色板对象, 名称: &str) -> 结果<String> {
         .map(str::to_owned)
         .ok_or_else(|| 工具错误::新(format!("未知调色板角色：{名称}")))
 }
-impl 表达式 {
-    fn 可为空(&self) -> bool {
+impl 颜色值 {
+    fn 求值(&self, 上下文: &上下文<'_>) -> 结果<Option<String>> {
         match self {
-            Self::空 => true,
-            Self::条件(_, 是, 否) => 是.可为空() || 否.可为空(),
-            _ => false,
+            Self::常量(值) => Ok(Some(值.clone())),
+            Self::角色(名称) => Ok(Some(角色值(上下文.调色板, 名称)?)),
+            Self::计算(函数) => 函数(上下文),
         }
     }
     fn 必需(&self, 上下文: &上下文<'_>) -> 结果<String> {
         self.求值(上下文)?
-            .ok_or_else(|| 工具错误::新("颜色表达式不得为空"))
-    }
-    fn 求值(&self, 上下文: &上下文<'_>) -> 结果<Option<String>> {
-        let 调色板 = 上下文.调色板;
-        Ok(Some(match self {
-            Self::空 => return Ok(None),
-            Self::常量(值) => 值.clone(),
-            Self::角色(名称) => 角色值(调色板, 名称)?,
-            Self::透明(颜色, 比例) => 合成透明颜色(&颜色.必需(上下文)?, *比例)?,
-            Self::叠加(颜色, 比例, 表面) => {
-                let 前景 = 合成透明颜色(&颜色.必需(上下文)?, *比例)?;
-                叠加颜色(&前景, &角色值(调色板, 表面)?)?
-            }
-            Self::色调(名称, 深, 浅) => {
-                let 级 = if 调色板.mode == "dark" { *深 } else { *浅 };
-                色阶(名称)
-                    .and_then(|色阶| 色阶.get(级 - 1).copied())
-                    .ok_or_else(|| 工具错误::新("未知色阶或级数"))?
-                    .to_string()
-            }
-            Self::样式(名称, 前景, 回退) => {
-                let 回退 = 回退.必需(上下文)?;
-                上下文
-                    .样式
-                    .get(名称)
-                    .and_then(|样式| {
-                        if *前景 {
-                            样式.foreground.clone()
-                        } else {
-                            样式.background.clone()
-                        }
-                    })
-                    .filter(|值| !值.is_empty())
-                    .unwrap_or(回退)
-            }
-            Self::条件(条件, 是, 否) => {
-                return if 条件.满足(上下文) {
-                    是.求值(上下文)
-                } else {
-                    否.求值(上下文)
-                };
-            }
-        }))
+            .ok_or_else(|| 工具错误::新("此颜色条目不得为空"))
     }
 }
 
@@ -132,174 +80,110 @@ enum 规则 {
     颜色 {
         操作: 操作,
         键: String,
-        值: 表达式,
+        值: 颜色值,
         条件: Option<条件>,
     },
 }
 
-fn 对象<'a>(值: &'a Value, 必需: &[&str], 可选: &[&str]) -> 结果<&'a Map<String, Value>> {
-    let 表 = 值
-        .as_object()
-        .ok_or_else(|| 工具错误::新("界面规则字段必须是对象"))?;
-    if 必需.iter().any(|键| !表.contains_key(*键))
-        || 表
-            .keys()
-            .any(|键| !必需.contains(&键.as_str()) && !可选.contains(&键.as_str()))
-    {
-        return Err(工具错误::新("界面规则含未知字段或缺少必需字段"));
-    }
-    Ok(表)
-}
-fn 文本<'a>(表: &'a Map<String, Value>, 键: &str) -> 结果<&'a str> {
-    表.get(键)
-        .and_then(Value::as_str)
-        .ok_or_else(|| 工具错误::新(format!("{键} 必须是字符串")))
-}
-fn 名称(表: &Map<String, Value>, 键: &str) -> 结果<String> {
-    let 值 = 文本(表, 键)?;
-    if 值.is_empty() {
-        return Err(工具错误::新(format!("{键} 不得为空")));
-    }
-    Ok(值.to_owned())
-}
-fn 子表达式(值: &Value, 深度: usize) -> 结果<表达式> {
-    let 值 = 解析表达式(值, 深度)?;
-    if 值.可为空() {
-        return Err(工具错误::新("此处颜色表达式不得为空"));
-    }
-    Ok(值)
-}
-fn 解析表达式(值: &Value, 深度: usize) -> 结果<表达式> {
-    if 深度 > 32 {
-        return Err(工具错误::新("界面颜色表达式嵌套过深"));
-    }
-    let 类型 = 值
-        .get("类型")
-        .and_then(Value::as_str)
-        .ok_or_else(|| 工具错误::新("颜色表达式缺少类型"))?;
-    let 字段: &[&str] = match 类型 {
-        "空" => &[],
-        "常量" => &["值"],
-        "角色" => &["名称"],
-        "透明" => &["颜色", "比例"],
-        "叠加" => &["颜色", "比例", "表面"],
-        "色调" => &["名称", "深", "浅"],
-        "样式" => &["名称", "前景", "回退"],
-        "条件" => &["条件", "是", "否"],
-        _ => return Err(工具错误::新(format!("未知颜色运算：{类型}"))),
-    };
-    let mut 必需 = vec!["类型"];
-    必需.extend_from_slice(字段);
-    let 表 = 对象(值, &必需, &[])?;
-    let 比例 = || -> 结果<f64> {
-        表["比例"]
-            .as_f64()
-            .filter(|值| 值.is_finite() && (0.0..=1.0).contains(值))
-            .ok_or_else(|| 工具错误::新("颜色比例必须是 0..1 的有限数"))
-    };
-    let 级数 = |键: &str| -> 结果<usize> {
-        表[键]
-            .as_u64()
-            .filter(|级| (1..=5).contains(级))
-            .map(|级| 级 as usize)
-            .ok_or_else(|| 工具错误::新("色阶级数必须为 1..5 整数"))
-    };
-    Ok(match 类型 {
-        "空" => 表达式::空,
-        "常量" => {
-            let 值 = 名称(表, "值")?;
-            解析颜色(&值)?;
-            表达式::常量(值)
-        }
-        "角色" => 表达式::角色(名称(表, "名称")?),
-        "透明" => 表达式::透明(Box::new(子表达式(&表["颜色"], 深度 + 1)?), 比例()?),
-        "叠加" => 表达式::叠加(
-            Box::new(子表达式(&表["颜色"], 深度 + 1)?),
-            比例()?,
-            名称(表, "表面")?,
-        ),
-        "色调" => {
-            let 名 = 名称(表, "名称")?;
-            if 色阶(&名).is_none() {
-                return Err(工具错误::新("未知色阶"));
-            }
-            表达式::色调(名, 级数("深")?, 级数("浅")?)
-        }
-        "样式" => 表达式::样式(
-            名称(表, "名称")?,
-            表["前景"]
-                .as_bool()
-                .ok_or_else(|| 工具错误::新("前景 必须是布尔值"))?,
-            Box::new(子表达式(&表["回退"], 深度 + 1)?),
-        ),
-        "条件" => 表达式::条件(
-            条件::解析(文本(表, "条件")?)?,
-            Box::new(解析表达式(&表["是"], 深度 + 1)?),
-            Box::new(解析表达式(&表["否"], 深度 + 1)?),
-        ),
-        _ => unreachable!("已校验运算"),
-    })
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct 映射清单 {
+    格式: u64,
+    许可: String,
+    版权: String,
+    #[serde(rename = "说明")]
+    _说明: String,
+    规则: Vec<映射行>,
 }
 
-fn 解析规则(文本值: &str) -> 结果<Vec<规则>> {
-    let 值: Value = serde_json::from_str(文本值)
-        .map_err(|错误| 工具错误::新(format!("界面规则 JSON 解析失败：{错误}")))?;
-    let 根 = 对象(&值, &["格式", "许可", "版权", "说明", "规则"], &[])?;
-    名称(根, "版权")?;
-    if 根["格式"].as_u64() != Some(1) || 文本(根, "许可")? != 许可 {
-        return Err(工具错误::新("不支持的界面规则格式或许可"));
+// 缺少字段与显式 null 不混淆；出现的可选字段仍必须通过类型校验。
+fn 读取可选字段<'de, D, T>(读取器: D) -> std::result::Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    T::deserialize(读取器).map(Some)
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct 映射行 {
+    操作: String,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    键: Option<String>,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    角色: Option<String>,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    常量: Option<String>,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    计算: Option<String>,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    条件: Option<条件>,
+    #[serde(default, deserialize_with = "读取可选字段")]
+    说明: Option<String>,
+}
+fn 读取颜色(行: &映射行) -> 结果<颜色值> {
+    match (&行.角色, &行.常量, &行.计算) {
+        (Some(名), None, None) if !名.is_empty() => Ok(颜色值::角色(名.clone())),
+        (None, Some(值), None) => {
+            解析颜色(值)?;
+            Ok(颜色值::常量(值.clone()))
+        }
+        (None, None, Some(名)) => Ok(颜色值::计算(计算::查找计算(名)?)),
+        _ => Err(工具错误::新(
+            "颜色条目必须且只能指定非空角色、常量或计算之一",
+        )),
     }
-    文本(根, "说明")?;
-    let 行 = 根["规则"]
-        .as_array()
-        .filter(|行| !行.is_empty() && 行.len() <= 4096)
-        .ok_or_else(|| 工具错误::新("界面规则必须是非空数组且不超过 4096 项"))?;
-    行.iter()
-        .map(|值| {
-            let 操作 = 值
-                .get("操作")
-                .and_then(Value::as_str)
-                .ok_or_else(|| 工具错误::新("规则缺少操作"))?;
-            match 操作 {
-                "注释" => {
-                    let 表 = 对象(值, &["操作", "说明"], &[])?;
-                    文本(表, "说明")?;
-                    Ok(规则::注释)
+}
+fn 解析规则(文本值: &str) -> 结果<Vec<规则>> {
+    let 根: 映射清单 = serde_json::from_str(文本值)
+        .map_err(|错误| 工具错误::新(format!("界面映射 JSON 解析失败：{错误}")))?;
+    if 根.格式 != 2 || 根.许可 != 许可 || 根.版权.is_empty() {
+        return Err(工具错误::新("不支持的界面映射格式、许可或版权"));
+    }
+    if 根.规则.is_empty() || 根.规则.len() > 4096 {
+        return Err(工具错误::新("界面映射必须是非空数组且不超过 4096 项"));
+    }
+    根.规则
+        .into_iter()
+        .map(|行| match 行.操作.as_str() {
+            "注释" | "终端" => {
+                if 行.键.is_some()
+                    || 行.角色.is_some()
+                    || 行.常量.is_some()
+                    || 行.计算.is_some()
+                    || 行.条件.is_some()
+                {
+                    return Err(工具错误::新("注释或终端条目含颜色字段"));
                 }
-                "终端" => {
-                    对象(值, &["操作"], &[])?;
-                    Ok(规则::终端)
+                match 行.操作.as_str() {
+                    "注释" if 行.说明.is_some() => Ok(规则::注释),
+                    "终端" if 行.说明.is_none() => Ok(规则::终端),
+                    _ => Err(工具错误::新("注释或终端条目字段错误")),
                 }
-                "放" | "放可选" | "覆盖" => {
-                    let 表 = 对象(值, &["操作", "键", "值"], &["条件"])?;
-                    let 条件 = 表
-                        .get("条件")
-                        .map(|值| {
-                            条件::解析(
-                                值.as_str()
-                                    .ok_or_else(|| 工具错误::新("条件必须是字符串"))?,
-                            )
-                        })
-                        .transpose()?;
-                    let 操作 = match 操作 {
-                        "放" => 操作::放,
-                        "放可选" => 操作::放可选,
-                        _ => 操作::覆盖,
-                    };
-                    let 表达式 = if matches!(操作, 操作::放可选) {
-                        解析表达式(&表["值"], 0)?
-                    } else {
-                        子表达式(&表["值"], 0)?
-                    };
-                    Ok(规则::颜色 {
-                        操作,
-                        键: 名称(表, "键")?,
-                        值: 表达式,
-                        条件,
-                    })
-                }
-                _ => Err(工具错误::新(format!("未知界面规则操作：{操作}"))),
             }
+            "放" | "放可选" | "覆盖" => {
+                if 行.说明.is_some() {
+                    return Err(工具错误::新("颜色条目含注释字段"));
+                }
+                let 值 = 读取颜色(&行)?;
+                let 键 = 行
+                    .键
+                    .filter(|键| !键.is_empty())
+                    .ok_or_else(|| 工具错误::新("颜色键不得为空"))?;
+                let 操作 = match 行.操作.as_str() {
+                    "放" => 操作::放,
+                    "放可选" => 操作::放可选,
+                    _ => 操作::覆盖,
+                };
+                Ok(规则::颜色 {
+                    操作,
+                    键,
+                    值,
+                    条件: 行.条件,
+                })
+            }
+            _ => Err(工具错误::新(format!("未知界面映射操作：{}", 行.操作))),
         })
         .collect()
 }
@@ -432,60 +316,40 @@ mod 测试 {
     }
     fn 解析行(行: Value) -> 结果<Vec<规则>> {
         解析规则(
-            &serde_json::json!({"格式":1,"许可":许可,"版权":"测试贡献者","说明":"测试","规则":行})
+            &serde_json::json!({"格式":2,"许可":许可,"版权":"测试贡献者","说明":"测试","规则":行})
                 .to_string(),
         )
     }
-
     #[test]
-    fn 非法规则与表达式严格拒绝() {
-        let 行 = serde_json::json!({"操作":"放","键":"测试","值":{"类型":"常量","值":"#123456"}});
-        assert!(解析行(serde_json::json!([行])).is_ok());
-        for 值 in [
-            serde_json::json!({"类型":"执行","值":"任意代码"}),
-            serde_json::json!({"类型":"常量","值":"错误颜色"}),
-            serde_json::json!({"类型":"常量","值":"#123456","多余":true}),
-            serde_json::json!({"类型":"角色","名称":""}),
-            serde_json::json!({"类型":"透明","颜色":{"类型":"常量","值":"#123456"},"比例":-0.1}),
-            serde_json::json!({"类型":"透明","颜色":{"类型":"空"},"比例":0.5}),
-            serde_json::json!({"类型":"叠加","颜色":{"类型":"角色","名称":"fg"},"比例":1.1,"表面":"bg_view"}),
-            serde_json::json!({"类型":"色调","名称":"blue","深":0,"浅":5}),
-            serde_json::json!({"类型":"色调","名称":"blue","深":5,"浅":6}),
-            serde_json::json!({"类型":"色调","名称":"无此色阶","深":1,"浅":5}),
-            serde_json::json!({"类型":"样式","名称":"def:type","前景":"true","回退":{"类型":"常量","值":"#123456"}}),
-            serde_json::json!({"类型":"条件","条件":"陌生条件","是":{"类型":"空"},"否":{"类型":"空"}}),
+    fn 平坦映射拒绝无效字段与计算() {
+        for 行 in [
+            serde_json::json!({"操作":"放","键":"测试"}),
+            serde_json::json!({"操作":"放","键":"测试","角色":null}),
+            serde_json::json!({"操作":"放","键":"测试","角色":"fg","条件":null}),
+            serde_json::json!({"操作":"放","键":"测试","角色":"fg","常量":"#123456"}),
+            serde_json::json!({"操作":"放","键":"测试","常量":"错误颜色"}),
+            serde_json::json!({"操作":"放","键":"测试","角色":""}),
+            serde_json::json!({"操作":"放","键":"测试","计算":"任意代码"}),
+            serde_json::json!({"操作":"放","键":"测试","值":{"类型":"角色","名称":"fg"}}),
+            serde_json::json!({"操作":"终端","常量":"#123456"}),
+            serde_json::json!({"操作":"放","键":"测试","角色":"fg","条件":"未知"}),
         ] {
-            let mut 坏 = 行.clone();
-            坏["值"] = 值;
-            assert!(解析行(serde_json::json!([坏])).is_err(), "{坏}");
+            assert!(解析行(serde_json::json!([行])).is_err(), "{行}");
         }
-        for 坏 in [
-            serde_json::json!([]),
-            serde_json::json!([{}]),
-            serde_json::json!([{"操作":"终端","值":null}]),
-            serde_json::json!([{"操作":"放","键":"","值":{"类型":"空"}}]),
-        ] {
-            assert!(解析行(坏).is_err());
-        }
-        let mut 深 = serde_json::json!({"类型":"常量","值":"#123456"});
-        for _ in 0..34 {
-            深 = serde_json::json!({"类型":"条件","条件":"深色","是":深,"否":{"类型":"常量","值":"#123456"}});
-        }
-        assert!(解析行(serde_json::json!([{"操作":"放","键":"测试","值":深}])).is_err());
+        assert!(解析行(serde_json::json!([])).is_err());
+        assert!(解析规则("{").is_err());
         let mut 根: Value = serde_json::from_str(规则文本).unwrap();
-        根["格式"] = serde_json::json!(2);
-        assert!(解析规则(&根.to_string()).is_err());
         根["格式"] = serde_json::json!(1);
+        assert!(解析规则(&根.to_string()).is_err());
+        根["格式"] = serde_json::json!(2);
         根["新增"] = serde_json::json!(true);
         assert!(解析规则(&根.to_string()).is_err());
-        assert!(解析规则("{").is_err());
     }
-
     #[test]
-    fn 规则覆盖省略终端与样式回退保持顺序() {
-        let 根目录 = Path::new(env!("CARGO_MANIFEST_DIR"));
+    fn 覆盖省略终端与样式回退保持顺序() {
+        let 根 = Path::new(env!("CARGO_MANIFEST_DIR"));
         let 调色板 =
-            调色板对象::新("dark", "blue", false, 编辑器颜色(根目录, "dark").unwrap()).unwrap();
+            调色板对象::新("dark", "blue", false, 编辑器颜色(根, "dark").unwrap()).unwrap();
         let 样式 = BTreeMap::new();
         let 上下文 = 上下文 {
             调色板: &调色板,
@@ -493,13 +357,14 @@ mod 测试 {
             彩色状态栏: false,
         };
         let 规则 = 解析行(serde_json::json!([
-            {"操作":"放可选","键":"首项","值":{"类型":"空"}},
-            {"操作":"放","键":"回退","值":{"类型":"样式","名称":"缺失样式","前景":true,"回退":{"类型":"常量","值":"#112233"}}},
+            {"操作":"放可选","键":"首项","计算":"高对比度_contrast_border_否则_省略"},
+            {"操作":"放","键":"回退","常量":"#112233"},
             {"操作":"终端"},
-            {"操作":"覆盖","键":"首项","值":{"类型":"常量","值":"#445566"}},
-            {"操作":"覆盖","键":"末项","值":{"类型":"常量","值":"#778899"}},
-            {"操作":"放","键":"不应出现","条件":"彩色状态栏","值":{"类型":"常量","值":"#000000"}}
-        ])).unwrap();
+            {"操作":"覆盖","键":"首项","常量":"#445566"},
+            {"操作":"覆盖","键":"末项","常量":"#778899"},
+            {"操作":"放","键":"不应出现","条件":"彩色状态栏","常量":"#000000"}
+        ]))
+        .unwrap();
         let 结果 = 应用规则(&规则, &上下文).unwrap();
         assert_eq!(结果.条目().len(), 19);
         assert_eq!(结果.条目()[0], ("首项".to_owned(), "#445566".to_owned()));
@@ -508,12 +373,9 @@ mod 测试 {
         for (键, 值) in crate::调色板::终端颜色() {
             assert_eq!(结果.取(键), Some(值));
         }
-        for 值 in [
-            serde_json::json!({"类型":"角色","名称":"无此角色"}),
-            serde_json::json!({"类型":"叠加","颜色":{"类型":"常量","值":"#123456"},"比例":0.5,"表面":"无此表面"}),
-        ] {
-            let 规则 = 解析行(serde_json::json!([{"操作":"放","键":"错误","值":值}])).unwrap();
-            assert!(应用规则(&规则, &上下文).is_err());
-        }
+        let 回退 = 计算::查找计算("样式_def:type_回退_fg").unwrap()(&上下文).unwrap();
+        assert_eq!(回退, Some(角色值(&调色板, "fg").unwrap()));
+        let 坏 = 解析行(serde_json::json!([{"操作":"放","键":"错误","角色":"无此角色"}])).unwrap();
+        assert!(应用规则(&坏, &上下文).is_err());
     }
 }

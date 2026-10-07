@@ -18,6 +18,7 @@ flo_curves = "0.8"
 kurbo = "0.13"
 quick-xml = "0.41.0"
 regex = "1.13.1"
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 svgtypes = "0.16"
 ureq = "3.4.2"
