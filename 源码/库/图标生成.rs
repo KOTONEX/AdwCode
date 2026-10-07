@@ -12,7 +12,7 @@
 //! 字重内缩（外轮廓收缩、内孔扩张）、`渲染图标/` 预览导出。
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use flo_curves::bezier::path::{
     GraphPath, GraphPathEdgeKind, PathLabel, SimpleBezierPath, path_intersect, path_sub,
@@ -28,7 +28,6 @@ use quick_xml::XmlVersion;
 use quick_xml::events::Event;
 use regex::Regex;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 use write_fonts::FontBuilder;
 use write_fonts::tables::cmap::{Cmap, CmapSubtable, EncodingRecord, PlatformId};
 use write_fonts::tables::glyf::{GlyfLocaBuilder, Glyph, SimpleGlyph};
@@ -41,6 +40,7 @@ use write_fonts::tables::os2::{Os2, SelectionFlags};
 use write_fonts::tables::post::Post;
 use write_fonts::types::{Fixed, LongDateTime, NameId, Tag};
 
+use crate::摘要::sha256十六进制;
 use crate::错误::{工具错误, 结果};
 
 /// SVG 命名空间；非该命名空间的元素不参与绘制。
@@ -53,6 +53,12 @@ const 基线: f64 = 896.0;
 const 固定时间戳: i64 = 3_863_548_800;
 /// 字形前进宽度。
 const 前进宽度: u16 = 1024;
+/// 路径与几何属性的坐标幅度上限。
+const 坐标上限: f64 = 10_000.0;
+/// 单条曲线展平的最大递归深度。
+const 展平最大深度: u32 = 12;
+/// XML 允许的最大元素嵌套深度。
+const 最大嵌套深度: usize = 256;
 
 /// 一段轮廓线段；坐标位于所在坐标系。
 #[derive(Clone, Copy, Debug)]
@@ -266,7 +272,7 @@ fn 展平二次(
     深度: u32,
     输出: &mut Vec<Point>,
 ) {
-    if 深度 >= 24 {
+    if 深度 >= 展平最大深度 {
         输出.push(终点);
         return;
     }
@@ -293,7 +299,7 @@ fn 展平三次(
     深度: u32,
     输出: &mut Vec<Point>,
 ) {
-    if 深度 >= 24 {
+    if 深度 >= 展平最大深度 {
         输出.push(终点);
         return;
     }
@@ -420,24 +426,94 @@ fn bezipath转轮廓(路径: &BezPath) -> Vec<子路径> {
     结果
 }
 
-/// 全局绕数：对展平多边形做非零环绕计数。
-fn 绕数(多边形列表: &[Vec<Point>], 点: Point) -> i64 {
-    let mut 绕数 = 0i64;
-    for 多边形 in 多边形列表 {
-        let 数量 = 多边形.len();
-        for 序号 in 0..数量 {
-            let 起点 = 多边形[序号];
-            let 终点 = 多边形[(序号 + 1) % 数量];
-            if 起点.y <= 点.y {
-                if 终点.y > 点.y && (终点 - 起点).cross(点 - 起点) > 0.0 {
-                    绕数 += 1;
-                }
-            } else if 终点.y <= 点.y && (终点 - 起点).cross(点 - 起点) < 0.0 {
-                绕数 -= 1;
+/// 按 y 分带的边索引，加速非零环绕采样。
+struct 绕数索引 {
+    下界: f64,
+    带宽: f64,
+    带: Vec<Vec<(Point, Point)>>,
+    长边: Vec<(Point, Point)>,
+}
+
+impl 绕数索引 {
+    /// 由展平多边形构建索引；退化输入返回空索引。
+    fn 新建(多边形列表: &[Vec<Point>]) -> Self {
+        let mut 最小y = f64::INFINITY;
+        let mut 最大y = f64::NEG_INFINITY;
+        for 多边形 in 多边形列表 {
+            for 点 in 多边形 {
+                最小y = 最小y.min(点.y);
+                最大y = 最大y.max(点.y);
             }
         }
+        const 带数: usize = 64;
+        if !最小y.is_finite() || !最大y.is_finite() || 最大y <= 最小y {
+            return Self {
+                下界: 0.0,
+                带宽: 1.0,
+                带: Vec::new(),
+                长边: Vec::new(),
+            };
+        }
+        let 带宽 = (最大y - 最小y) / 带数 as f64;
+        let mut 带: Vec<Vec<(Point, Point)>> = (0..带数).map(|_| Vec::new()).collect();
+        let mut 长边 = Vec::new();
+        for 多边形 in 多边形列表 {
+            let 数量 = 多边形.len();
+            for 序号 in 0..数量 {
+                let 起点 = 多边形[序号];
+                let 终点 = 多边形[(序号 + 1) % 数量];
+                let (低, 高) = if 起点.y <= 终点.y {
+                    (起点.y, 终点.y)
+                } else {
+                    (终点.y, 起点.y)
+                };
+                let 首 = 带编号(低, 最小y, 带宽, 带数);
+                let 末 = 带编号(高, 最小y, 带宽, 带数);
+                if 末 - 首 > 8 {
+                    长边.push((起点, 终点));
+                } else {
+                    for 桶 in &mut 带[首..=末] {
+                        桶.push((起点, 终点));
+                    }
+                }
+            }
+        }
+        Self {
+            下界: 最小y,
+            带宽,
+            带,
+            长边,
+        }
     }
-    绕数
+
+    /// 非零环绕计数；与逐边扫描结果一致。
+    fn 绕数(&self, 点: Point) -> i64 {
+        let mut 结果 = 0i64;
+        let mut 累计 = |起点: Point, 终点: Point| {
+            if 起点.y <= 点.y {
+                if 终点.y > 点.y && (终点 - 起点).cross(点 - 起点) > 0.0 {
+                    结果 += 1;
+                }
+            } else if 终点.y <= 点.y && (终点 - 起点).cross(点 - 起点) < 0.0 {
+                结果 -= 1;
+            }
+        };
+        for &(起点, 终点) in &self.长边 {
+            累计(起点, 终点);
+        }
+        if !self.带.is_empty() {
+            let 桶 = 带编号(点.y, self.下界, self.带宽, self.带.len());
+            for &(起点, 终点) in &self.带[桶] {
+                累计(起点, 终点);
+            }
+        }
+        结果
+    }
+}
+
+/// 把 y 值映射到分带编号。
+fn 带编号(值: f64, 下界: f64, 带宽: f64, 带数: usize) -> usize {
+    (((值 - 下界) / 带宽).floor() as i64).clamp(0, 带数 as i64 - 1) as usize
 }
 
 /// 奇偶规则包含测试（展平多边形）。
@@ -473,6 +549,7 @@ fn 简化轮廓(轮廓: &[子路径], 精度: f64) -> Vec<子路径> {
     图.round(精度);
     let 边列表: Vec<_> = 图.all_edge_refs().collect();
     let 偏移 = (精度 * 5.0).max(0.02);
+    let 索引 = 绕数索引::新建(&多边形列表);
     for 边引用 in 边列表 {
         let 边 = 图.get_edge(边引用);
         let 位置 = 边.point_at_pos(0.5);
@@ -483,8 +560,8 @@ fn 简化轮廓(轮廓: &[子路径], 精度: f64) -> Vec<子路径> {
             continue;
         }
         let 法线 = Coord2(-切线.y() / 长度, 切线.x() / 长度);
-        let 左 = 绕数(&多边形列表, 点自坐标(位置 + 法线 * 偏移)) != 0;
-        let 右 = 绕数(&多边形列表, 点自坐标(位置 - 法线 * 偏移)) != 0;
+        let 左 = 索引.绕数(点自坐标(位置 + 法线 * 偏移)) != 0;
+        let 右 = 索引.绕数(点自坐标(位置 - 法线 * 偏移)) != 0;
         图.set_edge_kind(
             边引用,
             if 左 != 右 {
@@ -682,6 +759,9 @@ fn 解析xml(文本: &str, 文件名: &str) -> 结果<节点> {
                         根 = Some(节点);
                     }
                 } else {
+                    if 节点栈.len() >= 最大嵌套深度 {
+                        return Err(工具错误::新(format!("{文件名} 的 XML 嵌套过深")));
+                    }
                     命名空间栈.push((新默认, 新前缀));
                     节点栈.push(节点);
                 }
@@ -711,6 +791,7 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
     let mut 上一控制: Option<Point> = None;
     let mut 上一命令 = '\0';
     let mut 当前路径: Option<子路径> = None;
+    let mut 有起点 = false;
     for 段 in svgtypes::PathParser::from(数据) {
         let 段 = 段.map_err(|错误| 工具错误::新(format!("{文件名} 路径解析失败：{错误}")))?;
         match 段 {
@@ -721,6 +802,7 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                 let 目标 = 取值(abs, 当前, x, y);
                 当前 = 目标;
                 起点 = 目标;
+                有起点 = true;
                 当前路径 = Some(子路径 {
                     起点: 目标,
                     段: Vec::new(),
@@ -731,21 +813,21 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
             }
             svgtypes::PathSegment::LineTo { abs, x, y } => {
                 let 目标 = 取值(abs, 当前, x, y);
-                推段(&mut 当前路径, 线段::直线(目标))?;
+                推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::直线(目标))?;
                 当前 = 目标;
                 上一控制 = None;
                 上一命令 = 'L';
             }
             svgtypes::PathSegment::HorizontalLineTo { abs, x } => {
                 let 目标 = Point::new(if abs { x } else { 当前.x + x }, 当前.y);
-                推段(&mut 当前路径, 线段::直线(目标))?;
+                推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::直线(目标))?;
                 当前 = 目标;
                 上一控制 = None;
                 上一命令 = 'L';
             }
             svgtypes::PathSegment::VerticalLineTo { abs, y } => {
                 let 目标 = Point::new(当前.x, if abs { y } else { 当前.y + y });
-                推段(&mut 当前路径, 线段::直线(目标))?;
+                推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::直线(目标))?;
                 当前 = 目标;
                 上一控制 = None;
                 上一命令 = 'L';
@@ -762,7 +844,13 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                 let 控制1 = 取值(abs, 当前, x1, y1);
                 let 控制2 = 取值(abs, 当前, x2, y2);
                 let 目标 = 取值(abs, 当前, x, y);
-                推段(&mut 当前路径, 线段::三次(控制1, 控制2, 目标))?;
+                推段(
+                    &mut 当前路径,
+                    起点,
+                    有起点,
+                    文件名,
+                    线段::三次(控制1, 控制2, 目标),
+                )?;
                 当前 = 目标;
                 上一控制 = Some(控制2);
                 上一命令 = 'C';
@@ -777,7 +865,13 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                 };
                 let 控制2 = 取值(abs, 当前, x2, y2);
                 let 目标 = 取值(abs, 当前, x, y);
-                推段(&mut 当前路径, 线段::三次(控制1, 控制2, 目标))?;
+                推段(
+                    &mut 当前路径,
+                    起点,
+                    有起点,
+                    文件名,
+                    线段::三次(控制1, 控制2, 目标),
+                )?;
                 当前 = 目标;
                 上一控制 = Some(控制2);
                 上一命令 = 'S';
@@ -785,7 +879,7 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
             svgtypes::PathSegment::Quadratic { abs, x1, y1, x, y } => {
                 let 控制 = 取值(abs, 当前, x1, y1);
                 let 目标 = 取值(abs, 当前, x, y);
-                推段(&mut 当前路径, 线段::二次(控制, 目标))?;
+                推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::二次(控制, 目标))?;
                 当前 = 目标;
                 上一控制 = Some(控制);
                 上一命令 = 'Q';
@@ -799,7 +893,7 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                     当前
                 };
                 let 目标 = 取值(abs, 当前, x, y);
-                推段(&mut 当前路径, 线段::二次(控制, 目标))?;
+                推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::二次(控制, 目标))?;
                 当前 = 目标;
                 上一控制 = Some(控制);
                 上一命令 = 'T';
@@ -829,19 +923,20 @@ fn 解析路径数据(数据: &str, 文件名: &str) -> 结果<Vec<子路径>> {
                         段列表.push(线段::三次(控制1, 控制2, 终点));
                     });
                     for 段项 in 段列表 {
-                        推段(&mut 当前路径, 段项)?;
+                        推段(&mut 当前路径, 起点, 有起点, 文件名, 段项)?;
                         当前 = 段项.终点();
                     }
                 } else {
-                    推段(&mut 当前路径, 线段::直线(目标))?;
+                    推段(&mut 当前路径, 起点, 有起点, 文件名, 线段::直线(目标))?;
                     当前 = 目标;
                 }
                 上一控制 = None;
                 上一命令 = 'A';
             }
             svgtypes::PathSegment::ClosePath { .. } => {
-                if let Some(路径) = 当前路径.as_mut() {
+                if let Some(mut 路径) = 当前路径.take() {
                     路径.闭合 = true;
+                    子路径列表.push(路径);
                 }
                 当前 = 起点;
                 上一控制 = None;
@@ -864,13 +959,43 @@ fn 取值(abs: bool, 当前: Point, x: f64, y: f64) -> Point {
     }
 }
 
-/// 追加线段；缺少 MoveTo 时报错。
-fn 推段(当前路径: &mut Option<子路径>, 段: 线段) -> 结果<()> {
-    let Some(路径) = 当前路径.as_mut() else {
-        return Err(工具错误::新("路径数据缺少 M 起始命令"));
-    };
+/// 追加线段；缺少 MoveTo 时报错，`Z` 之后的绘制命令会从起点另起子路径。
+fn 推段(
+    当前路径: &mut Option<子路径>,
+    缺省起点: Point,
+    有起点: bool,
+    文件名: &str,
+    段: 线段,
+) -> 结果<()> {
+    if !有起点 {
+        return Err(工具错误::新(
+            format!("{文件名} 路径数据缺少 M 起始命令"),
+        ));
+    }
+    if !段坐标有效(&段) {
+        return Err(工具错误::新(format!(
+            "{文件名} 路径数据包含非有限或超幅坐标"
+        )));
+    }
+    let 路径 = 当前路径.get_or_insert_with(|| 子路径 {
+        起点: 缺省起点,
+        段: Vec::new(),
+        闭合: false,
+    });
     路径.段.push(段);
     Ok(())
+}
+
+/// 线段所有坐标都有限且不超过坐标上限。
+fn 段坐标有效(段: &线段) -> bool {
+    let 有效 = |点: &Point| {
+        点.x.is_finite() && 点.y.is_finite() && 点.x.abs() <= 坐标上限 && 点.y.abs() <= 坐标上限
+    };
+    match *段 {
+        线段::直线(终点) => 有效(&终点),
+        线段::二次(控制, 终点) => 有效(&控制) && 有效(&终点),
+        线段::三次(控制1, 控制2, 终点) => 有效(&控制1) && 有效(&控制2) && 有效(&终点),
+    }
 }
 
 /// 解析元素变换；只接受 matrix/translate/scale，其余明确报错。
@@ -887,15 +1012,7 @@ fn 解析变换(值: &str, 文件名: &str) -> 结果<Affine> {
         let 捕获 = 变换正则.captures(匹配.as_str()).expect("变换捕获");
         let 名称 = 捕获.get(1).expect("变换名").as_str();
         let 参数文本 = 捕获.get(2).expect("变换参数").as_str().trim();
-        let 参数: Vec<f64> = 参数文本
-            .split([' ', ',', '\t', '\n', '\r'])
-            .filter(|项| !项.is_empty())
-            .map(|项| {
-                项.parse::<f64>().map_err(|_| {
-                    工具错误::新(format!("{文件名} 不支持的 SVG 变换：{参数文本}"))
-                })
-            })
-            .collect::<结果<Vec<f64>>>()?;
+        let 参数 = 解析数值列表(参数文本, 文件名, " SVG 变换")?;
         let 当前 = match 名称 {
             "matrix" if 参数.len() == 6 => {
                 Affine::new([参数[0], 参数[1], 参数[2], 参数[3], 参数[4], 参数[5]])
@@ -944,17 +1061,45 @@ fn 合并属性(节点: &节点) -> BTreeMap<String, String> {
     结果
 }
 
-/// 读取数值属性，缺省时使用默认值。
+/// 读取数值属性，缺省时使用默认值；拒绝非有限或超幅值。
 fn 数值属性(
     属性: &BTreeMap<String, String>, 键: &str, 默认: f64, 文件名: &str
 ) -> 结果<f64> {
     match 属性.get(键) {
-        Some(文本) => 文本
-            .trim()
-            .parse::<f64>()
-            .map_err(|_| 工具错误::新(format!("{文件名} 无法解析 {键}：{文本}"))),
+        Some(文本) => {
+            let 值 = 文本
+                .trim()
+                .parse::<f64>()
+                .map_err(|_| 工具错误::新(format!("{文件名} 无法解析 {键}：{文本}")))?;
+            if !值.is_finite() || 值.abs() > 坐标上限 {
+                return Err(工具错误::新(format!(
+                    "{文件名} 的 {键} 超出允许范围：{文本}"
+                )));
+            }
+            Ok(值)
+        }
         None => Ok(默认),
     }
+}
+
+/// 解析以空白或逗号分隔的数值列表；拒绝非有限或超幅值。
+fn 解析数值列表(文本: &str, 文件名: &str, 说明: &str) -> 结果<Vec<f64>> {
+    let mut 结果 = Vec::new();
+    for 项 in 文本.split([' ', ',', '\t', '\n', '\r']) {
+        if 项.is_empty() {
+            continue;
+        }
+        let 值 = 项
+            .parse::<f64>()
+            .map_err(|_| 工具错误::新(format!("{文件名} 无法解析{说明}：{文本}")))?;
+        if !值.is_finite() || 值.abs() > 坐标上限 {
+            return Err(工具错误::新(format!(
+                "{文件名} 的{说明}超出允许范围：{文本}"
+            )));
+        }
+        结果.push(值);
+    }
+    Ok(结果)
 }
 
 /// 元素对应的一条或多条子路径；不支持的标签返回错误。
@@ -1037,19 +1182,14 @@ fn 元素子路径(节点: &节点, 文件名: &str) -> 结果<Vec<子路径>> {
 
 /// 解析 points 属性为点列。
 fn 解析点列(文本: &str, 文件名: &str) -> 结果<Vec<Point>> {
-    let 数值: Vec<f64> = 文本
-        .split([' ', ',', '\t', '\n', '\r'])
-        .filter(|项| !项.is_empty())
-        .map(|项| {
-            项.parse::<f64>()
-                .map_err(|_| 工具错误::新(format!("{文件名} 无法解析 points：{文本}")))
-        })
-        .collect::<结果<Vec<f64>>>()?;
+    let 数值 = 解析数值列表(文本, 文件名, " points")?;
     if 数值.len() % 2 != 0 {
         return Err(工具错误::新(format!("{文件名} 的 points 坐标不成对")));
     }
     Ok(数值
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|对| Point::new(对[0], 对[1]))
         .collect())
 }
@@ -1212,7 +1352,7 @@ fn 访问元素(
     if 属性.get("fill").is_some_and(|值| 值 == "none") && !描边 {
         return Ok(());
     }
-    if 描边 && 属性.get("fill").is_some_and(|值| 值 != "none") {
+    if 描边 && 属性.get("fill").is_none_or(|值| 值 != "none") {
         return Err(工具错误::新(format!(
             "{文件名} 同时包含填充与描边，需要单独转换"
         )));
@@ -1248,6 +1388,7 @@ fn 访问元素(
             join: 连接,
             start_cap: 端点,
             end_cap: 端点,
+            miter_limit: 数值属性(&属性, "stroke-miterlimit", 4.0, 文件名)?,
             ..Stroke::new(宽度)
         };
         let mut 描边轮廓: Vec<子路径> = Vec::new();
@@ -1280,13 +1421,7 @@ fn 访问元素(
 fn 绘制svg(文本: &str, 文件名: &str, 收集: &mut Vec<子路径>) -> 结果<()> {
     let 根 = 解析xml(文本, 文件名)?;
     let 画布文本 = 根.属性.get("viewBox").map_or("0 0 16 16", String::as_str);
-    let 画布: Vec<f64> = 画布文本
-        .split_whitespace()
-        .map(|项| {
-            项.parse::<f64>()
-                .map_err(|_| 工具错误::新(format!("{文件名} 的 viewBox 无法解析")))
-        })
-        .collect::<结果<Vec<f64>>>()?;
+    let 画布 = 解析数值列表(画布文本, 文件名, " viewBox")?;
     if 画布.as_slice() != [0.0, 0.0, 16.0, 16.0] {
         return Err(工具错误::新(format!("{文件名} 需要 16 × 16 画布")));
     }
@@ -1350,6 +1485,12 @@ fn 写入字体(
         let 路径 = 合并路径(轮廓);
         let 字形 = SimpleGlyph::from_bezpath(&路径)
             .map_err(|错误| 工具错误::新(format!("字形编译失败：{错误:?}")))?;
+        if 字形.contours.len() >= i16::MAX as usize {
+            return Err(工具错误::新(format!(
+                "字形轮廓数过多：{}",
+                字形.contours.len()
+            )));
+        }
         let 点数: usize = 字形.contours.iter().map(|项| 项.len()).sum();
         最大点数 = 最大点数.max(u16::try_from(点数).unwrap_or(u16::MAX));
         最大轮廓数 = 最大轮廓数.max(u16::try_from(字形.contours.len()).unwrap_or(u16::MAX));
@@ -1366,11 +1507,7 @@ fn 写入字体(
         .map(|盒| 盒.map_or(0, |值| 值.0))
         .collect();
     let 前进列表: Vec<u16> = vec![前进宽度; 名称表.len()];
-    let mut 度量数 = 名称表.len();
-    while 度量数 > 1 && 前进列表[度量数 - 1] == 前进列表[名称表.len() - 1] {
-        度量数 -= 1;
-    }
-    let 度量数 = 度量数.max(1);
+    let 度量数 = 压缩度量数(&前进列表).max(1);
     let 长度量: Vec<LongMetric> = (0..度量数)
         .map(|序号| LongMetric::new(前进宽度, 左边界[序号]))
         .collect();
@@ -1561,9 +1698,87 @@ fn 写入字体(
         .and_then(|项| 项.add_table(&glyf))
         .and_then(|项| 项.add_table(&loca))
         .map_err(|错误| 工具错误::新(format!("字体表写入失败：{错误}")))?;
-    let 字节 = 字体构建.build();
+    let mut 字节 = 字体构建.build();
+    修补os2版本(&mut 字节, 3)?;
     std::fs::write(输出路径, 字节)
         .map_err(|错误| 工具错误::带来源(format!("无法写入 {}", 输出路径.display()), 错误))
+}
+
+/// 把 OS/2 版本改写为指定值并同步校验和（write-fonts 只能按字段算出 4）。
+fn 修补os2版本(字节: &mut [u8], 版本: u16) -> 结果<()> {
+    let 表数 = u16::from_be_bytes(
+        字节
+            .get(4..6)
+            .ok_or_else(|| 工具错误::新("字体缺少表目录"))?
+            .try_into()
+            .expect("表数"),
+    ) as usize;
+    let mut os2记录 = None;
+    let mut head偏移 = None;
+    for 序号 in 0..表数 {
+        let 记录 = 12 + 序号 * 16;
+        let 标签 = 字节
+            .get(记录..记录 + 4)
+            .ok_or_else(|| 工具错误::新("字体表目录不完整"))?;
+        let 偏移 = u32::from_be_bytes(
+            字节
+                .get(记录 + 8..记录 + 12)
+                .ok_or_else(|| 工具错误::新("字体表目录不完整"))?
+                .try_into()
+                .expect("表偏移"),
+        ) as usize;
+        let 长度 = u32::from_be_bytes(
+            字节
+                .get(记录 + 12..记录 + 16)
+                .ok_or_else(|| 工具错误::新("字体表目录不完整"))?
+                .try_into()
+                .expect("表长度"),
+        ) as usize;
+        if 标签 == b"OS/2" {
+            os2记录 = Some((记录, 偏移, 长度));
+        } else if 标签 == b"head" {
+            head偏移 = Some(偏移);
+        }
+    }
+    let (记录, 偏移, 长度) = os2记录.ok_or_else(|| 工具错误::新("字体缺少 OS/2 表"))?;
+    字节[偏移..偏移 + 2].copy_from_slice(&版本.to_be_bytes());
+    let 表校验 = 表校验和(
+        字节
+            .get(偏移..偏移 + 长度)
+            .ok_or_else(|| 工具错误::新("OS/2 表超出字体范围"))?,
+    );
+    字节[记录 + 4..记录 + 8].copy_from_slice(&表校验.to_be_bytes());
+    let head偏移 = head偏移.ok_or_else(|| 工具错误::新("字体缺少 head 表"))?;
+    let 调整位置 = head偏移 + 8;
+    字节[调整位置..调整位置 + 4].fill(0);
+    let 总校验 = 表校验和(字节);
+    let 调整 = 0xB1B0_AFBAu32.wrapping_sub(总校验);
+    字节[调整位置..调整位置 + 4].copy_from_slice(&调整.to_be_bytes());
+    Ok(())
+}
+
+/// SFNT 校验和：按 4 字节大端累加，尾部补零。
+fn 表校验和(字节: &[u8]) -> u32 {
+    let mut 和 = 0u32;
+    let mut 序号 = 0;
+    while 序号 < 字节.len() {
+        let mut 词 = [0u8; 4];
+        let 剩余 = (字节.len() - 序号).min(4);
+        词[..剩余].copy_from_slice(&字节[序号..序号 + 剩余]);
+        和 = 和.wrapping_add(u32::from_be_bytes(词));
+        序号 += 4;
+    }
+    和
+}
+
+/// 计算可省略尾部等宽度量的 numberOfHMetrics。
+fn 压缩度量数(前进列表: &[u16]) -> usize {
+    let 末前进 = 前进列表.last().copied().unwrap_or(0);
+    let mut 度量数 = 前进列表.len();
+    while 度量数 > 1 && 前进列表[度量数 - 2] == 末前进 {
+        度量数 -= 1;
+    }
+    度量数
 }
 
 /// 合并轮廓为单个 BezPath。
@@ -1681,8 +1896,10 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         .ok_or_else(|| 工具错误::新("产品图标/来源.json 缺少 fonts"))?;
     for 字体 in 字体列表 {
         let id = 字符串字段(字体, "id")?;
+        let id路径 = 校验相对路径(&id, "fonts[].id")?;
         let 族名 = 字符串字段(字体, "family")?;
         let 输出 = 字符串字段(字体, "output")?;
+        let 输出路径 = 图标目录.join(校验相对路径(&输出, "fonts[].output")?);
         let 许可 = 字符串字段(字体, "license")?;
         let 许可地址 = 字符串字段(字体, "license_url")?;
         let 署名 = 字符串字段(字体, "attribution")?;
@@ -1695,11 +1912,11 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         let mut 码点表: Vec<(u16, usize)> = Vec::new();
         for 条目 in 字形条目 {
             let 文件 = 字符串字段(条目, "file")?;
-            let 源路径 = 图标目录.join(&文件);
+            let 源路径 = 图标目录.join(校验相对路径(&文件, "glyphs[].file")?);
             let 数据 = std::fs::read(&源路径).map_err(|错误| {
                 工具错误::带来源(format!("无法读取 {}", 源路径.display()), 错误)
             })?;
-            let 摘要 = 十六进制摘要(&Sha256::digest(&数据));
+            let 摘要 = sha256十六进制(&数据);
             let 期望 = 字符串字段(条目, "sha256")?;
             if 摘要 != 期望 {
                 return Err(工具错误::新(format!(
@@ -1751,8 +1968,8 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             许可: &format!("{许可}；由 AdwCode 转换为单色轮廓；来源与字重参数见 来源.json"),
             许可地址: &许可地址,
         };
-        写入字体(&图标目录.join(&输出), &名称表, &轮廓表, &码点表, &描述)?;
-        导出预览(&图标目录, &id, 字形条目, &轮廓表, &许可, &署名)?;
+        写入字体(&输出路径, &名称表, &轮廓表, &码点表, &描述)?;
+        导出预览(&图标目录, &id路径, 字形条目, &轮廓表, &许可, &署名)?;
         let 状态 = if 字体.get("enabled").and_then(Value::as_bool).unwrap_or(true) {
             "启用"
         } else {
@@ -1766,7 +1983,7 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
 /// 导出陈列预览并清理过期文件。
 fn 导出预览(
     图标目录: &Path,
-    字体id: &str,
+    字体id: &Path,
     字形条目: &[Value],
     轮廓表: &[Vec<子路径>],
     许可: &str,
@@ -1776,7 +1993,7 @@ fn 导出预览(
     std::fs::create_dir_all(&预览目录).map_err(|错误| {
         工具错误::带来源(format!("无法创建 {}", 预览目录.display()), 错误)
     })?;
-    let 预览变换 = Affine::new([1.0 / 每像素单位, 0.0, 0.0, -1.0 / 每像素单位, 0.0, 14.0]);
+    let 预览变换 = 字体变换().inverse();
     let mut 期望: Vec<String> = Vec::new();
     for (序号, 条目) in 字形条目.iter().enumerate() {
         let 码点 = 字符串字段(条目, "codepoint")?;
@@ -1810,17 +2027,29 @@ fn 导出预览(
     Ok(())
 }
 
-/// 计算字节的十六进制摘要文本。
-fn 十六进制摘要(字节: &[u8]) -> String {
-    字节.iter().map(|项| format!("{项:02x}")).collect()
-}
-
 /// 读取字符串字段。
 fn 字符串字段(值: &Value, 键: &str) -> 结果<String> {
     值[键]
         .as_str()
         .map(str::to_string)
         .ok_or_else(|| 工具错误::新(format!("来源.json 缺少字段：{键}")))
+}
+
+/// 校验来源.json 中的相对路径：只允许普通组件，拒绝绝对路径与 `..`。
+fn 校验相对路径(文本: &str, 字段: &str) -> 结果<PathBuf> {
+    if 文本.is_empty() {
+        return Err(工具错误::新(format!("来源.json 的 {字段} 不能为空")));
+    }
+    let 路径 = Path::new(文本);
+    if !路径
+        .components()
+        .all(|组件| matches!(组件, Component::Normal(_)))
+    {
+        return Err(工具错误::新(format!(
+            "来源.json 的 {字段} 必须是产品图标目录内的相对路径：{文本}"
+        )));
+    }
+    Ok(路径.to_path_buf())
 }
 
 /// 读取可选数值字段；存在但不是数值时报错。
@@ -1921,6 +2150,8 @@ mod 测试 {
             );
             let 映射 = 字体.charmap().mappings().count();
             assert_eq!(映射, 映射数, "{文件} 映射数");
+            let os2 = 字体.os2().expect("OS/2");
+            assert_eq!(os2.version(), 3, "{文件} 的 OS/2 版本");
         }
     }
 
@@ -1963,5 +2194,101 @@ mod 测试 {
             .expect("读取预览二"),
             "预览字节不一致"
         );
+    }
+
+    #[test]
+    fn 来源路径拒绝越界() {
+        for 文本 in ["", "../x.svg", "/etc/passwd", "a/../../b.svg"] {
+            assert!(校验相对路径(文本, "glyphs[].file").is_err(), "{文本}");
+        }
+        assert!(校验相对路径("导入图标/adwaita/x.svg", "glyphs[].file").is_ok());
+    }
+
+    #[test]
+    fn 闭合后绘制命令另起子路径() {
+        let 子路径列表 = 解析路径数据("M0 0L1 0Z L2 2", "测试.svg").expect("解析路径数据");
+        assert_eq!(子路径列表.len(), 2);
+        assert!(子路径列表[0].闭合);
+        assert_eq!(子路径列表[0].段.len(), 1);
+        assert_eq!(子路径列表[1].起点, Point::new(0.0, 0.0));
+        assert_eq!(子路径列表[1].段.len(), 1);
+        assert_eq!(子路径列表[1].段[0].终点(), Point::new(2.0, 2.0));
+    }
+
+    #[test]
+    fn 路径数据拒绝超幅坐标() {
+        assert!(解析路径数据("M0 0L1e100 0", "测试.svg").is_err());
+        assert!(解析路径数据("M0 0LNaN 0", "测试.svg").is_err());
+    }
+
+    #[test]
+    fn xml嵌套过深报错() {
+        let 深 = 最大嵌套深度 + 1;
+        let 文本 = format!(
+            "<svg xmlns=\"{SVG命名空间}\">{}{}</svg>",
+            "<g>".repeat(深),
+            "</g>".repeat(深)
+        );
+        assert!(解析xml(&文本, "测试.svg").is_err());
+    }
+
+    #[test]
+    fn 压缩度量数按末尾等宽收敛() {
+        assert_eq!(压缩度量数(&[1024, 1024, 512, 512]), 3);
+        assert_eq!(压缩度量数(&[1024, 1024, 1024]), 1);
+        assert_eq!(压缩度量数(&[512, 1024]), 2);
+    }
+
+    fn 逐边绕数(多边形列表: &[Vec<Point>], 点: Point) -> i64 {
+        let mut 结果 = 0i64;
+        for 多边形 in 多边形列表 {
+            let 数量 = 多边形.len();
+            for 序号 in 0..数量 {
+                let 起点 = 多边形[序号];
+                let 终点 = 多边形[(序号 + 1) % 数量];
+                if 起点.y <= 点.y {
+                    if 终点.y > 点.y && (终点 - 起点).cross(点 - 起点) > 0.0 {
+                        结果 += 1;
+                    }
+                } else if 终点.y <= 点.y && (终点 - 起点).cross(点 - 起点) < 0.0 {
+                    结果 -= 1;
+                }
+            }
+        }
+        结果
+    }
+
+    #[test]
+    fn 绕数索引与逐边扫描一致() {
+        let 多边形列表 = vec![
+            vec![
+                Point::new(0.0, 0.0),
+                Point::new(4.0, 0.0),
+                Point::new(4.0, 4.0),
+                Point::new(0.0, 4.0),
+            ],
+            vec![
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 3.0),
+                Point::new(3.0, 3.0),
+                Point::new(3.0, 1.0),
+            ],
+            vec![
+                Point::new(-10.0, -10.0),
+                Point::new(-8.0, -10.0),
+                Point::new(-9.0, -8.0),
+            ],
+        ];
+        let 索引 = 绕数索引::新建(&多边形列表);
+        for 点 in [
+            Point::new(0.5, 0.5),
+            Point::new(2.0, 2.0),
+            Point::new(1.0, 2.0),
+            Point::new(5.0, 2.0),
+            Point::new(-9.0, -9.5),
+            Point::new(2.0, -1.0),
+        ] {
+            assert_eq!(索引.绕数(点), 逐边绕数(&多边形列表, 点), "{点:?}");
+        }
     }
 }

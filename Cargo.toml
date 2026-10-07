@@ -18,7 +18,6 @@ kurbo = "0.13"
 quick-xml = "0.41.0"
 regex = "1.13.1"
 serde_json = { version = "1", features = ["preserve_order"] }
-sha2 = "0.11"
 svgtypes = "0.16"
 ureq = "3.4.2"
 write-fonts = "0.54"
