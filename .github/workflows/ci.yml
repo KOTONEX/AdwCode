@@ -4,7 +4,7 @@ name: 持续集成
 
 on:
   push:
-    branches: [main]
+    branches: [main, rust]
   pull_request:
 
 permissions:
@@ -40,7 +40,9 @@ jobs:
       - name: 生成主题并校验无差异
         run: |
           cargo run --quiet -- 主题
-          git diff --exit-code -- 主题 package.json
+          cargo run --quiet -- 生成自有字形
+          cargo run --quiet -- 生成导入字形
+          git diff --exit-code -- 主题 产品图标 package.json
 
       - name: 自动生成变更日志
         run: cargo run --quiet -- 变更日志

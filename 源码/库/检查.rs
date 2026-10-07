@@ -46,6 +46,8 @@ pub fn 脚本文件(根目录: &Path) -> 结果<Vec<String>> {
         "扩展/扩展.js".to_string(),
         "测试/验证状态.cjs".to_string(),
         "测试/验证设置.cjs".to_string(),
+        "测试/发布策略.cjs".to_string(),
+        "测试/验证发布.cjs".to_string(),
         "基准/扩展基准.cjs".to_string(),
         "基准/工作台基准.cjs".to_string(),
     ];
@@ -88,6 +90,7 @@ pub fn 检查(根目录: &Path) -> 结果<()> {
     println!("离线 JS 测试");
     运行(根目录, "node", &["测试/验证状态.cjs"])?;
     运行(根目录, "node", &["测试/验证设置.cjs"])?;
+    运行(根目录, "node", &["测试/验证发布.cjs"])?;
     println!("全部检查通过");
     Ok(())
 }

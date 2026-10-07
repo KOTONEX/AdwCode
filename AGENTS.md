@@ -114,7 +114,8 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 - 生成产品图标字体：`cargo run --quiet -- 生成自有字形`、`cargo run --quiet -- 生成导入字形`
 - 发布：推送 `v*` 标签后由 GitHub Actions 自动构建并上传 VSIX
   （`.github/workflows/release.yml`，发布说明从 Git 提交范围生成；先校验标签与版本一致、产物与提交一致，
-  再跑静态检查与单元测试）；配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
+  再跑静态检查与单元测试）；非主线或预发布版本只创建候选 Release。正式标签提交
+  已进入 `main` 且配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
   VSIX 还会发布到 VS Code 扩展市场与 Open VSX（未配置时自动跳过）
 
 任何改动完成前都要跑 `cargo run --quiet -- 检查`。

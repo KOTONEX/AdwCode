@@ -5,7 +5,7 @@ name: 发布
 # 推送与清单版本一致的 v<版本> 标签时：校验 → 测试 → 打包 → 上传到对应 Release。
 # 仓库中不保存 VSIX，构建产物只作为 Release 附件发布。
 # 变更日志与发布说明按 Git 版本标签和提交标题自动生成；配置 VSCE_PAT / OVSX_PAT 后
-# 同一 VSIX 会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
+# 只有标签提交已进入 main 且版本不是预发布时，同一 VSIX 才会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
 on:
   push:
     tags:
@@ -42,16 +42,9 @@ jobs:
       - name: 安装 TypeScript
         run: npm install -g typescript
 
-      - name: 校验标签与版本一致
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          version="$(node -p "require('./package.json').version")"
-          if [ "$tag" != "$version" ]; then
-            echo "标签 $GITHUB_REF_NAME 与 package.json 的版本 $version 不一致" >&2
-            exit 1
-          fi
-          echo "版本：$version"
+      - name: 判断候选与市场发布权限
+        id: policy
+        run: node 测试/发布策略.cjs . "$GITHUB_REF"
 
       - name: 完整检查
         run: cargo run --quiet -- 检查
@@ -60,7 +53,9 @@ jobs:
         run: |
           cargo build --release --quiet
           ./target/release/adwcode 主题
-          git diff --exit-code -- 主题 package.json
+          ./target/release/adwcode 生成自有字形
+          ./target/release/adwcode 生成导入字形
+          git diff --exit-code -- 主题 产品图标 package.json
 
       - name: 打包
         run: ./target/release/adwcode 打包
@@ -69,8 +64,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ steps.policy.outputs['候选'] }}
+          LATEST: ${{ steps.policy.outputs['候选'] != 'true' }}
         run: |
-          vsix="$(ls -1 *.vsix | head -1)"
+          vsix="AdwCode-$(node -p "require('./package.json').version").vsix"
           # 从当前标签的提交范围生成说明，标签必须严格对应 HEAD 与清单版本。
           ./target/release/adwcode 发布说明 --标签 "$GITHUB_REF_NAME"
           # 标签对应固定提交；重复发布保留已有附件，只补齐缺失附件并更新说明。
@@ -86,25 +83,27 @@ jobs:
             if [ "$has_asset" = false ]; then
               gh release upload "$GITHUB_REF_NAME" "$vsix"
             else
-              # 后续市场发布复用已公开的同一份 VSIX，而非带新归档时间戳的重建文件。
+              # 后续市场发布复用已公开的同一份 VSIX。
               gh release download "$GITHUB_REF_NAME" --pattern "$vsix" --dir . --clobber
             fi
             gh release edit "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
+              --prerelease="$PRERELEASE" --latest="$LATEST" \
               --notes-file builddir/release-notes.md
           else
-            gh release create "$GITHUB_REF_NAME" "$vsix" \
+            gh release create "$GITHUB_REF_NAME" "$vsix" --verify-tag \
               --title "$GITHUB_REF_NAME" \
+              --prerelease="$PRERELEASE" --latest="$LATEST" \
               --notes-file builddir/release-notes.md
           fi
 
       - name: 发布到扩展市场
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && steps.policy.outputs['市场'] == 'true'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
-          vsix="$(ls -1 *.vsix | head -1)"
+          vsix="AdwCode-$(node -p "require('./package.json').version").vsix"
           version="$(node -p "require('./package.json').version")"
 
           if [ -z "$VSCE_PAT" ]; then
