@@ -152,6 +152,8 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     for (键, 值) in [
         ("workbench.colorTheme", json!("AdwCode 浅色")),
         ("workbench.productIconTheme", json!("adwcode")),
+        ("window.autoDetectColorScheme", json!(false)),
+        ("window.autoDetectHighContrast", json!(false)),
         ("workbench.startupEditor", json!("none")),
         ("window.restoreWindows", json!("none")),
         ("security.workspace.trust.enabled", json!(false)),
