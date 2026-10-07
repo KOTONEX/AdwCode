@@ -355,4 +355,69 @@ mod 测试 {
         let manifest: Value = serde_json::from_str(&文本).expect("解析清单");
         manifest["version"].as_str().expect("版本").to_string()
     }
+
+    /// 临时打包仓库；身份与签名配置仅作用于本次命令。
+    struct 临时仓库 {
+        目录: PathBuf,
+    }
+
+    impl 临时仓库 {
+        fn 新建(名称: &str) -> Self {
+            let 目录 =
+                std::env::temp_dir().join(format!("adwcode-打包-{名称}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&目录);
+            std::fs::create_dir_all(&目录).expect("创建临时仓库");
+            Self { 目录 }
+        }
+
+        fn 写清单(&self, 内容: &str) {
+            std::fs::write(self.目录.join("package.json"), 内容).expect("写入清单");
+        }
+    }
+
+    impl Drop for 临时仓库 {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.目录);
+        }
+    }
+
+    #[test]
+    fn 清单元数据被转义() {
+        let 仓库 = 临时仓库::新建("转义");
+        仓库.写清单(
+            r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试 & \"引号\"","displayName":"外观 <AdwCode>","description":"说明 '引号' 与 &","engines":{"vscode":"^1.100.0"}}"#,
+        );
+        let 日志 = 仓库.目录.join("日志.md");
+        std::fs::write(&日志, "## [1.1.0]\n").expect("写入日志");
+        let 输出 = 仓库.目录.join("测试.vsix");
+        构建(&仓库.目录, &输出, Some(&日志)).expect("构建 VSIX");
+        let 文件句柄 = std::fs::File::open(&输出).expect("打开 VSIX");
+        let mut 归档 = zip::ZipArchive::new(文件句柄).expect("读取 VSIX");
+        let mut 清单 = String::new();
+        use std::io::Read;
+        归档
+            .by_name("extension.vsixmanifest")
+            .expect("清单条目")
+            .read_to_string(&mut 清单)
+            .expect("读取清单");
+        assert!(清单.contains("Publisher=\"测试 &amp; &quot;引号&quot;\""));
+        assert!(清单.contains("<DisplayName>外观 &lt;AdwCode&gt;</DisplayName>"));
+        assert!(清单.contains("说明 &apos;引号&apos; 与 &amp;"));
+        assert!(清单.contains("Version=\"1.1.0\""));
+    }
+
+    #[test]
+    fn 空日志与缺少历史时拒绝打包() {
+        let 仓库 = 临时仓库::新建("日志");
+        仓库.写清单(
+            r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","displayName":"AdwCode","description":"测试","engines":{"vscode":"^1.100.0"}}"#,
+        );
+        let 空日志 = 仓库.目录.join("空.md");
+        std::fs::write(&空日志, "  \n").expect("写入空日志");
+        let 错误 = 构建(&仓库.目录, &仓库.目录.join("测试.vsix"), Some(&空日志)).unwrap_err();
+        assert!(错误.消息.contains("为空"), "{}", 错误.消息);
+        // 无 Git 的副本必须显式提供日志，否则读取历史失败。
+        let 错误 = 构建(&仓库.目录, &仓库.目录.join("测试.vsix"), None).unwrap_err();
+        assert!(错误.消息.contains("读取 Git 历史失败"), "{}", 错误.消息);
+    }
 }
