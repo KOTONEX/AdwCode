@@ -9,20 +9,12 @@
   "[javascript][json][jsonc][css][svg][yaml]": {
     "editor.tabSize": 2
   },
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff"
-  },
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
     "editor.wordWrap": "on"
   },
 
-  // uv 默认安装目录的解释器路径；已有解释器选择需手动切换。
-  "python.defaultInterpreterPath": "${userHome}/.local/bin/python3.14t",
-  "python.languageServer": "None",
-  "ty.diagnosticMode": "workspace",
   "javascript.validate.enable": true,
-  "mesonbuild.configureOnOpen": false,
 
   // 跟随系统明暗模式；四个主题分别用于普通及高对比度预览。
   "window.autoDetectColorScheme": true,
@@ -49,12 +41,12 @@
 
   // 隐藏缓存目录；构建日志仍可通过路径直接打开。
   "files.exclude": {
-    "**/__pycache__": true,
-    ".ruff_cache": true,
-    "builddir": true
+    "builddir": true,
+    "target": true
   },
   "search.exclude": {
     "builddir": true,
+    "target": true,
     ".tools": true,
     ".kilo/worktrees": true
   }

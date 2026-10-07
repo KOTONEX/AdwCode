@@ -19,7 +19,7 @@
   7% / 12% 的悬停与激活填充。
 - **界面颜色覆盖** —— 对照随附的 VS Code 颜色注册表与内置主题校验颜色键，
   覆盖聊天、智能体、笔记本、行内编辑、测试、合并编辑器与内联提示等界面。
-  具体覆盖情况可运行 `meson compile -C builddir 校验` 查看。
+  具体覆盖情况可运行 `cargo run --quiet -- 校验` 查看。
 - **GNOME Builder 语法高亮** —— 由随附的 GtkSourceView `Adwaita` /
   `Adwaita-dark` 方案生成，并附带 `semanticTokenColors` 语义高亮。
 - **强调色** —— 固定使用 Adwaita 蓝色。
@@ -65,13 +65,16 @@ code --install-extension AdwCode-<版本>.vsix
 ```
 
 也可以从源码构建（仓库中不包含 VSIX，构建产物会被 `.gitignore` 忽略；
-`源码/打包扩展.py` 会打印生成的文件名）：
+`adwcode 打包` 会打印生成的文件名）：
 
 ```sh
-python3.14t 源码/生成主题.py            # 固定蓝色
-python3.14t 源码/打包扩展.py          # 生成 AdwCode-<版本>.vsix
+cargo run --quiet -- 主题              # 固定蓝色
+cargo run --quiet -- 打包              # 生成 AdwCode-<版本>.vsix
 code --install-extension AdwCode-<版本>.vsix
 ```
+
+发布产物使用 `cargo build --release` 构建，之后可直接运行
+`./target/release/adwcode <子命令>`。
 
 ## 设置
 
@@ -121,7 +124,7 @@ GNOME 扩展
 同步副本，再由操作者手动应用。VS Code 升级后补丁会被覆盖：重新执行加载器的
 **Reload Custom CSS and JS**，或再跑一次安装命令。
 
-`python3.14t 源码/检查样式.py` 会校验 `附加外观/` 中每个类选择器在已安装的 VS Code 里
+`cargo run --quiet -- 检查样式` 会校验 `附加外观/` 中每个类选择器在已安装的 VS Code 里
 是否仍然存在（原生 JavaScript 类名在 bundle 中搜索，自有状态类核对附加脚本），以及样式引用的每个
 `var(--vscode-*)` 是否都有定义——每次 VS Code 升级后都应运行。
 未找到样式表时，校验会失败；可通过 `--样式表 /路径/workbench.desktop.main.css`
@@ -136,9 +139,9 @@ GNOME 扩展
 高对比度主题沿用原方案。
 
 默认值只在该设置没有被用户或工作区显式设置时生效，不会改写用户设置；在设置中
-改用其他值即可覆盖，卸载扩展后默认值随之消失。默认值不涉及 Python、ty、Meson
+改用其他值即可覆盖，卸载扩展后默认值随之消失。默认值不涉及 Rust 工具链
 或格式化等项目开发配置。标题栏等设置需要重新加载时，请保存工作并结束扩展会话后
-手动重载。工作区还提供 Python 自由线程、ty 与 AdwCode 预览配置，详见
+手动重载。工作区还提供 Rust 开发与 AdwCode 预览配置，详见
 [开发、验证与发布](文档/04-开发验证与发布.md#vs-code-工作区配置)。
 
 升级到 2.0 后，主题名称与产品图标标识统一为 AdwCode。安装新版后，请重新选择
@@ -181,23 +184,27 @@ AdwCode/
 ├── AGENTS.md                    自动化代理（含 AI）说明
 ├── CONTRIBUTING.md              贡献指南
 ├── LICENSE                      AGPL-3.0 全文
-├── meson.build                  统一命令入口
+├── Cargo.toml                   Rust 工作区与统一命令入口
+├── rust-toolchain.toml          固定 Rust 1.99 工具链
 ├── README.md                    本文件
 ├── package.json                 扩展清单，版本号唯一事实源
 ├── 源码/                         构建管线与可导入模块
-│   ├── 生成主题.py                 生成主题并同步 package.json
-│   ├── 检查样式.py             对照已安装的 VS Code 检查 附加外观/*.css
-│   ├── 界面映射.py               VS Code 颜色键到 Adwaita 角色的映射
-│   ├── 打包扩展.py               打包 VSIX
-│   ├── 调色板.py               libadwaita 颜色角色与合成工具
-│   ├── 生成变更日志.py         从 Git 标签与提交标题自动生成日志和发布说明
-│   ├── 语法映射.py                GtkSourceView 样式名到 TextMate 作用域的映射
-│   ├── 更新默认数据.py       刷新 VS Code 默认主题数据与键表
+│   ├── 库/                        构建、校验与打包模块
+│   │   ├── 调色板.rs             libadwaita 颜色角色与合成工具
+│   │   ├── 界面映射.rs           VS Code 颜色键到 Adwaita 角色的映射
+│   │   ├── 语法映射.rs           GtkSourceView 样式名到 TextMate 作用域的映射
+│   │   ├── 主题生成.rs           生成主题并同步 package.json
+│   │   ├── 打包.rs               打包 VSIX
+│   │   ├── 检查样式.rs           对照已安装的 VS Code 检查 附加外观/*.css
+│   │   ├── 更新默认数据.rs       刷新 VS Code 默认主题数据与键表
+│   │   ├── 变更日志.rs           从 Git 标签与提交标题生成日志与发布说明
+│   │   └── 命令.rs               子命令解析与分发
+│   ├── 程序/主程序.rs            adwcode 二进制入口
 │   ├── GtkSourceView方案/       随附的 GtkSourceView 方案（LGPL-2.1+）
 │   └── VSCode默认数据/         VS Code 颜色键表（MIT）
 ├── 基准/                  按需性能基准与独立工作台验证
-├── 测试/                       离线单元测试
-│   └── test_主题.py          颜色运算、调色板、语法、主题、CSS
+├── 测试/                       离线测试与 Rust 算例数据
+├── 类型声明/                   扩展 JS 的手写最小类型面
 ├── 主题/                      生成的主题 JSON（自动生成，请勿手工编辑；已提交）
 ├── 产品图标/               产品图标主题（Adwaita 符号字形与字体）
 ├── 附加外观/                      通过 Custom CSS 加载的样式表与窗口状态脚本
@@ -211,10 +218,9 @@ AdwCode/
 | 依赖 | 要求 | 用途 |
 | --- | --- | --- |
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
-| Python | 3.9+（CI 与本地开发使用 3.14 自由线程版本） | 仅构建与打包需要 |
+| Rust | 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt） | 构建、校验与打包 |
 | Git | 完整项目历史与版本标签 | 自动生成变更日志及打包；使用预先生成日志的源码导出副本可不带 Git |
-| Meson / Ninja | Meson ≥ 1.3 | 开发命令与 CI 调度；独立 Python 脚本可直接运行 |
-| Ruff / ty / tsc / Node.js | 静态、格式、类型与扩展测试工具 | 完整开发验证需要，最终扩展无额外运行时库依赖 |
+| Node.js 与 TypeScript 编译器 | 语法与类型检查、离线测试 | 扩展 JS 的静态检查与测试，最终扩展无额外运行时库依赖 |
 | VS Code 安装目录写权限 | — | Custom CSS and JS Loader 注入自定义 CSS 的要求 |
 
 GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与产品图标可独立使用。
@@ -226,7 +232,7 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 
 升级会覆盖注入的自定义 CSS：重新执行 **AdwCode: 安装 GNOME 外观（CSS）**，
 或让加载器执行 **Reload Custom CSS and JS**，随后运行
-`python3.14t 源码/检查样式.py` 初筛类名与设计令牌，再检查实际界面的结构和外观。
+`cargo run --quiet -- 检查样式` 初筛类名与设计令牌，再检查实际界面的结构和外观。
 
 ### 自定义窗口控制图标不出现
 
@@ -243,46 +249,48 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 - [贡献规范](CONTRIBUTING.md)：提交格式与贡献要求。
 - [中文接口迁移](文档/08-中文接口迁移.md)：设置键、命令与脚本更名后的升级步骤。
 
-需要 Python 3.9+（CI 与本地开发使用 3.14 自由线程版本）：
+需要 Rust 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt）：
 
 ```sh
-python3.14t 源码/生成主题.py --校验             # 产物注册、颜色格式、键覆盖与对比度
-python3.14t 源码/检查样式.py                 # 自定义 CSS 与已安装 VS Code 的比对
-python3.14t 源码/生成主题.py --监视             # 给主题加 _watch，编辑 JSON 即时生效
-python3.14t 源码/更新默认数据.py           # 刷新 VS Code 默认主题数据与键表
-python3.14t -m unittest discover -s 测试 -p 'test_*.py'   # 颜色运算、调色板、语法、主题、CSS
+cargo run --quiet -- 校验             # 产物注册、颜色格式、键覆盖与对比度
+cargo run --quiet -- 检查样式         # 自定义 CSS 与已安装 VS Code 的比对
+cargo run --quiet -- 主题 --监视      # 给主题加 _watch，编辑 JSON 即时生效
+cargo run --quiet -- 更新默认数据      # 刷新 VS Code 默认主题数据与键表
+cargo run --quiet -- 检查             # 格式化、clippy、单元测试与离线 JS 测试
 ```
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 与 Node.js，
-再安装自由线程 Python 和开发工具，完成首次配置与完整检查：
+首次运行 `cargo build` 获取固定工具链并编译。Node.js 与 TypeScript 编译器用于
+扩展 JavaScript 的语法与类型检查及离线测试，可在安装 Node.js 后执行
+`npm install -g typescript` 获取；完整检查为：
 
 ```sh
-uv python install 3.14t
-python3.14t -m pip install meson ninja ty ruff==0.16.9
-npm install -g typescript          # 需先安装 Node.js
-meson setup builddir
-meson test -C builddir --print-errorlogs
+cargo run --quiet -- 检查
 ```
 
-生成主题使用 `meson compile -C builddir 主题`，打包使用
-`meson compile -C builddir 打包`。Meson 不编译扩展 JavaScript；Python 脚本仍可
-单独运行。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+生成主题使用 `cargo run --quiet -- 主题`，打包使用
+`cargo run --quiet -- 打包`；`cargo build --release` 后的产物入口为
+`./target/release/adwcode <子命令>`。cargo 不编译扩展 JavaScript，扩展是
+无构建步骤的纯 JavaScript。其余目标与贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 变更日志从 Git 提交标题和版本标签自动生成，无需维护手写文件。运行
-`meson compile -C builddir 变更日志` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
-VSIX。当前版本的说明可通过 `meson compile -C builddir 发布说明` 预览。
+`cargo run --quiet -- 变更日志` 查看 `builddir/CHANGELOG.md`；打包时自动纳入
+VSIX。当前版本的说明可通过 `cargo run --quiet -- 发布说明` 预览。
 未提交修改不进入日志；已发布记录见
 [GitHub 发布页](https://github.com/KOTONEX/AdwCode/releases)，完整规则见
 [自动变更日志](文档/04-开发验证与发布.md#自动变更日志)。
 
-全部 Python 文件使用 Ruff 0.16.9 检查和格式化，含图标生成器与性能基准。
-运行 `meson compile -C builddir 格式化` 应用格式化，`lint` 目标同时执行
-`ruff check .`、`ruff format --check .`、ty、tsc 和 JavaScript 语法检查。
-Ruff 不处理 JavaScript 或 CSS，相关验证分别由 tsc、Node.js 和 CSS 检查器提供。
+全部 Rust 源码使用 `cargo fmt` 与 `cargo clippy` 检查和格式化，含图标生成器与
+性能基准。运行 `cargo run --quiet -- 格式化` 应用格式化；`cargo run --quiet -- 检查`
+聚合 `cargo fmt --check`、clippy、单元测试、主题校验、Node.js 语法检查、
+tsc 与离线 JS 测试。cargo 不处理 JavaScript 或 CSS，相关验证分别由 tsc、
+Node.js 和 CSS 检查器提供。
 
-`--check` 检查主题和产品图标的注册及文件完整性，要求界面、TextMate 和语义颜色
-使用六位或八位十六进制写法。未知颜色键会导致失败，未覆盖的内置键会被列出；
-对比度检查覆盖全部已生成主题；缺少随附的颜色键表时直接失败。
+`cargo run --quiet -- 校验` 检查主题和产品图标的注册及文件完整性，要求界面、
+TextMate 和语义颜色使用六位或八位十六进制写法。未知颜色键会导致失败，未覆盖的
+内置键会被列出；对比度检查覆盖全部已生成主题；缺少随附的颜色键表时直接失败。
+
+按需性能基准见 `基准/README.md`，本机结果与原始样本见
+[性能测试](文档/07-性能测试.md)；性能测试不在常规检查中自动运行。
 
 产品图标优先使用 Adwaita 官方字形，再由 GNOME Builder 补充调试、补全和
 版本控制符号；MoreWaita 仅作为缺项的备用来源。布局状态对保留 Adwaita 派生字形。
