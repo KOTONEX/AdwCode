@@ -101,3 +101,12 @@ VS Code 扩展宿主只运行 JavaScript，工作台补丁脚本运行在页面 
 - VSIX 归档条目、顺序与内容与 Python 版本一致（ZIP 字节不作要求）。
 - `registry_keys.json` 历史遗留的末尾换行已补齐，与生成器行为一致。
 - `检查样式` 仍需要本机 VS Code 构建；`检查` 聚合不包含需要 VS Code 的项。
+- 阶段⑥已删除 Python 源、Meson、Ruff/ty 配置与旧检查工具；`builddir/` 仅作为
+  变更日志、发布说明与基准结果输出目录。
+- 图标管线迁移后重新生成了 4 个 TTF 与 `渲染图标/` 轮廓：字形数量、映射与许可
+  分组与 Python 版一致，轮廓数据因几何实现差异存在少量取整差异。
+- 迁移后实跑基准：主题构建约 36 ms（Python 测得更慢），`检查样式` 约 2.2 s
+  （比 Python 版慢，主要耗时在整份工作台 bundle 的正则扫描，可作为后续优化项）。
+- 工作台基准的隔离配置显式关闭 `window.autoDetectColorScheme`：3.3.0 的
+  `configurationDefaults` 会开启主题自动检测，否则基准无法用 `workbench.colorTheme`
+  切换主题。
