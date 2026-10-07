@@ -28,44 +28,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 安装自由线程 Python
-        id: python
-        uses: actions/setup-python@v7
+      - name: 安装 Rust 工具链
+        uses: actions-rust-lang/setup-rust-toolchain@v2
+
+      - name: 缓存 cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
         with:
-          python-version: "3.14"
-          freethreaded: true
+          node-version: "22"
+
+      - name: 安装 TypeScript
+        run: npm install -g typescript
 
       - name: 校验标签与版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          version="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+          version="$(node -p "require('./package.json').version")"
           if [ "$tag" != "$version" ]; then
             echo "标签 $GITHUB_REF_NAME 与 package.json 的版本 $version 不一致" >&2
             exit 1
           fi
           echo "版本：$version"
 
-      - name: 安装检查工具
-        run: |
-          "${{ steps.python.outputs.python-path }}" -m pip install ruff==0.16.9 ty meson ninja
-          npm install -g typescript
-
-      - name: 配置 Meson
-        run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
-
-      - name: 静态、格式与类型检查
-        run: meson compile -C builddir 静态检查
+      - name: 完整检查
+        run: cargo run --quiet -- 检查
 
       - name: 生成/构建校验
         run: |
-          meson compile -C builddir 主题
+          cargo build --release --quiet
+          ./target/release/adwcode 主题
           git diff --exit-code -- 主题 package.json
 
-      - name: 离线单元测试
-        run: meson test -C builddir --print-errorlogs
-
       - name: 打包
-        run: meson compile -C builddir 打包
+        run: ./target/release/adwcode 打包
 
       - name: 上传到 Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -74,7 +72,7 @@ jobs:
         run: |
           vsix="$(ls -1 *.vsix | head -1)"
           # 从当前标签的提交范围生成说明，标签必须严格对应 HEAD 与清单版本。
-          "${{ steps.python.outputs.python-path }}" 源码/生成变更日志.py 发布说明 --标签 "$GITHUB_REF_NAME"
+          ./target/release/adwcode 发布说明 --标签 "$GITHUB_REF_NAME"
           # 标签对应固定提交；重复发布保留已有附件，只补齐缺失附件并更新说明。
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             asset_names="$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')"
@@ -107,7 +105,7 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
           vsix="$(ls -1 *.vsix | head -1)"
-          version="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+          version="$(node -p "require('./package.json').version")"
 
           if [ -z "$VSCE_PAT" ]; then
             printf '%s\n' '（未配置 VSCE_PAT，跳过 VS Code 扩展市场）'

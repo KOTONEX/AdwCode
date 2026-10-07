@@ -20,31 +20,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 安装自由线程 Python
-        id: python
-        uses: actions/setup-python@v7
+      - name: 安装 Rust 工具链
+        uses: actions-rust-lang/setup-rust-toolchain@v2
+
+      - name: 缓存 cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
         with:
-          python-version: "3.14"
-          freethreaded: true
+          node-version: "22"
 
-      - name: 安装检查工具（Ruff / ty / tsc）
+      - name: 安装 TypeScript
+        run: npm install -g typescript
+
+      - name: 完整检查
+        run: cargo run --quiet -- 检查
+
+      - name: 生成主题并校验无差异
         run: |
-          "${{ steps.python.outputs.python-path }}" -m pip install ruff==0.16.9 ty meson ninja
-          npm install -g typescript
-
-      - name: 配置 Meson
-        run: meson setup builddir -Dpython="${{ steps.python.outputs.python-path }}"
-
-      - name: 静态、格式与类型检查
-        run: meson compile -C builddir 静态检查
-
-      - name: 生成/构建校验
-        run: |
-          meson compile -C builddir 主题
+          cargo run --quiet -- 主题
           git diff --exit-code -- 主题 package.json
 
-      - name: 离线单元测试
-        run: meson test -C builddir --print-errorlogs
-
       - name: 自动生成变更日志
-        run: meson compile -C builddir 变更日志
+        run: cargo run --quiet -- 变更日志
