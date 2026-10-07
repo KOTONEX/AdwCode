@@ -22,7 +22,7 @@ assert.ok(!('workbench.iconTheme' in defaults), '不能用默认值清空用户�
 assert.equal(contributes.configuration.properties['adwcode.界面字体'].default,'');
 
 // 写入用户设置的命令已移除，其余命令与命令面板入口只在 Linux 提供。
-const expected = ['adwcode.查看外观安装状态','adwcode.安装GNOME外观','adwcode.安装仅关闭窗口控件'];
+const expected = ['adwcode.查看外观安装状态','adwcode.安装GNOME外观','adwcode.安装仅关闭窗口控件','adwcode.选择外观组件','adwcode.移除外观引用'];
 assert.ok(!commands.includes('adwcode.应用推荐设置'));
 assert.ok(!commands.includes('adwcode.恢复推荐设置'));
 assert.deepEqual([...commands].sort(), [...expected].sort());

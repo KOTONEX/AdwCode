@@ -146,6 +146,18 @@
         "title": "安装 GNOME 外观（CSS）",
         "category": "AdwCode",
         "enablement": "isLinux"
+      },
+      {
+        "command": "adwcode.选择外观组件",
+        "title": "选择外观组件",
+        "category": "AdwCode",
+        "enablement": "isLinux"
+      },
+      {
+        "command": "adwcode.移除外观引用",
+        "title": "移除自有外观加载引用",
+        "category": "AdwCode",
+        "enablement": "isLinux"
       }
     ],
     "menus": {
@@ -160,6 +172,14 @@
         },
         {
           "command": "adwcode.安装GNOME外观",
+          "when": "isLinux"
+        },
+        {
+          "command": "adwcode.选择外观组件",
+          "when": "isLinux"
+        },
+        {
+          "command": "adwcode.移除外观引用",
           "when": "isLinux"
         }
       ]

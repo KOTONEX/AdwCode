@@ -266,35 +266,86 @@ function 显示外观安装状态(context) {
  * @returns {Promise<void>}
  */
 async function 安装样式(context, names) {
-  /** @type {string[]} */
-  const installed = [];
+  return 执行外观事务(context, names, false);
+}
+
+/** 串行执行写入命令；失败反馈覆盖配置、剪贴板和加载器调用。
+ * @type {Promise<void>}
+ */
+let 外观操作队列 = Promise.resolve();
+/** @param {() => Promise<void>} 操作 @returns {Promise<void>} */
+function 排队外观操作(操作) {
+  const 本次 = 外观操作队列.then(操作).catch(async (错误) => {
+    await vscode.window.showErrorMessage(`AdwCode：外观操作失败：${String(错误)}`);
+  });
+  外观操作队列 = 本次;
+  return 本次;
+}
+
+/** @param {import("vscode").ExtensionContext} context
+ * @param {string[]} names @param {boolean} 替换全部 @returns {Promise<void>}
+ */
+async function 执行外观事务(context, names, 替换全部) {
+  if (names.some(name => !Object.hasOwn(CSS_FILES, name))) throw Error("未知外观组件");
   await 读取系统字体();
-  try {
-    await fs.promises.mkdir(CSS_DIR, { recursive: true });
-    for (const name of names) {
-      const target = path.join(CSS_DIR, name);
-      await fs.promises.writeFile(target, 样式源码(context, name), "utf8");
-      installed.push(target);
-    }
-  } catch (error) {
-    const message = /** @type {Error} */ (error).message;
-    vscode.window.showErrorMessage(`AdwCode：无法写入外观文件：${message}`);
-    return;
-  }
-
-  const uris = installed.map((file) => vscode.Uri.file(file).toString());
-  const markers = names.map((name) => CSS_FILES[name]);
   const loader = vscode.extensions.getExtension(CUSTOM_CSS_EXTENSION);
-  const state = 样式补丁状态(markers);
-
-  if (loader) {
-    const config = vscode.workspace.getConfiguration("vscode_custom_css");
-    const inspected = config.inspect("imports");
-    const imports = /** @type {string[]} */ (inspected?.globalValue ?? inspected?.defaultValue ?? []);
-    const merged = 合并加载引用(context, imports, names);
-    if (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index])) {
+  const config = vscode.workspace.getConfiguration("vscode_custom_css");
+  const inspected = config.inspect("imports");
+  const 原全局配置 = inspected?.globalValue;
+  const imports = 原全局配置 ?? inspected?.defaultValue ?? [];
+  if (!Array.isArray(imports) || !imports.every(value => typeof value === "string")) {
+    throw Error("vscode_custom_css.imports 必须是字符串数组");
+  }
+  const merged = 合并加载引用(context, 替换全部 ? imports.filter(value => !识别加载文件(context, value)) : imports, names);
+  /** @type {{target: string, temporary: string, before: string | undefined}[]} */
+  const 文件快照 = [];
+  let 配置更新开始 = false;
+  try {
+    if (names.length) await fs.promises.mkdir(CSS_DIR, { recursive: true, mode: 0o700 });
+    // 先读取全部源文件和旧副本，再写暂存文件，最后逐项替换。
+    const 内容 = names.map(name => ({ name, data: 样式源码(context, name) }));
+    for (const {name} of 内容) {
+      const target = path.join(CSS_DIR, name);
+      文件快照.push({ target, temporary: `${target}.${Date.now()}.${文件快照.length}.tmp`, before: fs.existsSync(target) ? fs.readFileSync(target, "utf8") : undefined });
+    }
+    for (let index = 0; index < 内容.length; index++) {
+      await fs.promises.writeFile(文件快照[index].temporary, 内容[index].data, "utf8");
+    }
+    for (const item of 文件快照) await fs.promises.rename(item.temporary, item.target);
+    if (loader && (merged.length !== imports.length || merged.some((uri, index) => uri !== imports[index]))) {
+      配置更新开始 = true;
       await config.update("imports", merged, vscode.ConfigurationTarget.Global);
     }
+  } catch (错误) {
+    const 恢复错误 = [];
+    for (const item of 文件快照) {
+      try {
+        if (item.before === undefined) {
+          if (fs.existsSync(item.target)) await fs.promises.unlink(item.target);
+        } else {
+          await fs.promises.writeFile(item.temporary, item.before, "utf8");
+          await fs.promises.rename(item.temporary, item.target);
+        }
+      } catch (失败) { 恢复错误.push(String(失败)); }
+      try { if (fs.existsSync(item.temporary)) await fs.promises.unlink(item.temporary); }
+      catch (失败) { 恢复错误.push(String(失败)); }
+    }
+    if (配置更新开始) {
+      try { await config.update("imports", 原全局配置, vscode.ConfigurationTarget.Global); }
+      catch (失败) { 恢复错误.push(String(失败)); }
+    }
+    throw Error(`${String(错误)}${恢复错误.length ? `；恢复未完成：${恢复错误.join("；")}` : "；原文件和配置已恢复"}`);
+  }
+  const installed = names.map(name => path.join(CSS_DIR, name));
+  const uris = installed.map(file => vscode.Uri.file(file).toString());
+  const markers = names.map(name => CSS_FILES[name]);
+  const state = 样式补丁状态(markers);
+  if (替换全部 && !names.length) {
+    if (!loader) await vscode.env.clipboard.writeText('"vscode_custom_css.imports": ' + JSON.stringify(merged, null, 2));
+    await vscode.window.showInformationMessage("AdwCode：已移除用户级自有外观引用，保留其他加载项和磁盘副本。工作区覆盖需手动移除；请手动更新加载器并重载窗口。");
+    return;
+  }
+  if (loader) {
     const activeConfig = vscode.workspace.getConfiguration("vscode_custom_css");
     const activeScope = activeConfig.inspect("imports");
     const effective = activeConfig.get("imports", /** @type {string[]} */ ([]));
@@ -342,6 +393,14 @@ async function 安装样式(context, names) {
   }
 }
 
+/** @param {import("vscode").ExtensionContext} context @returns {Promise<void>} */
+async function 选择外观组件(context) {
+  const 当前 = vscode.workspace.getConfiguration("vscode_custom_css").get("imports", /** @type {string[]} */ ([]));
+  const 选项 = Object.keys(CSS_FILES).map(name => ({ label: name, picked: 当前.some(value => 识别加载文件(context, value) === name) }));
+  const 选择 = await vscode.window.showQuickPick(选项, { canPickMany: true, placeHolder: "选择要加载的外观组件；清空选择可移除全部自有引用" });
+  if (选择 !== undefined) await 执行外观事务(context, 选择.map(item => item.label), true);
+}
+
 /**
  * @param {import("vscode").ExtensionContext} context
  * @returns {void}
@@ -350,10 +409,12 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand("adwcode.查看外观安装状态", async () => { await 读取系统字体(); 显示外观安装状态(context); }),
     vscode.commands.registerCommand("adwcode.安装GNOME外观", () =>
-      安装样式(context, Object.keys(CSS_FILES))
+      排队外观操作(() => 安装样式(context, Object.keys(CSS_FILES)))
     ),
+    vscode.commands.registerCommand("adwcode.选择外观组件", () => 排队外观操作(() => 选择外观组件(context))),
+    vscode.commands.registerCommand("adwcode.移除外观引用", () => 排队外观操作(() => 执行外观事务(context, [], true))),
     vscode.commands.registerCommand("adwcode.安装仅关闭窗口控件", () =>
-      安装样式(context, ["仅关闭窗口控件.css"])
+      排队外观操作(() => 安装样式(context, ["仅关闭窗口控件.css"]))
     ),
   );
 }

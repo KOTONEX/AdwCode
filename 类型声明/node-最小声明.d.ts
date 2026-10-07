@@ -46,7 +46,9 @@ declare module "fs" {
     export function existsSync(path: string): boolean;
     export function readFileSync(path: string, encoding: "utf8"): string;
     export const promises: {
-        mkdir(path: string, options?: { recursive?: boolean }): Promise<string | undefined>;
+        mkdir(path: string, options?: { recursive?: boolean; mode?: number }): Promise<string | undefined>;
+        rename(source: string, target: string): Promise<void>;
+        unlink(path: string): Promise<void>;
         copyFile(source: string, target: string): Promise<void>;
         writeFile(path: string, data: string, encoding: "utf8"): Promise<void>;
     };

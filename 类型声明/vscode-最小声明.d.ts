@@ -69,6 +69,7 @@ declare module "vscode" {
     }
 
     export namespace window {
+        function showQuickPick<T extends { label: string; picked?: boolean }>(items: T[], options: { canPickMany: true; placeHolder?: string }): Thenable<T[] | undefined>;
         function createOutputChannel(name: string): OutputChannel;
         function showInformationMessage(
             message: string,

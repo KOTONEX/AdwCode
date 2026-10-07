@@ -142,6 +142,8 @@ vscode.workspace.getConfiguration = () => ({
 sandbox.mockFs.promises = {
   async mkdir() {},
   async writeFile(target, data) { files.set(target, data); },
+  async rename(source, target) { files.set(target, files.get(source)); files.delete(source); },
+  async unlink(target) { files.delete(target); },
 };
 vscode.window.showInformationMessage = async () => undefined;
 vscode.commands = { async executeCommand() { throw Error("禁止真实命令"); } };
@@ -169,6 +171,36 @@ await sandbox.安装样式(context, ["GNOME外观.css"]);
 assert.deepEqual(JSON.parse("{" + copied + "}")["vscode_custom_css.imports"], ["file:///user/.config/adwcode/GNOME外观.css"]);
 vscode.extensions.getExtension = getExtension;
 console.log("CSS 安装：源码与副本去重、用户加载项保留和重复安装测试通过");
+
+// 配置拒绝时恢复所有副本；选择和移除保留其他加载项。
+const 正常配置 = vscode.workspace.getConfiguration;
+const oldCopy = files.get("/user/.config/adwcode/GNOME外观.css");
+let 拒绝一次 = true;
+vscode.workspace.getConfiguration = (...args) => ({ ...正常配置(...args), async update(key, value, target) { if (拒绝一次) { 拒绝一次 = false; throw Error("配置写入被拒绝"); } return 正常配置().update(key, value, target); } });
+imports = ["file:///other/user.css"];
+await assert.rejects(sandbox.安装样式(context, ["GNOME外观.css"]), /原文件和配置已恢复/);
+assert.equal(files.get("/user/.config/adwcode/GNOME外观.css"), oldCopy);
+assert.deepEqual(imports, ["file:///other/user.css"]);
+assert.ok(![...files.keys()].some(name => name.endsWith(".tmp")));
+vscode.workspace.getConfiguration = 正常配置;
+const 正常写入 = sandbox.mockFs.promises.writeFile;
+let 写入次数 = 0;
+sandbox.mockFs.promises.writeFile = async (...args) => { if (++写入次数 === 2) throw Error("磁盘写入失败"); return 正常写入(...args); };
+await assert.rejects(sandbox.安装样式(context, ["GNOME外观.css", "GNOME字体.css"]), /磁盘写入失败/);
+assert.equal(files.get("/user/.config/adwcode/GNOME外观.css"), oldCopy);
+assert.ok(![...files.keys()].some(name => name.endsWith(".tmp")));
+sandbox.mockFs.promises.writeFile = 正常写入;
+
+imports = ["file:///other/user.css", "file:///repo/附加外观/GNOME外观.css", "file:///user/.config/adwcode/GNOME字体.css"];
+vscode.window.showQuickPick = async () => [{label: "GNOME字体.css"}];
+await sandbox.选择外观组件(context);
+assert.deepEqual(Array.from(imports), ["file:///other/user.css", "file:///user/.config/adwcode/GNOME字体.css"]);
+await sandbox.执行外观事务(context, [], true);
+assert.deepEqual(Array.from(imports), ["file:///other/user.css"]);
+let 顺序 = [];
+await Promise.all([sandbox.排队外观操作(async () => { 顺序.push(1); await Promise.resolve(); 顺序.push(2); }), sandbox.排队外观操作(async () => { 顺序.push(3); })]);
+assert.deepEqual(顺序, [1,2,3]);
+console.log("外观管理：选择、移除、失败回滚及串行操作测试通过");
 
 assert.equal(sandbox.解析Pango字体("'更纱黑体 UI SC 11'"), "更纱黑体 UI SC");
 assert.equal(sandbox.解析Pango字体("'Adwaita Sans Bold Italic 10.5'"), "Adwaita Sans");
