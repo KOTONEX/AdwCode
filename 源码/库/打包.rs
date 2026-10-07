@@ -63,7 +63,7 @@ const 清单模板: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 "#;
 
-const 包含清单: [&str; 14] = [
+const 包含清单: [&str; 21] = [
     "package.json",
     "README.md",
     "LICENSE",
@@ -77,16 +77,24 @@ const 包含清单: [&str; 14] = [
     "文档",
     "CONTRIBUTING.md",
     "AGENTS.md",
-    "源码/VSCode默认数据/README.md",
+    "源码",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "测试",
+    "基准",
+    "类型声明",
+    "tsconfig.json",
 ];
 
 const 跳过后缀: [&str; 2] = [".pyc", ".py"];
 
-/// 收集打包文件：字体连同对应 SVG、来源记录与再生成脚本一起分发。
+/// 收集打包文件：字体连同对应 SVG、来源记录与 Rust 再生成源码一起分发。
 pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
     let mut 文件: Vec<PathBuf> = Vec::new();
     for 项目 in 包含清单 {
         let 路径 = 根目录.join(项目);
+        crate::文件事务::校验普通路径(&路径)?;
         if 路径.is_file() {
             文件.push(路径);
         } else if 路径.is_dir() {
@@ -95,6 +103,20 @@ pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
             目录内.sort_by(|左, 右| 左.to_string_lossy().cmp(&右.to_string_lossy()));
             文件.extend(目录内);
         }
+    }
+    if 根目录.join(".git").exists() {
+        let 输出 = std::process::Command::new("git")
+            .args(["ls-files", "-z"])
+            .current_dir(根目录)
+            .output()?;
+        if !输出.status.success() {
+            return Err(工具错误::新("无法读取 Git 打包文件清单"));
+        }
+        let 文本 = String::from_utf8(输出.stdout)
+            .map_err(|_| 工具错误::新("Git 文件名不是 UTF-8"))?;
+        let 已跟踪: std::collections::HashSet<_> =
+            文本.split('\0').map(|项| 根目录.join(项)).collect();
+        文件.retain(|路径| 已跟踪.contains(路径));
     }
     Ok(文件
         .into_iter()
@@ -116,6 +138,7 @@ fn 递归收集(目录: &Path, 输出: &mut Vec<PathBuf>) -> 结果<()> {
     for 条目 in std::fs::read_dir(目录)? {
         let 条目 = 条目?;
         let 路径 = 条目.path();
+        crate::文件事务::校验普通路径(&路径)?;
         if 路径.is_dir() {
             递归收集(&路径, 输出)?;
         } else if 路径.is_file() {
@@ -179,29 +202,56 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
                 .join(",")
         })
         .unwrap_or_default();
-    let 清单 = 清单模板
-        .replace("{icon_metadata}", &图标元数据)
-        .replace("{icon_asset}", &图标资产)
-        .replace("{name}", &xml转义(name))
-        .replace("{version}", &xml转义(version))
-        .replace(
-            "{publisher}",
-            &xml转义(manifest["publisher"].as_str().unwrap_or("")),
-        )
-        .replace(
-            "{display_name}",
-            &xml转义(manifest["displayName"].as_str().unwrap_or("")),
-        )
-        .replace(
-            "{description}",
-            &xml转义(manifest["description"].as_str().unwrap_or("")),
-        )
-        .replace("{keywords}", &xml转义(&关键字))
-        .replace("{categories}", &xml转义(&分类))
-        .replace(
-            "{engine}",
-            &xml转义(manifest["engines"]["vscode"].as_str().unwrap_or("")),
-        );
+    for (键, 值) in [
+        ("name", name),
+        ("version", version),
+        ("publisher", manifest["publisher"].as_str().unwrap_or("")),
+        (
+            "engines.vscode",
+            manifest["engines"]["vscode"].as_str().unwrap_or(""),
+        ),
+    ] {
+        if 值.trim().is_empty() {
+            return Err(工具错误::新(format!("清单字段不能为空：{键}")));
+        }
+    }
+    if !name
+        .chars()
+        .all(|字| 字.is_ascii_alphanumeric() || matches!(字, '-' | '_'))
+        || !regex::Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+            .expect("版本正则")
+            .is_match(version)
+    {
+        return Err(工具错误::新("清单 name 或 version 无效"));
+    }
+    let 替换 = std::collections::HashMap::from([
+        ("icon_metadata", 图标元数据),
+        ("icon_asset", 图标资产),
+        ("name", xml转义(name)),
+        ("version", xml转义(version)),
+        (
+            "publisher",
+            xml转义(manifest["publisher"].as_str().unwrap_or("")),
+        ),
+        (
+            "display_name",
+            xml转义(manifest["displayName"].as_str().unwrap_or(name)),
+        ),
+        (
+            "description",
+            xml转义(manifest["description"].as_str().unwrap_or("")),
+        ),
+        ("keywords", xml转义(&关键字)),
+        ("categories", xml转义(&分类)),
+        (
+            "engine",
+            xml转义(manifest["engines"]["vscode"].as_str().unwrap_or("")),
+        ),
+    ]);
+    let 正则 = regex::Regex::new(r"\{([a-z_]+)\}").expect("清单模板正则");
+    let 清单 = 正则.replace_all(清单模板, |捕获: &regex::Captures<'_>| {
+        替换[&捕获[1]].clone()
+    });
     // 正常打包读取完整 Git 历史；无 Git 的导出副本须显式提供已生成日志。
     let 日志 = if let Some(路径) = 变更日志路径 {
         std::fs::read_to_string(路径)?
@@ -211,11 +261,14 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
     if 日志.trim().is_empty() {
         return Err(工具错误::新("用于打包的变更日志为空"));
     }
-    if let Some(父目录) = 输出.parent() {
-        std::fs::create_dir_all(父目录)?;
-    }
-    let 文件句柄 = std::fs::File::create(输出)?;
-    let mut 归档 = zip::ZipWriter::new(文件句柄);
+    let 输出 = std::path::absolute(输出)?;
+    crate::文件事务::校验普通路径(&输出)?;
+    let 父目录 = 输出
+        .parent()
+        .ok_or_else(|| 工具错误::新("输出没有父目录"))?;
+    std::fs::create_dir_all(父目录)?;
+    let mut 暂存 = tempfile::NamedTempFile::new_in(父目录)?;
+    let mut 归档 = zip::ZipWriter::new(暂存.as_file_mut());
     let 选项 = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     归档
         .start_file("[Content_Types].xml", 选项)
@@ -251,6 +304,10 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
     归档
         .finish()
         .map_err(|错误| 工具错误::新(format!("完成归档失败：{错误}")))?;
+    暂存.as_file().sync_all()?;
+    暂存
+        .persist(&输出)
+        .map_err(|错误| 工具错误::新(format!("替换 VSIX 失败：{错误}")))?;
     Ok(())
 }
 
@@ -300,8 +357,8 @@ mod 测试 {
     #[test]
     fn 打包包含条目且不含源码python() {
         let 根 = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let 输出 = std::env::temp_dir().join("adwcode-打包测试.vsix");
-        let _ = std::fs::remove_file(&输出);
+        let 临时 = tempfile::tempdir().expect("临时目录");
+        let 输出 = 临时.path().join("测试.vsix");
         构建(根, &输出, None).expect("构建 VSIX");
         let 文件句柄 = std::fs::File::open(&输出).expect("打开 VSIX");
         let mut 归档 = zip::ZipArchive::new(文件句柄).expect("读取 VSIX");
@@ -338,6 +395,40 @@ mod 测试 {
         let _ = std::fs::remove_file(&输出);
     }
 
+    #[test]
+    fn 打包可复现且失败保留已有产物() {
+        let 仓库 = 临时仓库::新建("确定性");
+        仓库.写清单(r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","description":"包含 {engine} 与 {name}","engines":{"vscode":"^1.100.0"}}"#);
+        let 日志 = 仓库.目录.join("日志.md");
+        std::fs::write(&日志, "版本日志").unwrap();
+        let 输出 = 仓库.目录.join("测试.vsix");
+        构建(&仓库.目录, &输出, Some(&日志)).unwrap();
+        let 第一份 = std::fs::read(&输出).unwrap();
+        构建(&仓库.目录, &输出, Some(&日志)).unwrap();
+        assert_eq!(第一份, std::fs::read(&输出).unwrap());
+        let mut 归档 = zip::ZipArchive::new(std::io::Cursor::new(&第一份)).unwrap();
+        use std::io::Read;
+        let mut 清单 = String::new();
+        归档
+            .by_name("extension.vsixmanifest")
+            .unwrap()
+            .read_to_string(&mut 清单)
+            .unwrap();
+        assert!(清单.contains("包含 {engine} 与 {name}"));
+        仓库.写清单(r#"{"name":"AdwCode","version":"","publisher":"测试"}"#);
+        assert!(构建(&仓库.目录, &输出, Some(&日志)).is_err());
+        assert_eq!(第一份, std::fs::read(&输出).unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn 拒绝目录符号链接打包() {
+        let 根 = tempfile::tempdir().unwrap();
+        let 外部 = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(外部.path(), 根.path().join("资产")).unwrap();
+        assert!(收集文件(根.path()).is_err());
+    }
+
     fn manifest版本(根: &Path) -> String {
         let 文本 = std::fs::read_to_string(根.join("package.json")).expect("读取清单");
         let manifest: Value = serde_json::from_str(&文本).expect("解析清单");
@@ -347,25 +438,20 @@ mod 测试 {
     /// 临时打包仓库；身份与签名配置仅作用于本次命令。
     struct 临时仓库 {
         目录: PathBuf,
+        _临时: tempfile::TempDir,
     }
 
     impl 临时仓库 {
-        fn 新建(名称: &str) -> Self {
-            let 目录 =
-                std::env::temp_dir().join(format!("adwcode-打包-{名称}-{}", std::process::id()));
-            let _ = std::fs::remove_dir_all(&目录);
-            std::fs::create_dir_all(&目录).expect("创建临时仓库");
-            Self { 目录 }
+        fn 新建(_名称: &str) -> Self {
+            let 临时 = tempfile::tempdir().expect("临时打包仓库");
+            Self {
+                目录: 临时.path().to_path_buf(),
+                _临时: 临时,
+            }
         }
 
         fn 写清单(&self, 内容: &str) {
             std::fs::write(self.目录.join("package.json"), 内容).expect("写入清单");
-        }
-    }
-
-    impl Drop for 临时仓库 {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.目录);
         }
     }
 

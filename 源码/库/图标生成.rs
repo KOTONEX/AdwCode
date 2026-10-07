@@ -1485,13 +1485,12 @@ struct 字体描述<'a> {
 }
 
 /// 写入 TTF：glyf/loca、度量、cmap、名称与其余必需表。
-fn 写入字体(
-    输出路径: &Path,
+fn 生成字体字节(
     名称表: &[String],
     轮廓表: &[Vec<子路径>],
     码点表: &[(u16, usize)],
     描述: &字体描述<'_>,
-) -> 结果<()> {
+) -> 结果<Vec<u8>> {
     if 名称表.len() != 轮廓表.len() || 名称表.first().map(String::as_str) != Some(".notdef")
     {
         return Err(工具错误::新("字形表与名称表不一致"));
@@ -1726,8 +1725,7 @@ fn 写入字体(
         .map_err(|错误| 工具错误::新(format!("字体表写入失败：{错误}")))?;
     let mut 字节 = 字体构建.build();
     修补os2版本(&mut 字节, 3)?;
-    std::fs::write(输出路径, 字节)
-        .map_err(|错误| 工具错误::带来源(format!("无法写入 {}", 输出路径.display()), 错误))
+    Ok(字节)
 }
 
 /// 把 OS/2 版本改写为指定值并同步校验和（write-fonts 只能按字段算出 4）。
@@ -1902,13 +1900,8 @@ pub fn 自有入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         许可: "AGPL-3.0-or-later OR CC-BY-SA-4.0+；许可声明见 产品图标/LICENSE",
         许可地址: "https://github.com/KOTONEX/AdwCode/blob/main/产品图标/LICENSE",
     };
-    写入字体(
-        &根目录.join("产品图标").join("adwcode-符号.ttf"),
-        &名称表,
-        &轮廓表,
-        &码点表,
-        &描述,
-    )?;
+    let 字节 = 生成字体字节(&名称表, &轮廓表, &码点表, &描述)?;
+    crate::文件事务::写入批次(&[(根目录.join("产品图标/adwcode-符号.ttf"), Some(字节))])?;
     println!("已生成 {} 个单色字形", 源文件.len());
     Ok(())
 }
@@ -1926,6 +1919,8 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let 字体列表 = 来源["fonts"]
         .as_array()
         .ok_or_else(|| 工具错误::新("产品图标/来源.json 缺少 fonts"))?;
+    let mut 操作 = Vec::new();
+    let mut 消息 = Vec::new();
     for 字体 in 字体列表 {
         let id = 字符串字段(字体, "id")?;
         let id路径 = 校验相对路径(&id, "fonts[].id")?;
@@ -2000,14 +1995,31 @@ pub fn 导入入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             许可: &format!("{许可}；由 AdwCode 转换为单色轮廓；来源与字重参数见 来源.json"),
             许可地址: &许可地址,
         };
-        写入字体(&输出路径, &名称表, &轮廓表, &码点表, &描述)?;
-        导出预览(&图标目录, &id路径, 字形条目, &轮廓表, &许可, &署名)?;
+        操作.push((
+            输出路径,
+            Some(生成字体字节(&名称表, &轮廓表, &码点表, &描述)?),
+        ));
+        操作.extend(导出预览(
+            &图标目录,
+            &id路径,
+            字形条目,
+            &轮廓表,
+            &许可,
+            &署名,
+        )?);
         let 状态 = if 字体.get("enabled").and_then(Value::as_bool).unwrap_or(true) {
             "启用"
         } else {
             "备用"
         };
-        println!("已生成 {输出}：{} 个字形，{许可}，{状态}", 字形条目.len());
+        消息.push(format!(
+            "已生成 {输出}：{} 个字形，{许可}，{状态}",
+            字形条目.len()
+        ));
+    }
+    crate::文件事务::写入批次(&操作)?;
+    for 行 in 消息 {
+        println!("{行}");
     }
     Ok(())
 }
@@ -2020,7 +2032,8 @@ fn 导出预览(
     轮廓表: &[Vec<子路径>],
     许可: &str,
     署名: &str,
-) -> 结果<()> {
+) -> 结果<Vec<(PathBuf, Option<Vec<u8>>)>> {
+    let mut 操作 = Vec::new();
     let 预览目录 = 图标目录.join("渲染图标").join(字体id);
     std::fs::create_dir_all(&预览目录).map_err(|错误| {
         工具错误::带来源(format!("无法创建 {}", 预览目录.display()), 错误)
@@ -2038,25 +2051,23 @@ fn 导出预览(
         let 内容 = format!(
             "<!-- SPDX-License-Identifier: {许可} -->\n<!-- 署名：{署名}；由 AdwCode 从字体轮廓生成，来源见 来源.json。 -->\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" width=\"16\" height=\"16\"><path fill=\"currentColor\" d=\"{命令}\"/></svg>\n"
         );
-        std::fs::write(预览目录.join(&文件名), 内容)
-            .map_err(|错误| 工具错误::带来源(format!("无法写入预览 {文件名}"), 错误))?;
+        操作.push((预览目录.join(&文件名), Some(内容.into_bytes())));
         期望.push(文件名);
     }
     let 目录项 = std::fs::read_dir(&预览目录).map_err(|错误| {
         工具错误::带来源(format!("无法读取 {}", 预览目录.display()), 错误)
     })?;
-    for 项 in 目录项.filter_map(|项| 项.ok()) {
+    for 项 in 目录项 {
+        let 项 = 项?;
         let 路径 = 项.path();
         let 名字 = 路径
             .file_name()
             .map_or_else(String::new, |名| 名.to_string_lossy().to_string());
         if 路径.extension().is_some_and(|扩展| 扩展 == "svg") && !期望.contains(&名字) {
-            std::fs::remove_file(&路径).map_err(|错误| {
-                工具错误::带来源(format!("无法删除过期预览 {名字}"), 错误)
-            })?;
+            操作.push((路径, None));
         }
     }
-    Ok(())
+    Ok(操作)
 }
 
 /// 读取字符串字段。

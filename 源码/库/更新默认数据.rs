@@ -193,9 +193,16 @@ fn 更新(根目录: &Path, 下载: &dyn Fn(&str, u64) -> 结果<String>) -> 结
     });
     let 注册表文本 = 写字符串数组(&注册表);
     消息.push(format!("注册表颜色键： {}", 注册表.len()));
-    std::fs::create_dir_all(&输出目录)?;
-    std::fs::write(输出目录.join("builtin_keys.json"), 内置文本)?;
-    std::fs::write(输出目录.join("registry_keys.json"), 注册表文本)?;
+    crate::文件事务::写入批次(&[
+        (
+            输出目录.join("builtin_keys.json"),
+            Some(内置文本.into_bytes()),
+        ),
+        (
+            输出目录.join("registry_keys.json"),
+            Some(注册表文本.into_bytes()),
+        ),
+    ])?;
     for 行 in 消息 {
         println!("{行}");
     }

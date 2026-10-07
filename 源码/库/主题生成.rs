@@ -213,25 +213,39 @@ pub fn 写入主题(
     let 主题目录 = 根目录.join("主题");
     std::fs::create_dir_all(&主题目录)?;
     let prepared = 准备主题(根目录, plan, watch)?;
+    let mut 操作 = Vec::new();
     let mut written: HashSet<String> = HashSet::new();
     let mut entries = Vec::new();
     for (文件名, 主题, 注册项) in prepared {
-        std::fs::write(主题目录.join(&文件名), 写json(&主题))?;
+        操作.push((主题目录.join(&文件名), Some(写json(&主题).into_bytes())));
         written.insert(文件名);
         entries.push(注册项);
     }
     for 旧文件 in std::fs::read_dir(&主题目录)? {
         let 旧文件 = 旧文件?;
         let 名字 = 旧文件.file_name().to_string_lossy().to_string();
-        if 名字.ends_with(".json") && !written.contains(&名字) {
-            std::fs::remove_file(旧文件.path())?;
+        if 名字.starts_with("adwcode-") && 名字.ends_with(".json") && !written.contains(&名字)
+        {
+            操作.push((旧文件.path(), None));
         }
     }
+    操作.push((
+        根目录.join("package.json"),
+        Some(清单内容(根目录, &entries)?),
+    ));
+    crate::文件事务::写入批次(&操作)?;
     Ok(entries)
 }
 
 /// 将 `contributes.themes` 写回 `package.json`。
 pub fn 更新扩展清单(根目录: &Path, entries: &[主题注册项]) -> 结果<()> {
+    crate::文件事务::写入批次(&[(
+        根目录.join("package.json"),
+        Some(清单内容(根目录, entries)?),
+    )])
+}
+
+fn 清单内容(根目录: &Path, entries: &[主题注册项]) -> 结果<Vec<u8>> {
     let 路径 = 根目录.join("package.json");
     let 文本 = std::fs::read_to_string(&路径)?;
     let mut manifest: Value = serde_json::from_str(&文本)
@@ -250,8 +264,7 @@ pub fn 更新扩展清单(根目录: &Path, entries: &[主题注册项]) -> 结�
         })
         .collect();
     manifest["contributes"]["themes"] = Value::Array(列表);
-    std::fs::write(&路径, 写json(&manifest))?;
-    Ok(())
+    Ok(写json(&manifest).into_bytes())
 }
 
 /// 与 Python `json.dumps(obj, indent=2, ensure_ascii=False) + "\n"` 对齐。
@@ -711,7 +724,7 @@ pub fn 生成入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     if watch {
         println!("监视模式：已为主题条目添加 _watch 标记");
     }
-    更新扩展清单(根目录, &entries)?;
+
     for 条目 in &entries {
         println!("  {:9} {}", 条目.ui_theme, 条目.label);
     }

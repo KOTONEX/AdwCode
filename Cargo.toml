@@ -13,6 +13,7 @@ publish = false
 [workspace]
 
 [dependencies]
+tempfile = "3"
 flo_curves = "0.8"
 kurbo = "0.13"
 quick-xml = "0.41.0"
@@ -36,4 +37,3 @@ strip = true
 
 [dev-dependencies]
 skrifa = "0.48"
-tempfile = "3"

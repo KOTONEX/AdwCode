@@ -1,14 +1,10 @@
+# VSIX 的权威包含清单位于 源码/库/打包.rs；源码随包分发以便再生成与许可核验。
 .git/**
+.github/**
 .vscode/**
-源码/**
-资产/screenshot*
+.kilo/**
+target/**
+builddir/**
 *.vsix
-.gitignore
-文档/**
-测试/**
-CONTRIBUTING.md
-CHANGELOG.md
-AGENTS.md
-Makefile
-.editorconfig
-.gitattributes
+**/*.log
+**/*.tmp
