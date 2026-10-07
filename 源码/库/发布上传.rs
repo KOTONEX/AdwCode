@@ -543,6 +543,13 @@ mod 测试 {
                 .success()
         );
         let git = |参数: &[&str]| crate::变更日志::执行git(&根, 参数).unwrap();
+        // CI 通常以分离 HEAD 检出；本地 clone 不会自动复制来源仓库的远端引用。
+        let 主线 = crate::变更日志::执行git(
+            &源码,
+            &["rev-parse", "--verify", "refs/remotes/origin/main"],
+        )
+        .unwrap();
+        git(&["update-ref", "refs/remotes/origin/main", 主线.trim()]);
         git(&["config", "user.name", "离线测试"]);
         git(&["config", "user.email", "test@example.invalid"]);
         git(&["config", "commit.gpgsign", "false"]);
