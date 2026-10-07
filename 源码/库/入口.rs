@@ -75,3 +75,6 @@ pub mod 运行工具;
 
 #[path = "发布执行.rs"]
 mod 发布执行;
+
+#[path = "持续集成.rs"]
+pub mod 持续集成;

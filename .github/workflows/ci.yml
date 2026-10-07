@@ -52,21 +52,11 @@ jobs:
 
       - name: 判断宿主相关改动
         id: changes
-        run: node 测试/宿主触发.cjs
+        run: cargo run --quiet -- 持续集成 宿主改动
 
       - name: 确定最新稳定宿主与验收周
         id: host-version
-        shell: python
-        run: |
-          import datetime, json, os, re, subprocess
-          from pathlib import Path
-          版本 = json.loads(subprocess.check_output(['curl', '--fail', '--silent', '--show-error', '--max-time', '30',
-              'https://update.code.visualstudio.com/api/releases/stable?released=true'], text=True))[0]
-          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', 版本):
-              raise RuntimeError('最新宿主版本格式错误')
-          周 = datetime.datetime.now(datetime.timezone.utc).strftime('%G-%V')
-          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as 输出:
-              输出.write(f'版本={版本}\n周={周}\n')
+        run: cargo run --quiet -- 持续集成 宿主版本
 
       - name: 恢复本周最新版宿主验收记录
         id: weekly-host
@@ -80,13 +70,7 @@ jobs:
         env:
           相关: ${{ steps.changes.outputs['相关'] }}
           已验收: ${{ steps.weekly-host.outputs.cache-hit }}
-        shell: python
-        run: |
-          import os
-          from pathlib import Path
-          运行 = os.environ['相关'] == 'true' or os.environ['已验收'] != 'true'
-          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as 输出:
-              输出.write(f'运行={str(运行).lower()}\n')
+        run: cargo run --quiet -- 持续集成 宿主计划
 
       - name: 缓存固定版本编辑器
         if: steps.host-plan.outputs['运行'] == 'true'
@@ -106,26 +90,13 @@ jobs:
 
       - name: 记录本周成功宿主验收
         if: steps.host-plan.outputs['运行'] == 'true'
-        shell: python
-        run: |
-          import os
-          from pathlib import Path
-          Path(os.environ['RUNNER_TEMP'], 'adwcode-宿主周记录').write_text('成功', encoding='utf-8')
+        run: cargo run --quiet -- 持续集成 宿主成功
 
       - name: 构建并记录同提交发布工具
         if: github.event_name == 'push'
-        shell: python
         run: |
-          import hashlib, json, os, shutil, subprocess
-          from pathlib import Path
-          subprocess.run(['cargo', 'build', '--release', '--quiet'], check=True)
-          目录 = Path(os.environ['RUNNER_TEMP']) / 'adwcode-工具'
-          目录.mkdir()
-          程序 = 目录 / 'adwcode'
-          shutil.copyfile('target/release/adwcode', 程序)
-          提交 = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          元数据 = {'提交': 提交, '平台': 'linux-x64', 'sha256': hashlib.sha256(程序.read_bytes()).hexdigest()}
-          (目录 / '元数据.json').write_text(json.dumps(元数据, ensure_ascii=False), encoding='utf-8')
+          cargo build --release --quiet
+          ./target/release/adwcode 持续集成 登记工具
 
       - name: 保存同提交发布工具
         if: github.event_name == 'push'

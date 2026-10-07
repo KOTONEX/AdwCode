@@ -240,11 +240,3 @@ console.log("界面字体：Pango 解析与 CSS 生成测试通过");
 
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
-
-const {需要宿主} = require('./宿主触发.cjs');
-assert.equal(需要宿主(['README.md','源码/库/摘要.rs'], {}, {}), false);
-assert.equal(需要宿主(['package.json'], {version:'1.0.0',main:'入口.js'}, {version:'1.1.0',main:'入口.js'}), false);
-assert.equal(需要宿主(['package.json'], {main:'入口.js'}, {main:'新入口.js'}), true);
-for (const 文件 of ['扩展/字体.js','测试/真实宿主.cjs','tsconfig.json','源码/库/宿主测试.rs','.github/workflows/ci.yml']) {
-  assert.equal(需要宿主([文件], {}, {}), true);
-}
