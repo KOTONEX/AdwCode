@@ -114,7 +114,7 @@ GNOME 扩展
   VS Code 原生的活动栏位置；把设置改回 `classic` 或 `visible` 即可恢复完整菜单栏。
 
 执行 **AdwCode: 安装 GNOME 外观（CSS）**（只想改窗口按钮则用
-**AdwCode: 生成仅关闭按钮的窗口控件 CSS**）。完整安装包含三个 CSS 文件及
+**AdwCode: 安装仅关闭按钮的窗口控件 CSS**）。完整安装包含三个 CSS 文件及
 `窗口状态.js`：脚本将原生标题栏状态同步到导航容器，保留非活动窗口的弱化效果，
 减少全工作台样式重算。检测到加载器时，安装命令将本次组件的已知源码和副本引用统一为单份安装副本，
 保留其他加载项；状态命令会提示重复引用或重复注入。
@@ -171,7 +171,7 @@ gsettings get org.gnome.desktop.wm.preferences button-layout
 - `"window.controlsStyle": "native"`（推荐）由 GTK 按该布局绘制，无需额外配置。
 - VS Code 的自绘控件始终绘制最小化、最大化/还原与关闭三个按钮（固定 46px 宽、
   容器 138px），颜色主题与产品图标主题都无法隐藏。若要在自绘控件上保持 GNOME
-  布局，执行 **AdwCode: 生成仅关闭按钮的窗口控件 CSS**：它会写入
+  布局，执行 **AdwCode: 安装仅关闭按钮的窗口控件 CSS**：它会将随包提供的静态 CSS 原样复制到
   `~/.config/adwcode/仅关闭窗口控件.css`，并在检测到
   [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css)
   时自动加入 `vscode_custom_css.imports`；否则把设置片段复制到剪贴板。先执行一次
