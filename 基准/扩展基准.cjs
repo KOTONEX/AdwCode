@@ -46,10 +46,6 @@ function load() {
   vm.runInContext(source, sandbox);
   return { sandbox, channel, context: { extensionPath: root, subscriptions: [] } };
 }
-function summarize(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return { median: sorted.length % 2 ? sorted[Math.floor(sorted.length / 2)] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2, p95: sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)], min: sorted[0], max: sorted.at(-1) };
-}
 function bench(name, prepare, invoke, count) {
   for (let i = 0; i < 10; i++) invoke(prepare());
   global.gc?.();
@@ -60,7 +56,8 @@ function bench(name, prepare, invoke, count) {
     invoke(input);
     samples.push(performance.now() - start);
   }
-  return { name, unit: 'ms', count, summary: summarize(samples), samples };
+  // 保留报告的原始样本协议；摘要统一由 Rust 计算。
+  return { name, unit: 'ms', count, samples };
 }
 try {
   const runtime = load();
@@ -79,12 +76,6 @@ try {
     bench('外观安装状态读取（真实文件）', () => runtime, input => input.sandbox.外观安装状态(input.context), 500),
     bench('外观状态输出生成（模拟输出通道）', () => runtime, input => { input.sandbox.显示外观安装状态(input.context); input.context.subscriptions.length = 0; }, 200),
   ];
-  for (const result of results) {
-    if (result.name.includes('1000')) {
-      result.samples = result.samples.map(value => value / 1000);
-      result.summary = summarize(result.samples);
-    }
-  }
   assert.equal(writes, 0);
   assert.equal(processes, 0);
   assert.equal(commands, 0);

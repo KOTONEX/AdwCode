@@ -26,7 +26,7 @@ pub fn 摘要(值: &[f64]) -> Value {
     有序.sort_by(|左, 右| 左.partial_cmp(右).unwrap_or(std::cmp::Ordering::Equal));
     let 数量 = 有序.len();
     let 中位 = if 数量.is_multiple_of(2) {
-        (有序[数量 / 2 - 1] + 有序[数量 / 2]) / 2.0
+        有序[数量 / 2 - 1] / 2.0 + 有序[数量 / 2] / 2.0
     } else {
         有序[数量 / 2]
     };
@@ -39,6 +39,41 @@ pub fn 摘要(值: &[f64]) -> Value {
         "min": 有序[0],
         "max": 有序[数量 - 1],
     })
+}
+
+/// Node 只采样真实 JS；沿用报告协议字段，由 Rust 校验并填充摘要。
+pub fn 汇总扩展样本(mut 报告: Value) -> 结果<Value> {
+    let 场景 = 报告["results"]
+        .as_array_mut()
+        .filter(|场景| !场景.is_empty())
+        .ok_or_else(|| 工具错误::新("扩展基准缺少场景"))?;
+    let mut 名称 = std::collections::BTreeSet::new();
+    for 场景 in 场景 {
+        let 名字 = 场景["name"]
+            .as_str()
+            .filter(|名字| !名字.is_empty())
+            .ok_or_else(|| 工具错误::新("扩展基准场景名称无效"))?;
+        if !名称.insert(名字.to_string()) || 场景["unit"] != "ms" {
+            return Err(工具错误::新("扩展基准名称重复或单位无效"));
+        }
+        let 样本 = 场景["samples"]
+            .as_array()
+            .filter(|样本| !样本.is_empty())
+            .ok_or_else(|| 工具错误::新("扩展基准缺少样本"))?;
+        if 场景["count"].as_u64() != Some(样本.len() as u64) {
+            return Err(工具错误::新("扩展基准样本数量不匹配"));
+        }
+        let 数值: Vec<f64> = 样本
+            .iter()
+            .map(|值| {
+                值.as_f64()
+                    .filter(|值| 值.is_finite() && *值 >= 0.0)
+                    .ok_or_else(|| 工具错误::新("扩展基准样本必须为有限非负数"))
+            })
+            .collect::<结果<_>>()?;
+        场景["summary"] = 摘要(&数值);
+    }
+    Ok(报告)
 }
 
 /// 每秒时钟滴答数；读取失败时按常见的 100 处理。
@@ -416,8 +451,10 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             String::from_utf8_lossy(&扩展输出.stderr)
         )));
     }
-    result["扩展"] = serde_json::from_slice(&扩展输出.stdout)
-        .map_err(|错误| 工具错误::新(format!("扩展基准输出解析失败：{错误}")))?;
+    result["扩展"] = 汇总扩展样本(
+        serde_json::from_slice(&扩展输出.stdout)
+            .map_err(|错误| 工具错误::新(format!("扩展基准输出解析失败：{错误}")))?,
+    )?;
     println!("扩展离线基准完成");
     drop(临时副本);
     if before != 指纹(根目录)? {
@@ -451,5 +488,42 @@ mod 测试 {
         let 奇数 = 摘要(&[3.0, 1.0, 2.0]);
         assert_eq!(奇数["median"], 2.0);
         assert_eq!(奇数["p95"], 3.0);
+        assert_eq!(摘要(&[f64::MAX, f64::MAX])["median"], f64::MAX);
+    }
+
+    #[test]
+    fn 扩展原始样本汇总保持报告字段并拒绝坏数据() {
+        let 原始 = json!({"node": "测试", "results": [{
+            "name": "状态读取", "unit": "ms", "count": 4, "samples": [4, 1, 3, 2]
+        }]});
+        let 汇总 = 汇总扩展样本(原始.clone()).unwrap();
+        assert_eq!(汇总["node"], 原始["node"]);
+        assert_eq!(汇总["results"][0]["samples"], 原始["results"][0]["samples"]);
+        assert_eq!(
+            汇总["results"][0]["summary"],
+            json!({"median": 2.5, "p95": 4.0, "min": 1.0, "max": 4.0})
+        );
+        for (键, 值) in [
+            ("count", json!(3)),
+            ("count", json!(4.5)),
+            ("name", json!(null)),
+            ("unit", json!("s")),
+            ("samples", json!([])),
+            ("samples", json!([4, 1, null, 2])),
+            ("samples", json!([4, 1, -1, 2])),
+            ("samples", json!([4, 1, "3", 2])),
+        ] {
+            let mut 错误 = 原始.clone();
+            错误["results"][0][键] = 值;
+            assert!(汇总扩展样本(错误).is_err());
+        }
+        let mut 重复 = 原始.clone();
+        重复["results"]
+            .as_array_mut()
+            .unwrap()
+            .push(原始["results"][0].clone());
+        assert!(汇总扩展样本(重复).is_err());
+        assert!(汇总扩展样本(json!({"results": []})).is_err());
+        assert!(汇总扩展样本(json!({})).is_err());
     }
 }

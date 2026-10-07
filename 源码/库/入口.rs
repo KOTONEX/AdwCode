@@ -28,6 +28,9 @@ pub mod 变更日志;
 #[path = "发布策略.rs"]
 pub mod 发布策略;
 
+#[path = "发布上传.rs"]
+pub mod 发布上传;
+
 #[path = "验证设置.rs"]
 pub mod 验证设置;
 

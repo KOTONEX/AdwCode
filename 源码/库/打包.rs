@@ -63,7 +63,7 @@ const 清单模板: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 "#;
 
-const 包含清单: [&str; 21] = [
+pub(crate) const 包含清单: [&str; 21] = [
     "package.json",
     "README.md",
     "LICENSE",

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
 // SPDX-FileCopyrightText: 2026 AdwCode 贡献者
-// 仅连接 工作台基准.py 创建的独立进程；CSS 注入只修改该窗口的 DOM。
+// 仅连接 Rust 工作台基准 创建的独立进程；CSS 注入只修改该窗口的 DOM。
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -171,7 +171,7 @@ async function main() {
     await page.locator('#adwcode-performance-lifecycle').evaluate(element => element.remove());
     for (let mode = 0; mode < themes.length; mode++) {
       if (mode === 1) {
-        // 仅更新 工作台基准.py 创建的临时用户设置；由 VS Code 原生主题服务响应。
+        // 仅更新 Rust 工作台基准 创建的临时用户设置；由 VS Code 原生主题服务响应。
         const settingsPath = path.join(state.profile, 'User/settings.json');
         const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
         settings['workbench.colorTheme'] = themes[mode].name;
