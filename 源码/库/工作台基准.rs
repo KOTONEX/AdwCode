@@ -6,29 +6,15 @@
 //! 隔离环境、启动调试端口、执行测量并清理本次创建的进程组。
 
 use std::net::TcpListener;
-use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
+use crate::运行工具::{受管进程, 复制目录, 查找程序};
 use crate::错误::{工具错误, 结果};
-
-/// 在 PATH 中查找可执行文件。
-#[must_use]
-pub fn 查找程序(名称: &str) -> Option<PathBuf> {
-    let 路径 = std::env::var_os("PATH")?;
-    std::env::split_paths(&路径)
-        .map(|目录| 目录.join(名称))
-        .find(|候选| {
-            候选.is_file()
-                && 候选
-                    .metadata()
-                    .is_ok_and(|信息| 信息.permissions().mode() & 0o111 != 0)
-        })
-}
 
 fn 参数错误(消息: &str) -> 工具错误 {
     工具错误::新(消息)
@@ -43,41 +29,6 @@ impl Drop for 隔离环境 {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.目录);
     }
-}
-
-/// 子进程一启动即接管；错误返回也会清理其独立进程组。
-pub(crate) struct 受管进程(pub(crate) Child);
-
-impl Drop for 受管进程 {
-    fn drop(&mut self) {
-        终止进程组(self.0.id(), "-TERM");
-        let 截止 = Instant::now() + Duration::from_secs(1);
-        while Instant::now() < 截止 {
-            if self.0.try_wait().ok().flatten().is_some() {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        }
-        // 主进程已退出也可能仍有后代持有调试端口。
-        终止进程组(self.0.id(), "-KILL");
-        let _ = self.0.wait();
-    }
-}
-
-fn 复制目录(来源: &Path, 目标: &Path) -> 结果<()> {
-    std::fs::create_dir_all(目标)?;
-    for 条目 in std::fs::read_dir(来源)? {
-        let 条目 = 条目?;
-        let 来源路径 = 条目.path();
-        crate::文件事务::校验普通路径(&来源路径)?;
-        let 目标路径 = 目标.join(条目.file_name());
-        if 来源路径.is_dir() {
-            复制目录(&来源路径, &目标路径)?;
-        } else if 来源路径.is_file() {
-            std::fs::copy(&来源路径, &目标路径)?;
-        }
-    }
-    Ok(())
 }
 
 /// `adwcode 工作台基准` 的入口。
@@ -170,7 +121,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     for 名称 in ["扩展", "主题", "附加外观", "产品图标", "资产"] {
         let 来源 = 根目录.join(名称);
         if 来源.exists() {
-            复制目录(&来源, &扩展路径.join(名称))?;
+            复制目录(&来源, &扩展路径.join(名称), |_| false)?;
         }
     }
     std::fs::copy(根目录.join("package.json"), 扩展路径.join("package.json"))?;
@@ -313,40 +264,4 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         return Err(工具错误::新("工作台基准失败"));
     }
     Ok(())
-}
-
-fn 终止进程组(pid: u32, 信号: &str) {
-    let _ = Command::new("kill")
-        .arg(信号)
-        .arg("--")
-        .arg(format!("-{pid}"))
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-}
-
-#[cfg(test)]
-mod 测试 {
-    use super::*;
-
-    #[test]
-    fn 错误返回清理已启动的进程() {
-        let 临时 = tempfile::tempdir().unwrap();
-        let 标记 = 临时.path().join("不应写入");
-        let 运行 = || -> 结果<()> {
-            let _进程 = 受管进程(
-                Command::new("sh")
-                    .arg("-c")
-                    .arg("sleep 1; touch \"$1\"")
-                    .arg("sh")
-                    .arg(&标记)
-                    .process_group(0)
-                    .spawn()?,
-            );
-            Err(工具错误::新("模拟后续步骤失败"))
-        };
-        assert!(运行().is_err());
-        std::thread::sleep(Duration::from_millis(1200));
-        assert!(!标记.exists());
-    }
 }

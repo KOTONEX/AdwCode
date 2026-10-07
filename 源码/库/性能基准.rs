@@ -114,7 +114,7 @@ fn 采样(命令: &[String], 目录: &Path) -> 结果<Value> {
     let 可执行 = std::fs::canonicalize(&命令[0])?;
     let cpu起 = 子进程cpu秒()?;
     let 开始 = Instant::now();
-    let mut 子进程 = crate::工作台基准::受管进程(
+    let mut 子进程 = crate::运行工具::受管进程(
         Command::new(&命令[0])
             .args(&命令[1..])
             .current_dir(目录)
@@ -211,25 +211,6 @@ fn 忽略项(路径: &Path) -> bool {
         .components()
         .any(|部件| 部件.as_os_str() == "__pycache__")
         || 路径.extension().is_some_and(|扩展| 扩展 == "pyc")
-}
-
-fn 复制目录(来源: &Path, 目标: &Path) -> 结果<()> {
-    std::fs::create_dir_all(目标)?;
-    for 条目 in std::fs::read_dir(来源)? {
-        let 条目 = 条目?;
-        let 来源路径 = 条目.path();
-        crate::文件事务::校验普通路径(&来源路径)?;
-        if 忽略项(&来源路径) {
-            continue;
-        }
-        let 目标路径 = 目标.join(条目.file_name());
-        if 来源路径.is_dir() {
-            复制目录(&来源路径, &目标路径)?;
-        } else if 来源路径.is_file() {
-            std::fs::copy(&来源路径, &目标路径)?;
-        }
-    }
-    Ok(())
 }
 
 fn 版本(根目录: &Path) -> 结果<String> {
@@ -344,7 +325,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     ] {
         let 来源 = 根目录.join(名称);
         if 来源.exists() {
-            复制目录(&来源, &临时根.join(名称))?;
+            crate::运行工具::复制目录(&来源, &临时根.join(名称), 忽略项)?;
         }
     }
     for 名称 in [

@@ -37,7 +37,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         位置 += 1;
     }
     let 编辑器 = 编辑器
-        .or_else(|| crate::工作台基准::查找程序("code"))
+        .or_else(|| crate::运行工具::查找程序("code"))
         .ok_or_else(|| 工具错误::新("找不到 VS Code"))?;
     let 编辑器 = std::fs::canonicalize(编辑器)?;
     let 编辑器 = if 编辑器
@@ -96,7 +96,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     ] {
         命令.env_remove(键);
     }
-    let mut 进程 = crate::工作台基准::受管进程(命令.spawn()?);
+    let mut 进程 = crate::运行工具::受管进程(命令.spawn()?);
     let 截止 = Instant::now() + Duration::from_secs(120);
     loop {
         if let Some(状态) = 进程.0.try_wait()? {
