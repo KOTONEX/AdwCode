@@ -246,6 +246,37 @@ fn 平台标识(值: &Value) -> 结果<&str> {
         .ok_or_else(|| 工具错误::新("发布者或扩展名称无效"))
 }
 
+/// 非零退出只允许明确的 GitHub 404，其余失败保留阶段诊断。
+fn 校验执行输出(
+    阶段: &str,
+    程序: &str,
+    参数: &[String],
+    输出: crate::发布执行::命令输出,
+) -> 结果<执行输出> {
+    let 明确404 = !输出.成功
+        && 输出.退出码 == Some(1)
+        && 程序 == "gh"
+        && 参数.first().is_some_and(|参数| 参数 == "api")
+        && 查询响应(执行输出 {
+            成功: 输出.成功,
+            内容: 输出.标准输出.clone(),
+        })
+        .is_ok_and(|响应| 响应.is_none());
+    if !输出.成功 && !明确404 {
+        let 退出码 = 输出
+            .退出码
+            .map_or_else(|| "信号终止".to_string(), |码| 码.to_string());
+        return Err(工具错误::新(format!(
+            "{阶段} 失败（退出码 {退出码}）：{}",
+            输出.诊断
+        )));
+    }
+    Ok(执行输出 {
+        成功: 输出.成功,
+        内容: 输出.标准输出,
+    })
+}
+
 /// 严格标签、干净的打包源文件及现有 VSIX 校验后，才运行外部发布工具。
 pub fn 入口(根目录: &Path, 输入: &[String]) -> 结果<()> {
     let (引用, 目标, 预演) = 解析参数(输入)?;
@@ -309,12 +340,35 @@ pub fn 入口(根目录: &Path, 输入: &[String]) -> 结果<()> {
         );
         return Ok(());
     }
+    let 敏感值: Vec<String> = ["GH_TOKEN", "GITHUB_TOKEN", "VSCE_PAT", "OVSX_PAT"]
+        .iter()
+        .filter_map(|名称| std::env::var(名称).ok())
+        .filter(|值| !值.is_empty())
+        .collect();
     let mut 执行 = |程序: &str, 参数: &[String]| {
-        let 输出 = Command::new(程序).args(参数).current_dir(根目录).output()?;
-        Ok(执行输出 {
-            成功: 输出.status.success(),
-            内容: String::from_utf8_lossy(&输出.stdout).into_owned(),
-        })
+        let (阶段, 秒数) = match (
+            程序,
+            参数.first().map(String::as_str),
+            参数.get(1).map(String::as_str),
+        ) {
+            ("gh", Some("api"), _) => ("查询 GitHub Release", 60),
+            ("gh", Some("release"), Some("download")) => ("下载已有 Release 附件", 180),
+            ("gh", Some("release"), Some("upload")) => ("上传 Release 附件", 180),
+            ("gh", Some("release"), Some("create")) => ("创建 GitHub Release", 180),
+            ("gh", Some("release"), Some("edit")) => ("更新 GitHub Release", 180),
+            ("npx", _, Some("ovsx")) => ("发布 Open VSX", 600),
+            ("npx", _, _) => ("发布 VS Code Marketplace", 600),
+            _ => ("执行发布工具", 180),
+        };
+        let 输出 = crate::发布执行::运行(
+            根目录,
+            阶段,
+            程序,
+            参数,
+            std::time::Duration::from_secs(秒数),
+            &敏感值,
+        )?;
+        校验执行输出(阶段, 程序, 参数, 输出)
     };
     match 目标 {
         发布目标::附件 => 上传附件(&资料, &mut 执行),
@@ -619,5 +673,62 @@ mod 测试 {
         .unwrap();
         assert_eq!(目标, 发布目标::附件);
         assert!(预演);
+    }
+
+    #[test]
+    fn 执行器边界只允许明确404并保留阶段诊断() {
+        let 输出 = |内容: &str, 退出码| crate::发布执行::命令输出 {
+            成功: false,
+            退出码,
+            标准输出: 内容.into(),
+            诊断: "权限拒绝".into(),
+        };
+        let 参数 = vec!["api".into()];
+        let 允许 = 校验执行输出(
+            "查询阶段",
+            "gh",
+            &参数,
+            输出("HTTP/2.0 404 Not Found\r\n\r\n{}", Some(1)),
+        )
+        .unwrap();
+        assert!(查询响应(允许).unwrap().is_none());
+        for 退出码 in [None, Some(2), Some(4)] {
+            assert!(
+                校验执行输出(
+                    "查询阶段",
+                    "gh",
+                    &参数,
+                    输出("HTTP/2.0 404 Not Found\r\n\r\n{}", 退出码)
+                )
+                .is_err()
+            );
+        }
+        for 内容 in [
+            "HTTP/2.0 403 Forbidden\r\n\r\n{}",
+            "HTTP/2.0 500 Error\r\n\r\n{}",
+            "网络断开",
+        ] {
+            let 错误 = 校验执行输出("查询阶段", "gh", &参数, 输出(内容, Some(1)))
+                .err()
+                .unwrap();
+            assert!(错误.消息.contains("查询阶段 失败（退出码 1）"));
+            assert!(错误.消息.contains("权限拒绝"));
+        }
+        assert!(
+            校验执行输出(
+                "上传阶段",
+                "npx",
+                &参数,
+                输出("HTTP/2.0 404 Not Found\r\n\r\n{}", Some(1))
+            )
+            .is_err()
+        );
+        assert!(
+            校验执行输出("上传阶段", "gh", &参数, 输出("", None))
+                .err()
+                .unwrap()
+                .消息
+                .contains("信号终止")
+        );
     }
 }

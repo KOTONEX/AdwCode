@@ -72,3 +72,6 @@ pub mod 宿主测试;
 
 #[path = "运行工具.rs"]
 pub mod 运行工具;
+
+#[path = "发布执行.rs"]
+mod 发布执行;
