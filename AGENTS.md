@@ -6,10 +6,9 @@
 
 1. 先运行 `git status --short`，区分已有改动、暂存内容与未跟踪文件；不要覆盖或
    顺手提交与任务无关的内容。版本读取 `package.json`，提交状态读取 Git。
-2. 阅读本文件；按任务查阅 [架构与状态](文档/03-架构与实现状态.md)、
-   [开发与验证](文档/04-开发验证与发布.md)。后续功能候选见
-   [待办清单](文档/02-待办清单.md)，按需查阅；实现与审查记录见
-   [外观实现与验收](文档/05-外观实现与验收.md)，不要把其他候选功能当成已实现功能。
+2. 阅读本文件，按 [文档目录](文档/README.md) 选择当前说明：
+   [架构](文档/开发/架构.md)、[开发验证](文档/开发/开发验证.md)、[发布](文档/开发/发布.md)。
+   [路线图](文档/开发/路线图.md) 仅记录候选；`文档/历史/` 是阶段记录，不能当成当前操作说明。
 3. 完成任务后说明改动范围、验证结果和已知限制。涉及重载、推送或发布时，
    遵循当前任务的授权范围。
 
@@ -71,26 +70,9 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 
 ## 目录
 
-- `源码/库/调色板.rs` —— libadwaita 1.10 变量、强调色、颜色合成工具
-- `源码/库/界面映射.rs` —— VS Code 颜色键到 Adwaita 角色的映射
-- `源码/库/语法映射.rs` —— GtkSourceView 样式名到 TextMate 作用域的映射
-- `源码/库/主题生成.rs` / `源码/库/打包.rs` / `源码/库/更新默认数据.rs`
-- `源码/库/变更日志.rs` —— 从 Git 版本标签和提交标题生成变更日志与发布说明
-- `源码/库/发布上传.rs` —— 本地与 CI 共用的 Release 附件/市场发布编排
-- `源码/库/发布策略.rs`、`源码/库/验证设置.rs` —— 发布权限与清单设置验证，回归由 Cargo 执行
-- `源码/库/命令.rs`、`源码/程序/主程序.rs` —— `adwcode` 子命令与二进制入口
-- 单元测试与模块内联，运行 `cargo test`
-- `源码/GtkSourceView方案/` —— 随附的 GtkSourceView 方案（LGPL-2.1+）
-- `源码/VSCode默认数据/` —— 随附的 VS Code 默认数据与键表（MIT）
-- `主题/` —— 生成的主题 JSON，已提交，便于符号链接安装从克隆即可使用
-- `资产/` —— 原创扩展图标 PNG、来源与设计说明；制作方式见 `资产/README.md`
-- `产品图标/`、`附加外观/`、`扩展/`；`附加外观/窗口状态.ts` 只同步窗口状态
-- `类型声明/`、`tsconfig.json` —— 全部 TS 的严格编译配置与手写最小类型面
-- `Cargo.toml`、`rust-toolchain.toml` —— Rust 工作区与稳定渠道工具链
-- `基准/` —— Linux 性能基准，运行方式见其 README，测量结果见
-  [性能测试](文档/07-性能测试.md)
-- `文档/01-第三方许可证.md` —— 第三方登记；`adwcode` 是统一命令入口
-- `文档/06-产品图标陈列.md` —— 实际使用的字形、缩略图与标识；图标映射变化时同步更新
+目录与模块职责统一见 [架构](文档/开发/架构.md#目录与语言边界)。
+图标调整查 [产品图标维护](产品图标/README.md) 与 [字形陈列](文档/参考/产品图标陈列.md)，
+第三方引入查 [许可证登记](文档/参考/第三方许可证.md)，基准查 [运行说明](基准/README.md)。
 
 ## 约定
 
@@ -123,36 +105,13 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 
 ## 常用命令
 
-Rust 工具链由 `rust-toolchain.toml` 选择 `stable`；开发前执行 `rustup update stable`，再运行 `cargo build`。命令统一由
-`adwcode` 提供，开发期用 `cargo run --quiet -- <子命令>`，发布产物用
-`./target/release/adwcode <子命令>`。
+命令表和参数入口见 [开发验证](文档/开发/开发验证.md#常用命令)，发布命令见
+[发布](文档/开发/发布.md)。统一 CLI 为 `adwcode`：开发期使用
+`cargo run --quiet -- <子命令>`，release 构建后用 `./target/release/adwcode <子命令>`。
 
-- 独立宿主测试（临时配置与工作区，不重载当前窗口）：`cargo run --quiet -- 宿主测试`
-- 完整检查（cargo fmt/clippy/test、校验、TS 编译、Node 语法与离线测试）：`cargo run --quiet -- 检查`
-- 格式化全部 Rust 源码：`cargo run --quiet -- 格式化`
-- 类型检查（cargo check 与 tsc）：`cargo run --quiet -- 类型检查`
-- 校验（产物注册、颜色格式、键覆盖、对比度和产品图标）：`cargo run --quiet -- 校验`
-- 验证清单默认设置、命令和工作区能力：`cargo run --quiet -- 验证设置`
-- 判断发布权限：`cargo run --quiet -- 发布策略 --引用 refs/tags/v<版本>`（CI 添加 `--输出 "$GITHUB_OUTPUT"`）
-- 校验并上传已打包版本：`cargo run --quiet -- 发布上传 --引用 refs/tags/v<版本> --目标 Release`
-  （`--预演` 只做本地校验；`--目标 市场` 仍受主线与令牌约束）
-- 构建主题并同步 `package.json`：`cargo run --quiet -- 主题`（`--监视` 添加调试标记）
-- 对照已安装的 VS Code 检查自定义 CSS：`cargo run --quiet -- 检查样式`
-- 按需运行离线性能基准：`cargo run --quiet -- 性能基准`（不属于常规完整检查；
-  独立工作台基准 `cargo run --quiet -- 工作台基准 --浏览器工具 <playwright 目录>`
-  另见 `基准/README.md`）
-- 打包 VSIX（需要最新稳定版 Node.js 与 TypeScript）：`cargo run --release --quiet -- 打包`
-- 自动生成变更日志：`cargo run --quiet -- 变更日志`
-- 预览当前版本发布说明：`cargo run --quiet -- 发布说明`
-- 刷新随附的 VS Code 数据与键表：`cargo run --quiet -- 更新默认数据`
-- 生成产品图标字体：`cargo run --quiet -- 生成自有字形`、`cargo run --quiet -- 生成导入字形`
-- 发布：推送 `v*` 标签后由 GitHub Actions 自动构建并上传 VSIX
-  （`.github/workflows/release.yml`，发布说明从 Git 提交范围生成；先校验标签与版本一致、产物与提交一致，
-  再跑静态检查与单元测试）；非主线或预发布版本只创建候选 Release。正式标签提交
-  已进入 `main` 且配置仓库 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一
-  VSIX 还会发布到 VS Code 扩展市场与 Open VSX（未配置时自动跳过）
-
-任何改动完成前都要跑 `cargo run --quiet -- 检查`。
+任何改动完成前都要跑 `cargo run --quiet -- 检查`。主题、字体等生成器修改后，
+同步生成产物并核对差异；涉及 CSS 时另跑 `检查样式`。真实宿主和工作台采用独立环境，
+不执行用户窗口重载。命令缺少必要环境时报告未完成，不将跳过当成验证成功。
 
 ## 提交
 
@@ -188,7 +147,7 @@ Rust 工具链由 `rust-toolchain.toml` 选择 `stable`；开发前执行 `rustu
 
 特例必须有外部规范、上游来源或本项目明确约定作为依据；习惯使用英文不是特例。
 新增或重命名时同步更新调用、清单、文档与测试，不随意翻译外部强制标识。
-升级迁移见 [中文接口迁移](文档/08-中文接口迁移.md)。
+用户升级见 [升级与旧接口](文档/使用/升级与旧接口.md)。
 
 项目自有目录及子目录必须采用简体中文。`.git`、`.github`、`.vscode`、`LICENSES`
 及工具生成的缓存、构建目录保留约定名称；第三方原始目录保留上游名称。

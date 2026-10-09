@@ -4,41 +4,22 @@
 libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参考 GNOME 的实际参数
 设计；配色与布局调整以可核对的上游取值和界面验证为依据。
 
-## 开发环境
+## 开发入口
 
-| 依赖 | 用途 |
-| --- | --- |
-| 最新稳定版 Rust（`rust-toolchain.toml` 使用 `stable`） | 生成主题、校验、打包与基准 |
-| 最新稳定版 Node.js 与 TypeScript 编译器 | 全部 TS 的严格编译、产物语法检查与离线测试 |
-| VS Code | 供 `cargo run --quiet -- 检查样式` 对照已安装的构建检查 `附加外观/*.css` |
-
-## 常用命令
-
-先按 [rustup](https://rustup.rs/) 安装 Rust（`rust-toolchain.toml` 选择 `stable`，
-包含 clippy/rustfmt），再安装最新稳定版 Node.js 与 TypeScript 编译器。
-每次开始开发前更新工具链，具体规范见 [工具链政策](AGENTS.md#工具链政策)：
+先按 [工具链政策](AGENTS.md#工具链政策) 准备最新稳定版 Rust、Node.js 与 TypeScript，
+再读 [开发验证](文档/开发/开发验证.md) 的命令和按改动验证表。完整检查统一为：
 
 ```sh
-rustup update stable
-npm install -g typescript@latest
-cargo build
-
-cargo run --quiet -- 主题          # 生成主题并同步清单
-cargo run --quiet -- 检查          # 完整检查：fmt/clippy/test、校验、TS 编译与离线测试
-cargo run --quiet -- 格式化        # cargo fmt
-cargo run --quiet -- 校验          # 主题与产品图标校验
-cargo run --quiet -- 打包          # 打包 VSIX
-cargo run --quiet -- 变更日志      # 自动生成变更日志
-cargo run --quiet -- 发布说明      # 预览当前版本发布说明
+cargo run --quiet -- 检查
 ```
 
-`package.json` 中保留了等价别名，`npm run 构建`、`npm run 校验`、`npm test`、
-`npm run 打包` 等与上面的命令一一对应。
+模块职责见 [架构](文档/开发/架构.md)，打包、CI、标签及上传见
+[发布](文档/开发/发布.md)。文档全貌见 [文档目录](文档/README.md)。
 
 ## 改动流程
 
-开始前阅读 [架构与实现状态](文档/03-架构与实现状态.md)，按
-[开发、验证与发布](文档/04-开发验证与发布.md) 选择检查方式。
+开始前阅读 [架构](文档/开发/架构.md)，按
+[开发验证](文档/开发/开发验证.md) 选择检查方式。
 自动化测试应使用独立环境，避免重载正在使用的工作窗口。扩展不监视文件，
 也不会自动重载。
 
@@ -64,7 +45,7 @@ cargo run --quiet -- 发布说明      # 预览当前版本发布说明
   自有目录及子目录必须采用简体中文；工具规定的 `.git`、`.github`、`.vscode`、
   `LICENSES`、生成的缓存与构建目录、VSIX 标准 `extension/` 根目录，以及第三方原始目录
   保留约定名称。目录更名须同步更新导入与路径引用、构建、打包、CI、测试和文档。
-  改名时同步更新调用、清单、文档与测试；详见 [中文接口迁移](文档/08-中文接口迁移.md)。
+  改名时同步更新调用、清单、文档与测试；详见 [升级与旧接口](文档/使用/升级与旧接口.md)。
 - 提交信息使用**简体中文类型前缀**（格式 `类型: 描述`，半角冒号 + 空格）：
 
   | 类型 | 用途 | 对应英文约定 |
@@ -84,10 +65,8 @@ cargo run --quiet -- 发布说明      # 预览当前版本发布说明
 - PR 描述请填写仓库自带的模板，逐项确认约束检查。
 - VSIX 产物不变的改动只提交与推送，不更新发布版本号、不打版本标签、不创建 Release。
   是否发布以实际打包内容的变化为依据，不因产生新提交而自动发布。
-- 发布：`package.json` 的 `version` 是版本号的唯一事实源；推送与清单版本一致的 `v<版本>`
-  标签后，GitHub Actions 会自动构建并上传 VSIX 到对应的 Release，变更日志及说明
-  从版本范围内的 Git 提交标题生成；配置 Secrets `VSCE_PAT`、`OVSX_PAT` 后，同一 VSIX 会同步发布到
-  VS Code 扩展市场与 Open VSX；未配置 Secrets 时只跳过市场发布。
+- 版本只以 `package.json` 为准；提交后的隔离安装按 [AGENTS.md](AGENTS.md#提交) 执行。
+  分支推送不会创建 Release，标签、候选／正式发布及市场权限见 [发布流程](文档/开发/发布.md)。
 
 ## 许可证
 
@@ -96,5 +75,5 @@ cargo run --quiet -- 发布说明      # 预览当前版本发布说明
 可选许可，使用者可任选其一；范围与全文见 [许可声明](许可声明.md)。
 
 第三方内容及其衍生部分保留原许可；引入前核对兼容性、署名和分发边界，在
-[第三方许可证](文档/01-第三方许可证.md) 登记。包含第三方内容的文件不能因
+[第三方许可证](文档/参考/第三方许可证.md) 登记。包含第三方内容的文件不能因
 其中的自有贡献提供双重许可而整体重新许可。
