@@ -8,7 +8,6 @@ use std::process::Command;
 use crate::错误::{工具错误, 结果};
 
 pub const 产物目录: &str = "builddir/脚本";
-pub const 编译器版本: &str = "7.0.2";
 
 fn 收集(目录: &Path, 文件: &mut Vec<PathBuf>) -> 结果<()> {
     crate::文件事务::校验普通路径(目录)?;
@@ -52,7 +51,10 @@ pub fn 产物文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
 
 fn 成功输出(根目录: &Path, 命令: &mut Command) -> 结果<String> {
     let 输出 = 命令.current_dir(根目录).output().map_err(|错误| {
-        工具错误::带来源("无法运行 tsc，请安装 TypeScript 7.0.2".to_string(), 错误)
+        工具错误::带来源(
+            "无法运行 tsc，请安装最新稳定版 TypeScript".to_string(),
+            错误,
+        )
     })?;
     let 文本 = format!(
         "{}{}",
@@ -68,6 +70,21 @@ fn 成功输出(根目录: &Path, 命令: &mut Command) -> 结果<String> {
     Ok(文本)
 }
 
+fn 校验稳定编译器(文本: &str) -> 结果<()> {
+    let 版本 = 文本
+        .trim()
+        .strip_prefix("Version ")
+        .and_then(|版本| semver::Version::parse(版本).ok())
+        .filter(|版本| 版本.pre.is_empty());
+    if 版本.is_none() {
+        return Err(工具错误::新(format!(
+            "需要最新稳定版 TypeScript，请更新编译器；当前输出：{}",
+            文本.trim()
+        )));
+    }
+    Ok(())
+}
+
 /// 只有全部文件编译成功，才更新产物并删除过时文件；失败不使用旧产物。
 pub fn 编译(根目录: &Path) -> 结果<Vec<PathBuf>> {
     let 文件 = 产物文件(根目录)?;
@@ -78,12 +95,7 @@ pub fn 编译(根目录: &Path) -> 结果<Vec<PathBuf>> {
     let mut 旧文件 = Vec::new();
     收集(&根目录.join(产物目录), &mut 旧文件)?;
     let 版本 = 成功输出(根目录, Command::new("tsc").arg("--version"))?;
-    if 版本.trim() != format!("Version {编译器版本}") {
-        return Err(工具错误::新(format!(
-            "需要 TypeScript {编译器版本}，当前为 {}",
-            版本.trim()
-        )));
-    }
+    校验稳定编译器(&版本)?;
     let 临时 = tempfile::Builder::new().prefix("adwcode-ts-").tempdir()?;
     成功输出(
         根目录,
@@ -134,6 +146,22 @@ pub fn 编译(根目录: &Path) -> 结果<Vec<PathBuf>> {
 #[cfg(test)]
 mod 测试 {
     use super::*;
+
+    #[test]
+    fn 稳定编译器不固定数字版本且拒绝预发布() {
+        for 文本 in ["Version 7.0.2\n", "Version 99.0.0\n"] {
+            校验稳定编译器(文本).unwrap();
+        }
+        for 文本 in [
+            "Version 7.1.0-dev.20261008",
+            "Version 7.1.0-beta",
+            "Version 7.1.0-rc",
+            "Version nightly",
+            "",
+        ] {
+            assert!(校验稳定编译器(文本).is_err());
+        }
+    }
 
     #[test]
     fn 编译成功替换产物但类型错误保留旧内容() {

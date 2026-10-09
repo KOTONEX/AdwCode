@@ -5,7 +5,6 @@
 name = "adwcode"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.99"
 description = "AdwCode 构建与打包工具"
 license = "AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later"
 publish = false

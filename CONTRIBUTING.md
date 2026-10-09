@@ -8,17 +8,19 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 
 | 依赖 | 用途 |
 | --- | --- |
-| Rust 1.99（`rust-toolchain.toml` 固定） | 生成主题、校验、打包与基准 |
-| Node.js 与 TypeScript 编译器 | 全部 TS 的严格编译、产物语法检查与离线测试 |
+| 最新稳定版 Rust（`rust-toolchain.toml` 使用 `stable`） | 生成主题、校验、打包与基准 |
+| 最新稳定版 Node.js 与 TypeScript 编译器 | 全部 TS 的严格编译、产物语法检查与离线测试 |
 | VS Code | 供 `cargo run --quiet -- 检查样式` 对照已安装的构建检查 `附加外观/*.css` |
 
 ## 常用命令
 
-先按 [rustup](https://rustup.rs/) 安装 Rust（`rust-toolchain.toml` 会自动拉取
-1.99.0 与 clippy/rustfmt），再安装 Node.js 与 TypeScript 编译器：
+先按 [rustup](https://rustup.rs/) 安装 Rust（`rust-toolchain.toml` 选择 `stable`，
+包含 clippy/rustfmt），再安装最新稳定版 Node.js 与 TypeScript 编译器。
+每次开始开发前更新工具链，具体规范见 [工具链政策](AGENTS.md#工具链政策)：
 
 ```sh
-npm install -g typescript@7.0.2
+rustup update stable
+npm install -g typescript@latest
 cargo build
 
 cargo run --quiet -- 主题          # 生成主题并同步清单

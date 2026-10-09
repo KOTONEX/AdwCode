@@ -1,5 +1,6 @@
-# rustup 工具链固定版本；CI 与本地读取本文件安装 clippy 与 rustfmt。
+# 跟随 Rust 最新稳定渠道；本地开始开发前执行 rustup update stable。
+# CI 与本地读取本文件安装 clippy 与 rustfmt。
 [toolchain]
-channel = "1.99.0"
+channel = "stable"
 components = ["clippy", "rustfmt"]
 profile = "minimal"

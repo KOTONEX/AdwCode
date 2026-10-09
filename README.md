@@ -65,7 +65,7 @@ code --install-extension AdwCode-<版本>.vsix
 ```
 
 也可以从源码构建（仓库中不包含 VSIX，构建产物会被 `.gitignore` 忽略；
-`adwcode 打包` 会打印生成的文件名；需要 Node.js 与 TypeScript 7.0.2）：
+`adwcode 打包` 会打印生成的文件名；需要最新稳定版 Node.js 与 TypeScript）：
 
 ```sh
 cargo run --quiet -- 主题              # 固定蓝色
@@ -186,7 +186,7 @@ AdwCode/
 ├── CONTRIBUTING.md              贡献指南
 ├── LICENSE                      AGPL-3.0 全文
 ├── Cargo.toml                   Rust 工作区与统一命令入口
-├── rust-toolchain.toml          固定 Rust 1.99 工具链
+├── rust-toolchain.toml          Rust stable 工具链
 ├── README.md                    本文件
 ├── package.json                 扩展清单，版本号唯一事实源
 ├── 源码/                         构建管线与可导入模块
@@ -219,9 +219,9 @@ AdwCode/
 | 依赖 | 要求 | 用途 |
 | --- | --- | --- |
 | VS Code | ≥ 1.100（`package.json` 的 `engines`） | 运行主题与扩展 |
-| Rust | 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt） | 构建、校验与打包 |
+| Rust | 最新稳定版（`rust-toolchain.toml` 使用 `stable`，含 clippy 与 rustfmt） | 构建、校验与打包 |
 | Git | 完整项目历史与版本标签 | 自动生成变更日志及打包；使用预先生成日志的源码导出副本可不带 Git |
-| Node.js 与 TypeScript 7.0.2 | 源码编译、打包与测试 | 安装已打包的扩展不需要另装编译器，扩展无额外运行时库依赖 |
+| 最新稳定版 Node.js 与 TypeScript | 源码编译、打包与测试 | 安装已打包的扩展不需要另装编译器，扩展无额外运行时库依赖 |
 | VS Code 安装目录写权限 | — | Custom CSS and JS Loader 注入自定义 CSS 的要求 |
 
 GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与产品图标可独立使用。
@@ -251,7 +251,7 @@ GNOME 系统跟随和扩展命令目前只在 Linux 上注册；颜色主题与�
 - [中文接口迁移](文档/08-中文接口迁移.md)：设置键、命令与脚本更名后的升级步骤。
 - [4.0 审查与迭代](文档/10-4.0审查与迭代.md)：完整代码审阅、四项迭代、二审修复和候选发布验收。
 
-需要 Rust 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt）：
+需要最新稳定版 Rust（`rust-toolchain.toml` 使用 `stable`，含 clippy 与 rustfmt）：
 
 ```sh
 cargo run --quiet -- 校验             # 产物注册、颜色格式、键覆盖与对比度
@@ -262,9 +262,10 @@ cargo run --quiet -- 更新默认数据      # 刷新 VS Code 默认主题数据
 cargo run --quiet -- 检查             # 格式化、clippy、单元测试与离线 JS 测试
 ```
 
-首次运行 `cargo build` 获取固定工具链并编译。Node.js 与 TypeScript 编译器用于
+开发前执行 `rustup update stable` 更新稳定工具链，再运行 `cargo build` 编译。Node.js 与 TypeScript 编译器用于
 全部 TypeScript 的严格编译、打包及离线测试，可在安装 Node.js 后执行
-`npm install -g typescript@7.0.2` 获取；完整检查为：
+`npm install -g typescript@latest` 获取；工具链始终跟随最新稳定版，
+具体要求见 [工具链政策](AGENTS.md#工具链政策)。完整检查为：
 
 ```sh
 cargo run --quiet -- 检查

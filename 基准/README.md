@@ -5,7 +5,7 @@
 
 ## 命令行与扩展逻辑
 
-需要完整 Git 历史与版本标签、Rust 工具链（`cargo build`）、Node.js、TypeScript 7.0.2、GNOME 的
+需要完整 Git 历史与版本标签、最新稳定版 Rust 工具链（先 `rustup update stable` 再 `cargo build`）、Node.js、TypeScript、GNOME 的
 `gsettings` 和可自动定位的本机 VS Code 样式表。找不到样式表时基准会失败，
 不把跳过校验记为成功样本：
 

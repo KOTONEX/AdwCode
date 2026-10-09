@@ -100,10 +100,11 @@ jobs:
       - name: 安装 Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "latest"
+          check-latest: true
 
       - name: 安装 TypeScript
-        run: npm install -g typescript@7.0.2
+        run: npm install -g typescript@latest
 
       - name: 完整检查
         if: steps.reuse.outputs['产物'] == ''

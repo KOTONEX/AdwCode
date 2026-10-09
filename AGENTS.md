@@ -40,7 +40,34 @@
 VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生成。
 目标是让 VS Code 看起来像原生 GNOME 应用（尤其是 GNOME Builder）。
 
-需要 Rust 1.99（`rust-toolchain.toml` 固定，含 clippy 与 rustfmt）；TypeScript 脚本编译、产物语法检查和离线测试需要 Node.js 与 TypeScript 7.0.2。
+需要最新稳定版 Rust（`rust-toolchain.toml` 使用 `stable`，含 clippy 与 rustfmt）、Node.js 和 TypeScript；脚本编译、产物语法检查和离线测试使用同一工具链政策。
+
+## 工具链政策
+
+- 本地开发、检查、打包及 CI 始终使用上游最新稳定版工具链，不固定 Rust、
+  Node.js 或 TypeScript 的数字版本；禁止以 beta、RC、nightly、dev 版本代替稳定版。
+  最新稳定版包括 Node.js 的最新正式发行版，不限于 LTS。
+- Rust 通过 `rust-toolchain.toml` 的 `channel = "stable"` 选择；每次开始开发前运行
+  `rustup update stable`。已有 stable 安装不会仅因执行 cargo 自动更新，不能把
+  渠道配置视为已完成更新。不声明旧编译器的支持范围或添加固定版本门槛。
+- Node.js 通过所用版本管理器或包管理器更新到最新正式版；CI 使用
+  `node-version: "latest"` 与 `check-latest: true`。
+  TypeScript 使用 npm 的稳定标签 `typescript@latest`，不使用 `next`、beta 或 RC。
+  本地用 npm 安装时运行 `npm install -g typescript@latest`；由其他包管理器管理时，
+  通过该管理器更新，并核对其版本与 npm 的 `latest` 一致。
+- 开发前核对 `rustc --version`、`cargo --version`、`node --version`、`tsc --version`；
+  必要时用 `npm view typescript@latest version` 核对稳定编译器版本。常规编译与打包
+  不访问版本服务或擅自升级全局环境，工具链更新在准备阶段完成。
+- 最新稳定版引入不兼容时，应修复代码、类型声明或配置并运行完整检查，不通过
+  回退或重新固定旧工具链绕过问题。验收与基准记录当次实际版本；同一源码、
+  同一工具链下验证打包确定性，不承诺不同编译器产物逐字节一致。
+- `Cargo.lock` 和第三方库版本管理继续用于依赖解析；`edition = "2024"` 与 TS 的
+  `target`、模块解析配置属于语言及运行兼容性约定，不是工具链版本锁定。
+  Cargo 要求 Edition 显式使用合法值，不能写 `latest`；上游发布新 Edition 后，
+  以最新稳定编译器验证迁移再更新，不省略字段退回旧 Edition。
+- 官方渠道说明见 [Rust stable 与更新](https://rust-lang.github.io/rustup/basics.html)、
+  [Node.js latest](https://github.com/actions/setup-node#supported-version-syntax) 和
+  [TypeScript 安装](https://www.typescriptlang.org/download/)。
 
 ## 目录
 
@@ -59,7 +86,7 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 - `资产/` —— 原创扩展图标 PNG、来源与设计说明；制作方式见 `资产/README.md`
 - `产品图标/`、`附加外观/`、`扩展/`；`附加外观/窗口状态.ts` 只同步窗口状态
 - `类型声明/`、`tsconfig.json` —— 全部 TS 的严格编译配置与手写最小类型面
-- `Cargo.toml`、`rust-toolchain.toml` —— Rust 工作区与固定工具链
+- `Cargo.toml`、`rust-toolchain.toml` —— Rust 工作区与稳定渠道工具链
 - `基准/` —— Linux 性能基准，运行方式见其 README，测量结果见
   [性能测试](文档/07-性能测试.md)
 - `文档/01-第三方许可证.md` —— 第三方登记；`adwcode` 是统一命令入口
@@ -96,7 +123,7 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 
 ## 常用命令
 
-Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。命令统一由
+Rust 工具链由 `rust-toolchain.toml` 选择 `stable`；开发前执行 `rustup update stable`，再运行 `cargo build`。命令统一由
 `adwcode` 提供，开发期用 `cargo run --quiet -- <子命令>`，发布产物用
 `./target/release/adwcode <子命令>`。
 
@@ -114,7 +141,7 @@ Rust 工具链由 `rust-toolchain.toml` 固定；首次运行 `cargo build`。�
 - 按需运行离线性能基准：`cargo run --quiet -- 性能基准`（不属于常规完整检查；
   独立工作台基准 `cargo run --quiet -- 工作台基准 --浏览器工具 <playwright 目录>`
   另见 `基准/README.md`）
-- 打包 VSIX（需要 Node.js 与 TypeScript 7.0.2）：`cargo run --release --quiet -- 打包`
+- 打包 VSIX（需要最新稳定版 Node.js 与 TypeScript）：`cargo run --release --quiet -- 打包`
 - 自动生成变更日志：`cargo run --quiet -- 变更日志`
 - 预览当前版本发布说明：`cargo run --quiet -- 发布说明`
 - 刷新随附的 VS Code 数据与键表：`cargo run --quiet -- 更新默认数据`
