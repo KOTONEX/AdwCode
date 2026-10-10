@@ -280,7 +280,7 @@ fn 校验执行输出(
 /// 严格标签、干净的打包源文件及现有 VSIX 校验后，才运行外部发布工具。
 pub fn 入口(根目录: &Path, 输入: &[String]) -> 结果<()> {
     let (引用, 目标, 预演) = 解析参数(输入)?;
-    let 策略 = 判断发布(根目录, &引用, "refs/remotes/origin/main")?;
+    let 策略 = 判断发布(根目录, &引用, "refs/remotes/origin/主线")?;
     if 目标 == 发布目标::市场 && !策略.市场 {
         return Err(工具错误::新("此标签不允许市场发布"));
     }
@@ -600,10 +600,10 @@ mod 测试 {
         // CI 通常以分离 HEAD 检出；本地 clone 不会自动复制来源仓库的远端引用。
         let 主线 = crate::变更日志::执行git(
             &源码,
-            &["rev-parse", "--verify", "refs/remotes/origin/main"],
+            &["rev-parse", "--verify", "refs/remotes/origin/主线"],
         )
         .unwrap();
-        git(&["update-ref", "refs/remotes/origin/main", 主线.trim()]);
+        git(&["update-ref", "refs/remotes/origin/主线", 主线.trim()]);
         git(&["config", "user.name", "离线测试"]);
         git(&["config", "user.email", "test@example.invalid"]);
         git(&["config", "commit.gpgsign", "false"]);

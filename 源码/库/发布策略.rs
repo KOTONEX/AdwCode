@@ -109,7 +109,7 @@ fn 解析参数(参数: &[String]) -> 结果<(String, Option<PathBuf>)> {
 /// `adwcode 发布策略 --引用 refs/... [--输出 路径]`；输出文件按 Actions 协议追加。
 pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
     let (引用, 输出) = 解析参数(参数)?;
-    let 策略 = 判断发布(根目录, &引用, "refs/remotes/origin/main")?;
+    let 策略 = 判断发布(根目录, &引用, "refs/remotes/origin/主线")?;
     if let Some(输出) = 输出 {
         std::fs::OpenOptions::new()
             .create(true)
@@ -131,7 +131,7 @@ mod 测试 {
     fn 新建仓库() -> tempfile::TempDir {
         let 目录 = tempfile::tempdir().unwrap();
         for 参数 in [
-            vec!["init", "-b", "main"],
+            vec!["init", "-b", "主线"],
             vec!["config", "user.name", "离线测试"],
             vec!["config", "user.email", "test@example.invalid"],
             vec!["config", "commit.gpgsign", "false"],
@@ -143,7 +143,7 @@ mod 测试 {
         执行git(目录.path(), &["commit", "-m", "主线基线"]).unwrap();
         执行git(
             目录.path(),
-            &["update-ref", "refs/remotes/origin/main", "HEAD"],
+            &["update-ref", "refs/remotes/origin/主线", "HEAD"],
         )
         .unwrap();
         目录
@@ -161,7 +161,7 @@ mod 测试 {
     fn 真实仓库覆盖主线分支标签与预发布() {
         let 临时 = 新建仓库();
         let 根 = 临时.path();
-        let 判断 = |引用| 判断发布(根, 引用, "refs/remotes/origin/main").unwrap();
+        let 判断 = |引用| 判断发布(根, 引用, "refs/remotes/origin/主线").unwrap();
         assert_eq!(
             判断("refs/tags/v4.1.0"),
             发布判断 {
@@ -170,8 +170,8 @@ mod 测试 {
                 市场: true
             }
         );
-        assert!(!判断("refs/heads/main").市场);
-        assert!(判断发布(根, "refs/tags/v4.0.1", "refs/remotes/origin/main").is_err());
+        assert!(!判断("refs/heads/主线").市场);
+        assert!(判断发布(根, "refs/tags/v4.0.1", "refs/remotes/origin/主线").is_err());
         执行git(根, &["checkout", "-b", "rust"]).unwrap();
         执行git(根, &["commit", "--allow-empty", "-m", "分支迭代"]).unwrap();
         assert_eq!(
@@ -183,14 +183,14 @@ mod 测试 {
             }
         );
         assert!(判断发布(根, "refs/tags/v4.1.0", "refs/heads/不存在").is_err());
-        执行git(根, &["update-ref", "refs/remotes/origin/main", "HEAD"]).unwrap();
+        执行git(根, &["update-ref", "refs/remotes/origin/主线", "HEAD"]).unwrap();
         assert!(判断("refs/tags/v4.1.0").市场);
         写版本(根, "4.1.0-beta.1+构建");
         assert!(
             判断发布(
                 根,
                 "refs/tags/v4.1.0-beta.1+构建",
-                "refs/remotes/origin/main"
+                "refs/remotes/origin/主线"
             )
             .is_err()
         );
@@ -214,7 +214,7 @@ mod 测试 {
             r#"{"version":"4.1.0\n市场=true"}"#,
         ] {
             std::fs::write(根.join("package.json"), 内容).unwrap();
-            assert!(判断发布(根, "refs/heads/main", "refs/remotes/origin/main").is_err());
+            assert!(判断发布(根, "refs/heads/主线", "refs/remotes/origin/主线").is_err());
         }
         写版本(根, "4.1.0");
         let 输出 = 根.join("输出");
@@ -242,22 +242,22 @@ mod 测试 {
             )
             .is_err()
         );
-        执行git(根, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+        执行git(根, &["update-ref", "-d", "refs/remotes/origin/主线"]).unwrap();
         let 之前 = std::fs::read(&输出).unwrap();
         assert!(入口(根, &参数).is_err());
         assert_eq!(std::fs::read(&输出).unwrap(), 之前);
         let 提交 = 执行git(根, &["rev-parse", "HEAD"]).unwrap();
         std::fs::write(根.join(".git/shallow"), 提交).unwrap();
         assert!(
-            判断发布(根, "refs/heads/main", "HEAD")
+            判断发布(根, "refs/heads/主线", "HEAD")
                 .unwrap_err()
                 .消息
                 .contains("完整 Git 历史")
         );
-        assert!(判断发布(Path::new("/不存在的仓库"), "refs/heads/main", "HEAD").is_err());
+        assert!(判断发布(Path::new("/不存在的仓库"), "refs/heads/主线", "HEAD").is_err());
         let 非仓库 = tempfile::tempdir().unwrap();
         写版本(非仓库.path(), "4.1.0");
-        assert!(判断发布(非仓库.path(), "refs/heads/main", "HEAD").is_err());
+        assert!(判断发布(非仓库.path(), "refs/heads/主线", "HEAD").is_err());
     }
 
     #[test]
@@ -270,7 +270,7 @@ mod 测试 {
             vec!["--引用", "refs/heads/rust", "多余"],
             vec!["--引用", "refs/heads/rust", "--输出"],
             vec!["--引用", "--输出"],
-            vec!["--引用", "refs/heads/rust", "--引用", "refs/heads/main"],
+            vec!["--引用", "refs/heads/rust", "--引用", "refs/heads/主线"],
             vec!["--引用", "refs/heads/rust", "--输出", "a", "--输出", "b"],
         ] {
             assert!(解析参数(&参数.into_iter().map(str::to_string).collect::<Vec<_>>()).is_err());

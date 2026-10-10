@@ -4,7 +4,7 @@ name: 持续集成
 
 on:
   push:
-    branches: [main, rust]
+    branches: ["主线", rust]
   pull_request:
   workflow_dispatch:
 

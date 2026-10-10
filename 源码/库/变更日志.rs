@@ -501,7 +501,7 @@ mod 仓库测试 {
             let 输出 = Command::new("git")
                 .args([
                     "-c",
-                    "init.defaultBranch=main",
+                    "init.defaultBranch=主线",
                     "-c",
                     "user.name=测试",
                     "-c",
@@ -578,7 +578,7 @@ mod 仓库测试 {
         仓库.git(&["checkout", "--quiet", "-b", "feature"]);
         仓库.提交("新增: 分支功能");
         仓库.git(&["tag", "v9.0.0"]);
-        仓库.git(&["checkout", "--quiet", "main"]);
+        仓库.git(&["checkout", "--quiet", "主线"]);
         仓库.提交("修复: 主线问题");
         仓库.git(&[
             "merge",

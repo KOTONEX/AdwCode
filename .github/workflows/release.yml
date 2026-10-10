@@ -5,7 +5,7 @@ name: 发布
 # 推送与清单版本一致的 v<版本> 标签时：校验 → 测试 → 打包 → 上传到对应 Release。
 # 仓库中不保存 VSIX，构建产物只作为 Release 附件发布。
 # 变更日志与发布说明按 Git 版本标签和提交标题自动生成；配置 VSCE_PAT / OVSX_PAT 后
-# 只有标签提交已进入 main 且版本不是预发布时，同一 VSIX 才会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
+# 只有标签提交已进入主线且版本不是预发布时，同一 VSIX 才会同步发布到 VS Code 扩展市场与 Open VSX（缺失时跳过）。
 on:
   push:
     tags:
@@ -44,7 +44,7 @@ jobs:
           记录 = 请求(f'repos/{仓库}/actions/workflows/ci.yml/runs?head_sha={提交}&event=push&status=success&per_page=100')
           运行, 产物 = '', ''
           for 项 in 记录['workflow_runs']:
-              if (项['head_sha'] != 提交 or 项['head_branch'] not in ['main', 'rust']
+              if (项['head_sha'] != 提交 or 项['head_branch'] not in ['主线', 'rust']
                   or 项['event'] != 'push' or 项['conclusion'] != 'success'
                   or 项['head_repository']['full_name'] != 仓库):
                   continue

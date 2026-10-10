@@ -96,6 +96,7 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
   JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
 - VSIX 产物不变的改动只提交与推送，不更新发布版本号、不打版本标签、不创建 Release。
   是否发布以实际打包内容的变化为依据，不因产生新提交而自动发布。
+- 默认开发分支为 `主线`，远端跟踪引用为 `origin/主线`；CI 和发布策略使用该名称。
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
   `.github/workflows/release.yml`。
 - 不手工维护 `CHANGELOG.md`；提交标题与主线上的版本标签是日志输入。

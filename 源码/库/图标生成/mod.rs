@@ -101,7 +101,7 @@ pub fn 自有入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         版本: "Version 1.0",
         版权: "2026 AdwCode 贡献者",
         许可: "AGPL-3.0-or-later OR CC-BY-SA-4.0+；许可声明见 产品图标/LICENSE",
-        许可地址: "https://github.com/KOTONEX/AdwCode/blob/main/产品图标/LICENSE",
+        许可地址: "https://github.com/KOTONEX/AdwCode/blob/%E4%B8%BB%E7%BA%BF/产品图标/LICENSE",
     };
     let 字节 = 生成字体字节(&名称表, &轮廓表, &码点表, &描述)?;
     crate::文件事务::写入批次(&[(根目录.join("产品图标/adwcode-符号.ttf"), Some(字节))])?;
