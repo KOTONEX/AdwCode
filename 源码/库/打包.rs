@@ -3,7 +3,7 @@
 //! 把扩展打包为 .vsix（带 VS Code 清单的 zip）。
 //!
 //! TypeScript 脚本先严格编译，归档结构与 `vsce package` 生成的一致。
-//! 默认从完整 Git 历史生成日志；无 Git 的源码副本可显式提供预先生成的日志。
+//! 打包不读取提交历史；仅在显式指定时收录预先生成的变更日志。
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -280,13 +280,8 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
     let 清单 = 正则.replace_all(清单模板, |捕获: &regex::Captures<'_>| {
         替换[&捕获[1]].clone()
     });
-    // 正常打包读取完整 Git 历史；无 Git 的导出副本须显式提供已生成日志。
-    let 日志 = if let Some(路径) = 变更日志路径 {
-        std::fs::read_to_string(路径)?
-    } else {
-        crate::变更日志::生成变更日志(根目录)?
-    };
-    if 日志.trim().is_empty() {
+    let 日志 = 变更日志路径.map(std::fs::read_to_string).transpose()?;
+    if 日志.as_ref().is_some_and(|日志| 日志.trim().is_empty()) {
         return Err(工具错误::新("用于打包的变更日志为空"));
     }
     let 输出 = std::path::absolute(输出)?;
@@ -310,12 +305,14 @@ pub fn 构建(根目录: &Path, 输出: &Path, 变更日志路径: Option<&Path>
     归档
         .write_all(清单.as_bytes())
         .map_err(|错误| 工具错误::新(format!("写入归档失败：{错误}")))?;
-    归档
-        .start_file("extension/CHANGELOG.md", 选项)
-        .map_err(|错误| 工具错误::新(format!("写入归档失败：{错误}")))?;
-    归档
-        .write_all(日志.as_bytes())
-        .map_err(|错误| 工具错误::新(format!("写入归档失败：{错误}")))?;
+    if let Some(日志) = 日志 {
+        归档
+            .start_file("extension/CHANGELOG.md", 选项)
+            .map_err(|错误| 工具错误::新(format!("写入归档失败：{错误}")))?;
+        归档
+            .write_all(日志.as_bytes())
+            .map_err(|错误| 工具错误::新(format!("写入归档失败：{错误}")))?;
+    }
     for 路径 in &文件 {
         let 相对 = 路径
             .strip_prefix(根目录)
@@ -397,7 +394,6 @@ mod 测试 {
         for 必需 in [
             "[Content_Types].xml",
             "extension.vsixmanifest",
-            "extension/CHANGELOG.md",
             "extension/package.json",
             "extension/builddir/脚本/扩展/扩展.js",
             "extension/builddir/脚本/附加外观/窗口状态.js",
@@ -407,6 +403,7 @@ mod 测试 {
         ] {
             assert!(条目.contains(&必需.to_string()), "缺少 {必需}");
         }
+        assert!(!条目.contains(&"extension/CHANGELOG.md".to_owned()));
         assert!(
             !条目.iter().any(|名字| 名字.ends_with(".py")),
             "打包不应包含 Python 文件"
@@ -545,7 +542,7 @@ mod 测试 {
     }
 
     #[test]
-    fn 空日志与缺少历史时拒绝打包() {
+    fn 无git打包不需要日志且显式空日志仍拒绝() {
         let 仓库 = 临时仓库::新建("日志");
         仓库.写清单(
             r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","displayName":"AdwCode","description":"测试","engines":{"vscode":"^1.100.0"}}"#,
@@ -554,8 +551,57 @@ mod 测试 {
         std::fs::write(&空日志, "  \n").expect("写入空日志");
         let 错误 = 构建(&仓库.目录, &仓库.目录.join("测试.vsix"), Some(&空日志)).unwrap_err();
         assert!(错误.消息.contains("为空"), "{}", 错误.消息);
-        // 无 Git 的副本必须显式提供日志，否则读取历史失败。
-        let 错误 = 构建(&仓库.目录, &仓库.目录.join("测试.vsix"), None).unwrap_err();
-        assert!(错误.消息.contains("读取 Git 历史失败"), "{}", 错误.消息);
+        let 输出 = 仓库.目录.join("测试.vsix");
+        构建(&仓库.目录, &输出, None).unwrap();
+        let mut 归档 = zip::ZipArchive::new(std::fs::File::open(输出).unwrap()).unwrap();
+        assert!(归档.by_name("extension/CHANGELOG.md").is_err());
+    }
+
+    #[test]
+    fn 无标签浅克隆与无git源码产生相同开发包() {
+        let 仓库 = 临时仓库::新建("浅克隆");
+        仓库.写清单(
+            r#"{"name":"AdwCode","version":"1.1.0","publisher":"测试","engines":{"vscode":"^1.100.0"}}"#,
+        );
+        let git = |参数: &[&str]| crate::变更日志::执行git(&仓库.目录, 参数).unwrap();
+        git(&["init", "--quiet"]);
+        git(&["config", "user.name", "离线测试"]);
+        git(&["config", "user.email", "test@example.invalid"]);
+        git(&["config", "commit.gpgsign", "false"]);
+        git(&["add", "package.json"]);
+        git(&["commit", "--quiet", "-m", "测试清单"]);
+        git(&["tag", "v1.1.0"]);
+        git(&["commit", "--quiet", "--allow-empty", "-m", "后继提交"]);
+        let 副本 = tempfile::tempdir().unwrap();
+        let 浅克隆 = 副本.path().join("浅克隆");
+        git(&[
+            "clone",
+            "--quiet",
+            "--depth",
+            "1",
+            "--no-tags",
+            &format!("file://{}", 仓库.目录.display()),
+            浅克隆.to_str().unwrap(),
+        ]);
+        assert_eq!(
+            crate::变更日志::执行git(&浅克隆, &["rev-parse", "--is-shallow-repository"])
+                .unwrap()
+                .trim(),
+            "true"
+        );
+        assert!(
+            crate::变更日志::执行git(&浅克隆, &["tag"])
+                .unwrap()
+                .trim()
+                .is_empty()
+        );
+        let 浅包 = 副本.path().join("浅克隆.vsix");
+        构建(&浅克隆, &浅包, None).unwrap();
+        let 导出 = 副本.path().join("导出");
+        std::fs::create_dir(&导出).unwrap();
+        std::fs::copy(浅克隆.join("package.json"), 导出.join("package.json")).unwrap();
+        let 导出包 = 副本.path().join("导出.vsix");
+        构建(&导出, &导出包, None).unwrap();
+        assert_eq!(std::fs::read(浅包).unwrap(), std::fs::read(导出包).unwrap());
     }
 }

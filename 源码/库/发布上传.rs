@@ -318,7 +318,9 @@ pub fn 入口(根目录: &Path, 输入: &[String]) -> 结果<()> {
     crate::文件事务::校验普通路径(&包)?;
     let 临时 = tempfile::tempdir()?;
     let 校验包 = 临时.path().join("校验.vsix");
-    crate::打包::构建(根目录, &校验包, None)?;
+    let 日志路径 = 临时.path().join("CHANGELOG.md");
+    std::fs::write(&日志路径, crate::变更日志::生成变更日志(根目录)?)?;
+    crate::打包::构建(根目录, &校验包, Some(&日志路径))?;
     if std::fs::read(&校验包)? != std::fs::read(&包)? {
         return Err(工具错误::新("VSIX 与当前标签源码不一致，请先重新打包"));
     }
@@ -617,7 +619,17 @@ mod 测试 {
         let 输入 = 参数(&["--引用", "refs/tags/v99.0.0", "--目标", "Release", "--预演"]);
         assert!(入口(&根, &输入).is_err()); // 包缺失。
         let 包 = 根.join("AdwCode-99.0.0.vsix");
+        // 普通开发包不包含历史日志，正式上传必须拒绝。
         crate::打包::构建(&根, &包, None).unwrap();
+        assert!(
+            入口(&根, &输入)
+                .unwrap_err()
+                .消息
+                .contains("VSIX 与当前标签源码不一致")
+        );
+        let 日志路径 = 临时.path().join("CHANGELOG.md");
+        std::fs::write(&日志路径, crate::变更日志::生成变更日志(&根).unwrap()).unwrap();
+        crate::打包::构建(&根, &包, Some(&日志路径)).unwrap();
         入口(&根, &输入).unwrap(); // 无 gh/npx/HTTP 调用。
         std::fs::write(根.join(".vscode/settings.json"), "用户私有配置").unwrap();
         入口(&根, &输入).unwrap(); // 不参与打包的用户配置可保留。

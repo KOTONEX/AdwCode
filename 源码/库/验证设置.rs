@@ -58,10 +58,19 @@ pub fn 校验清单(清单: &Value) -> 结果<()> {
         默认图标.is_some_and(|值| 图标.iter().any(|图标| 图标["id"].as_str() == Some(值))),
         "默认产品图标必须已注册",
     )?;
-    要求(
-        默认.get("window.menuBarVisibility") == Some(&json!("compact")),
-        "菜单默认值应为 compact",
-    )?;
+    let 推荐 = json!({
+        "window.menuBarVisibility": "compact",
+        "window.autoDetectHighContrast": true,
+        "window.titleBarStyle": "custom",
+        "window.controlsStyle": "native"
+    });
+    要求(清单["推荐设置"] == 推荐, "应用级推荐设置缺失或无效")?;
+    for 键 in 推荐.as_object().unwrap().keys() {
+        要求(
+            !默认.contains_key(键),
+            &format!("应用级设置不能注册为扩展默认值：{键}"),
+        )?;
+    }
     要求(
         默认.get("editor.fontFamily") == Some(&json!("Adwaita Mono, monospace")),
         "编辑器字体默认值",
@@ -164,10 +173,11 @@ mod 测试 {
                 "/contributes/configurationDefaults/workbench.preferredHighContrastColorTheme",
                 json!("未注册"),
             ),
-            (
-                "/contributes/configurationDefaults/window.menuBarVisibility",
-                json!("hidden"),
-            ),
+            ("/推荐设置/window.menuBarVisibility", json!("hidden")),
+            ("/推荐设置/window.autoDetectHighContrast", json!(false)),
+            ("/推荐设置/window.titleBarStyle", json!("native")),
+            ("/推荐设置/window.controlsStyle", json!("custom")),
+            ("/推荐设置", Value::Null),
             (
                 "/contributes/configurationDefaults/editor.fontFamily",
                 json!("monospace"),
@@ -195,6 +205,11 @@ mod 测试 {
         let mut 清单 = 当前清单();
         清单["contributes"]["configurationDefaults"]["workbench.iconTheme"] = Value::Null;
         assert!(校验清单(&清单).is_err());
+        for 键 in 当前清单()["推荐设置"].as_object().unwrap().keys() {
+            let mut 清单 = 当前清单();
+            清单["contributes"]["configurationDefaults"][键] = 清单["推荐设置"][键].clone();
+            assert!(校验清单(&清单).is_err(), "应用级默认值未拒绝：{键}");
+        }
         for 路径 in ["/contributes/commands", "/contributes/menus/commandPalette"] {
             let mut 清单 = 当前清单();
             let 列表 = 清单.pointer_mut(路径).unwrap().as_array_mut().unwrap();

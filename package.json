@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "4.16.0",
+  "version": "4.17.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -54,12 +54,16 @@
     "性能基准": "cargo 开发 性能基准",
     "工作台基准": "cargo 开发 工作台基准"
   },
+  "推荐设置": {
+    "window.menuBarVisibility": "compact",
+    "window.autoDetectHighContrast": true,
+    "window.titleBarStyle": "custom",
+    "window.controlsStyle": "native"
+  },
   "contributes": {
     "configurationDefaults": {
-      "window.menuBarVisibility": "compact",
       "editor.fontFamily": "Adwaita Mono, monospace",
       "window.autoDetectColorScheme": true,
-      "window.autoDetectHighContrast": true,
       "workbench.preferredLightColorTheme": "AdwCode 浅色 · 彩色状态栏",
       "workbench.preferredDarkColorTheme": "AdwCode 深色",
       "workbench.preferredHighContrastLightColorTheme": "AdwCode 浅色 高对比度",
@@ -73,8 +77,6 @@
       "breadcrumbs.enabled": false,
       "scm.diffDecorations": "none",
       "window.commandCenter": true,
-      "window.titleBarStyle": "custom",
-      "window.controlsStyle": "native",
       "window.density.editorTabHeight": "compact",
       "workbench.tree.indent": 12,
       "workbench.editor.tabSizing": "shrink",

@@ -126,7 +126,9 @@ jobs:
           git diff --exit-code -- 主题 产品图标 package.json
 
       - name: 打包
-        run: ./target/release/adwcode 打包
+        run: |
+          ./target/release/adwcode 变更日志
+          ./target/release/adwcode 打包 --变更日志 builddir/CHANGELOG.md
 
       - name: 上传到 Release
         if: startsWith(github.ref, 'refs/tags/v')

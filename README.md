@@ -55,14 +55,19 @@ VS Code 最低版本以 [package.json](package.json) 的 `engines.vscode` 为准
 ## 从源码开发与构建
 
 日常版本控制使用 [Jujutsu](文档/开发/版本控制.md)，与现有 Git 仓库共置；
-构建需要完整 Git 历史与标签，以及最新稳定版 Rust、Node.js 和 TypeScript。
+构建需要最新稳定版 Rust、Node.js 和 TypeScript。普通编译与打包支持浅克隆、
+无标签仓库及无 Git 的源码目录；完整历史和版本标签只用于完整日志与发布校验。
 先按 [工具链政策](AGENTS.md#工具链政策) 准备环境，再运行：
 
 ```sh
 cargo 主题
-cargo 检查
-cargo run --release --quiet -- 打包
+cargo 打包
 ```
+
+开发仓库完成改动后另运行 `cargo 检查`；其中日志与发布回归测试使用完整 Git 副本。
+开发预览可运行 `cargo 预览`：从最新交付提交构建并打开全新窗口；仅匹配版本标签时
+安装到日常用户环境，其余提交使用独立配置。详见[提交预览](文档/开发/开发验证.md#提交预览)。
+相同提交与构建条件下复用已验证的 VSIX；`cargo 预览 --重新构建` 可强制重验。
 
 生成的 VSIX 位于仓库根目录，构建工具会打印文件名。Rust 开发工具位于 `源码/`；
 扩展、附加脚本、测试与基准以 TypeScript 维护，编译到 `builddir/脚本/`。
