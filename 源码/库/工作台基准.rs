@@ -163,6 +163,8 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         ("window.controlsStyle", json!("custom")),
         ("workbench.experimental.modernUI", json!(true)),
         ("window.density.layout", json!("default")),
+        ("workbench.layoutControl.type", json!("both")),
+        ("workbench.browser.showInTitleBar", json!(true)),
     ] {
         设置.insert(键.to_string(), 值);
     }

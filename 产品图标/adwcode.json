@@ -350,6 +350,114 @@
     "close": {
       "fontCharacter": "\\e306",
       "fontId": "adwcode-adwaita"
+    },
+    "add-compact": {
+      "fontCharacter": "\\e304",
+      "fontId": "adwcode-adwaita"
+    },
+    "beaker-compact": {
+      "fontCharacter": "\\e10f",
+      "fontId": "adwcode-builder"
+    },
+    "chevron-down-compact": {
+      "fontCharacter": "\\e318",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-left-compact": {
+      "fontCharacter": "\\e31a",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-right-compact": {
+      "fontCharacter": "\\e317",
+      "fontId": "adwcode-adwaita"
+    },
+    "chevron-up-compact": {
+      "fontCharacter": "\\e319",
+      "fontId": "adwcode-adwaita"
+    },
+    "close-compact": {
+      "fontCharacter": "\\e306",
+      "fontId": "adwcode-adwaita"
+    },
+    "close-small": {
+      "fontCharacter": "\\e306",
+      "fontId": "adwcode-adwaita"
+    },
+    "debug-alt-small": {
+      "fontCharacter": "\\e100",
+      "fontId": "adwcode-builder"
+    },
+    "error-compact": {
+      "fontCharacter": "\\e312",
+      "fontId": "adwcode-adwaita"
+    },
+    "folder-compact": {
+      "fontCharacter": "\\e315",
+      "fontId": "adwcode-adwaita"
+    },
+    "folder-opened-compact": {
+      "fontCharacter": "\\e316",
+      "fontId": "adwcode-adwaita"
+    },
+    "gear": {
+      "fontCharacter": "\\e302",
+      "fontId": "adwcode-adwaita"
+    },
+    "gear-compact": {
+      "fontCharacter": "\\e302",
+      "fontId": "adwcode-adwaita"
+    },
+    "git-branch-compact": {
+      "fontCharacter": "\\e103",
+      "fontId": "adwcode-builder"
+    },
+    "refresh-compact": {
+      "fontCharacter": "\\e303",
+      "fontId": "adwcode-adwaita"
+    },
+    "right-panel-hide": {
+      "fontCharacter": "\\ea0a",
+      "fontId": "adwaita-icons"
+    },
+    "right-panel-show": {
+      "fontCharacter": "\\ea09",
+      "fontId": "adwaita-icons"
+    },
+    "run-compact": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31d"
+    },
+    "search-compact": {
+      "fontCharacter": "\\e301",
+      "fontId": "adwcode-adwaita"
+    },
+    "settings": {
+      "fontCharacter": "\\e302",
+      "fontId": "adwcode-adwaita"
+    },
+    "settings-compact": {
+      "fontCharacter": "\\e302",
+      "fontId": "adwcode-adwaita"
+    },
+    "terminal-compact": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e31b"
+    },
+    "warning-compact": {
+      "fontCharacter": "\\e313",
+      "fontId": "adwcode-adwaita"
+    },
+    "layout": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e325"
+    },
+    "configure-layout-icon": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e325"
+    },
+    "globe": {
+      "fontId": "adwcode-adwaita",
+      "fontCharacter": "\\e326"
     }
   }
 }

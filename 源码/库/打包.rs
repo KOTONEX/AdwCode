@@ -106,15 +106,25 @@ pub fn 收集文件(根目录: &Path) -> 结果<Vec<PathBuf>> {
         }
     }
     if 根目录.join(".git").exists() {
-        let 输出 = std::process::Command::new("git")
-            .args(["ls-files", "-z"])
+        // 共置仓库的新文件可能已由 jj 跟踪，但还未进入 Git 的父提交或索引。
+        let (程序, 参数, 名称): (&str, &[&str], &str) = if 根目录.join(".jj").is_dir() {
+            (
+                "jj",
+                &["file", "list", "--template", r#"path ++ "\0""#],
+                "Jujutsu",
+            )
+        } else {
+            ("git", &["ls-files", "-z"], "Git")
+        };
+        let 输出 = std::process::Command::new(程序)
+            .args(参数)
             .current_dir(根目录)
             .output()?;
         if !输出.status.success() {
-            return Err(工具错误::新("无法读取 Git 打包文件清单"));
+            return Err(工具错误::新(format!("无法读取{名称}打包文件清单")));
         }
         let 文本 = String::from_utf8(输出.stdout)
-            .map_err(|_| 工具错误::新("Git 文件名不是 UTF-8"))?;
+            .map_err(|_| 工具错误::新(format!("{名称}文件名不是 UTF-8")))?;
         let 已跟踪: std::collections::HashSet<_> =
             文本.split('\0').map(|项| 根目录.join(项)).collect();
         文件.retain(|路径| 已跟踪.contains(路径));

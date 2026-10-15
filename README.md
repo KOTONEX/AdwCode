@@ -17,7 +17,7 @@ GtkSourceView 方案，界面采用固定蓝色强调色。可选 CSS 提供 GNO
 | `AdwCode 深色 高对比度` / `AdwCode 浅色 高对比度` | libadwaita 高对比度参数 |
 
 颜色主题覆盖界面、TextMate、语义高亮和 16 色终端。产品图标主题 `AdwCode`
-映射 79 个标识，未覆盖的标识沿用 Codicons；本项目不提供文件图标主题。
+映射 106 个标识，未覆盖的标识沿用 Codicons；本项目不提供文件图标主题。
 来源与再生成方式见 [产品图标说明](产品图标/README.md)，逐项预览见
 [产品图标陈列](文档/参考/产品图标陈列.md)。
 
@@ -54,7 +54,8 @@ VS Code 最低版本以 [package.json](package.json) 的 `engines.vscode` 为准
 
 ## 从源码开发与构建
 
-需要完整 Git 历史与标签，以及最新稳定版 Rust、Node.js 和 TypeScript。
+日常版本控制使用 [Jujutsu](文档/开发/版本控制.md)，与现有 Git 仓库共置；
+构建需要完整 Git 历史与标签，以及最新稳定版 Rust、Node.js 和 TypeScript。
 先按 [工具链政策](AGENTS.md#工具链政策) 准备环境，再运行：
 
 ```sh

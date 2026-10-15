@@ -209,6 +209,7 @@ async function 运行基准() {
             },
             appearanceChecks: [] as object[],
             几何检查: [] as object[],
+            产品图标检查: [] as object[],
             lifecycleChecks: undefined as
                 { lateStartup: boolean; disposed: boolean } | undefined,
         };
@@ -219,6 +220,51 @@ async function 运行基准() {
                     "\n",
             );
         保存(false);
+        const 图标定义 = (
+            JSON.parse(
+                fs.readFileSync(path.join(root, "产品图标/adwcode.json"), "utf8"),
+            ) as {
+                iconDefinitions: Record<string, { fontId: string; fontCharacter: string }>;
+            }
+        ).iconDefinitions;
+        const 标题栏图标 = ["configure-layout-icon", "globe"].map((标识) => ({
+            标识,
+            字体: 图标定义[标识].fontId,
+            字符: String.fromCodePoint(
+                parseInt(图标定义[标识].fontCharacter.slice(1), 16),
+            ),
+        }));
+        const 验证产品图标 = async () => {
+            const 检查 = await page.evaluate(async (列表) => {
+                await document.fonts.ready;
+                return 列表.map(({ 标识, 字体, 字符 }) => {
+                    const 元素 = document.querySelector<HTMLElement>(
+                        `.part.titlebar .codicon-${标识}`,
+                    );
+                    if (!元素) throw Error(`标题栏缺少产品图标：${标识}；实际图标：${JSON.stringify(
+                        [...document.querySelectorAll(".part.titlebar .codicon")].map(
+                            (元素) => ({ 类名: 元素.className, 标签: 元素.getAttribute("aria-label") }),
+                        ),
+                    )}`);
+                    const 样式 = getComputedStyle(元素, "::before");
+                    const 区域 = 元素.getBoundingClientRect();
+                    return {
+                        标识,
+                        字体: 样式.fontFamily,
+                        字符: 样式.content.slice(1, -1),
+                        字体匹配: 样式.fontFamily.includes(字体),
+                        字符匹配: 样式.content.slice(1, -1) === 字符,
+                        字体已加载: document.fonts.check(`${样式.fontSize} ${样式.fontFamily}`, 字符),
+                        可见: 区域.width > 0 && 区域.height > 0,
+                    };
+                });
+            }, 标题栏图标);
+            for (const 项 of 检查) {
+                assert.ok(项.字体匹配 && 项.字符匹配 && 项.字体已加载 && 项.可见,
+                    `标题栏产品图标未使用主题字形：${JSON.stringify(项)}`);
+            }
+            return 检查;
+        };
         const 读取指标 = async () =>
             Object.fromEntries(
                 (await session.send("Performance.getMetrics")).metrics.map(
@@ -491,6 +537,11 @@ async function 运行基准() {
                     几何.关闭可见 && 几何.仅关闭宽度,
                     `窗口按钮或标签布局异常：${JSON.stringify(几何)}`);
                 metadata.几何检查.push({ mode: themes[mode].type, 密度, ...几何 });
+                metadata.产品图标检查.push({
+                    mode: themes[mode].type,
+                    密度,
+                    图标: await 验证产品图标(),
+                });
             }
             for (const scenario of selectorsOnly
                 ? ["工作台非活动状态切换"]

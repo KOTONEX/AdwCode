@@ -4,6 +4,9 @@
 dist/
 *.vsix
 
+# Jujutsu 本地工作区与操作记录
+.jj/
+
 # 类型检查的本地缓存与依赖（node_modules 仅用于本地装 typescript 时）
 builddir/
 node_modules/

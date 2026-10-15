@@ -133,7 +133,7 @@ fn 导入字形分组与映射正确() {
     let 根 = 测试根();
     导入入口(根.path(), &[]).expect("生成导入字形");
     for (文件, 字形数, 映射数) in [
-        ("adwaita-symbols.ttf", 38, 37),
+        ("adwaita-symbols.ttf", 40, 39),
         ("builder-symbols.ttf", 26, 25),
         ("morewaita-symbols.ttf", 4, 3),
     ] {

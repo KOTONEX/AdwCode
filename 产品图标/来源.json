@@ -25,7 +25,8 @@
           "sha256": "7a0e3a3778cc62cb3ac5e4d0c56a14b16492a45308189ddd558cfc581f1d4b8c",
           "codepoint": "e301",
           "icons": [
-            "search"
+            "search",
+            "search-compact"
           ]
         },
         {
@@ -34,7 +35,11 @@
           "sha256": "8fafb24aa22074d2a1eb6572b1aafa542efcfcd559e716ab52babec654440818",
           "codepoint": "e302",
           "icons": [
-            "settings-gear"
+            "settings-gear",
+            "gear",
+            "gear-compact",
+            "settings",
+            "settings-compact"
           ]
         },
         {
@@ -43,7 +48,8 @@
           "sha256": "8ba496c8471418a4ada66942b8713af9477fc04af399821046f902260ae92ba0",
           "codepoint": "e303",
           "icons": [
-            "refresh"
+            "refresh",
+            "refresh-compact"
           ]
         },
         {
@@ -52,7 +58,8 @@
           "sha256": "5733eb7e96a2a35a5b419dfabc348670d89ea201afeff638c972112d79b4dc1e",
           "codepoint": "e304",
           "icons": [
-            "add"
+            "add",
+            "add-compact"
           ]
         },
         {
@@ -71,7 +78,9 @@
           "codepoint": "e306",
           "icons": [
             "close",
-            "chrome-close"
+            "chrome-close",
+            "close-compact",
+            "close-small"
           ]
         },
         {
@@ -180,7 +189,8 @@
           "sha256": "87c0ead9045f853c731747756b822d53a57ad6c13337f140d288be5e290f15d7",
           "codepoint": "e312",
           "icons": [
-            "error"
+            "error",
+            "error-compact"
           ]
         },
         {
@@ -189,7 +199,8 @@
           "sha256": "cf5523cc190d4a85ed67669ee09a5acfb243aa832b15be7618ace43950f81d4f",
           "codepoint": "e313",
           "icons": [
-            "warning"
+            "warning",
+            "warning-compact"
           ]
         },
         {
@@ -209,7 +220,8 @@
           "sha256": "8e942d91446f0c77b3c0ac8a05f5d8825a5f7f2f0c94ef0dd91baca3cf5204ee",
           "codepoint": "e315",
           "icons": [
-            "folder"
+            "folder",
+            "folder-compact"
           ]
         },
         {
@@ -218,7 +230,8 @@
           "sha256": "d63f0fbaf917cb88f32613cae646a21c7838d55f9900e05817889b5f3072d664",
           "codepoint": "e316",
           "icons": [
-            "folder-opened"
+            "folder-opened",
+            "folder-opened-compact"
           ]
         },
         {
@@ -227,7 +240,8 @@
           "sha256": "cde5dd78413bb974d5d702f7683afed107fafd8a18eab6f07dbb3935546d33da",
           "codepoint": "e317",
           "icons": [
-            "chevron-right"
+            "chevron-right",
+            "chevron-right-compact"
           ]
         },
         {
@@ -236,7 +250,8 @@
           "sha256": "d408475faa54d493cfd315c27beac34c70a0495872343ef9e65a8c9c3a6256ec",
           "codepoint": "e318",
           "icons": [
-            "chevron-down"
+            "chevron-down",
+            "chevron-down-compact"
           ]
         },
         {
@@ -245,7 +260,8 @@
           "sha256": "c9aaa9a58d182f92790959348157173f6a6ee78fe2b3fa08b7f149984154c918",
           "codepoint": "e319",
           "icons": [
-            "chevron-up"
+            "chevron-up",
+            "chevron-up-compact"
           ]
         },
         {
@@ -254,7 +270,8 @@
           "sha256": "88d807d3a62c328b2dcf81e7496e1af959521d5e383e24587d1cb5c9c9a7ba7c",
           "codepoint": "e31a",
           "icons": [
-            "chevron-left"
+            "chevron-left",
+            "chevron-left-compact"
           ]
         },
         {
@@ -263,7 +280,8 @@
           "sha256": "734cc4d47c6312ff9430afbd3582692d755289d1a736e4fc69d100dc2ed9a2d1",
           "codepoint": "e31b",
           "icons": [
-            "terminal"
+            "terminal",
+            "terminal-compact"
           ],
           "weight_inset": 0.06
         },
@@ -285,7 +303,8 @@
             "debug-continue",
             "run",
             "play",
-            "debug-start"
+            "debug-start",
+            "run-compact"
           ]
         },
         {
@@ -354,6 +373,27 @@
           "icons": [
             "chrome-restore"
           ]
+        },
+        {
+          "file": "导入图标/adwaita/view-grid-symbolic.svg",
+          "upstream_path": "Adwaita/symbolic/actions/view-grid-symbolic.svg",
+          "sha256": "281bd400127f75410bf9b000f69f7a28ac248713336efe1378f0d59535368a0e",
+          "codepoint": "e325",
+          "icons": [
+            "layout",
+            "configure-layout-icon"
+          ]
+        },
+        {
+          "file": "导入图标/adwaita/web-browser-symbolic.svg",
+          "upstream_path": "Adwaita/symbolic/legacy/web-browser-symbolic.svg",
+          "sha256": "ac8bece2b0edfa1d19f862cae46288afab8fefa02bb73cab636e5bab190566f8",
+          "codepoint": "e326",
+          "icons": [
+            "globe"
+          ],
+          "半透明处理": "不透明轮廓",
+          "weight_inset": 0.06
         }
       ],
       "weight_inset": 0.18
@@ -376,7 +416,8 @@
           "icons": [
             "debug-alt",
             "debug",
-            "bug"
+            "bug",
+            "debug-alt-small"
           ]
         },
         {
@@ -386,7 +427,8 @@
           "codepoint": "e103",
           "icons": [
             "source-control",
-            "git-branch"
+            "git-branch",
+            "git-branch-compact"
           ]
         },
         {
@@ -467,7 +509,8 @@
           "sha256": "cf627a4cc739d465e36e812fdf53dd829bb97c322c1ab42b2a06081b4c169a88",
           "codepoint": "e10f",
           "icons": [
-            "beaker"
+            "beaker",
+            "beaker-compact"
           ]
         },
         {
