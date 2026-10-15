@@ -58,8 +58,8 @@ VS Code 最低版本以 [package.json](package.json) 的 `engines.vscode` 为准
 先按 [工具链政策](AGENTS.md#工具链政策) 准备环境，再运行：
 
 ```sh
-cargo run --quiet -- 主题
-cargo run --quiet -- 检查
+cargo 主题
+cargo 检查
 cargo run --release --quiet -- 打包
 ```
 

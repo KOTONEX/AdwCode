@@ -73,7 +73,7 @@ Adwaita 通常将轮廓边缘内缩 0.18 个 SVG 像素，Builder 为 0.12；终
 GNOME Builder、MoreWaita 或系统图标主题，更不需要在构建时访问网络：
 
 ```sh
-cargo run --quiet -- 生成导入字形
+cargo 开发 生成导入字形
 ```
 
 `生成导入字形` 根据来源记录校验 SVG 哈希，为不同许可证分别生成字体，
@@ -85,7 +85,7 @@ cargo run --quiet -- 生成导入字形
 备用自有字体通过以下命令再生成：
 
 ```sh
-cargo run --quiet -- 生成自有字形
+cargo 开发 生成自有字形
 ```
 
 色彩字体 `adwaita-icons.ttf` 由 nanoemoji 一次性生成，当前为六个布局状态图标

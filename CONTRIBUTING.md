@@ -10,7 +10,7 @@ libadwaita 的实测取值，语法高亮对齐 GtkSourceView 方案，几何参
 再读 [开发验证](文档/开发/开发验证.md) 的命令和按改动验证表。完整检查统一为：
 
 ```sh
-cargo run --quiet -- 检查
+cargo 检查
 ```
 
 模块职责见 [架构](文档/开发/架构.md)，打包、CI、标签及上传见
@@ -24,15 +24,15 @@ cargo run --quiet -- 检查
 也不会自动重载。
 
 - `主题/` 是生成产物，不要手工编辑；改完映射或调色板后重新运行
-  `cargo run --quiet -- 主题`，并让生成结果随提交一起入库。
+  `cargo 主题`，并让生成结果随提交一起入库。
 - 新增颜色键必须存在于 `源码/VSCode默认数据/registry_keys.json`，或在
-  `主题生成::补充颜色键` 中，否则 `cargo run --quiet -- 校验` 会失败。
+  `主题生成::补充颜色键` 中，否则 `cargo 开发 校验` 会失败。
 - 主题 JSON 中的颜色必须是十六进制（`#rrggbb` / `#rrggbbaa`）：VS Code 会忽略
   CSS Color 4 写法（如 `rgb(0 0 6 / 36%)`），请使用 `调色板::规范颜色格式`。
 - `contrastBorder` / `contrastActiveBorder` 只属于高对比度主题；在普通主题中定义
   它们会到处多出描边。
 - 扩展、附加脚本、测试与基准均以 TypeScript 维护，不引入第三方运行时依赖。
-  `cargo run --quiet -- 编译脚本` 输出到 `builddir/脚本/`；打包自动重新编译，源码与 JS 产物一起分发。
+  `cargo 开发 编译脚本` 输出到 `builddir/脚本/`；打包自动重新编译，源码与 JS 产物一起分发。
 
 ## 提交与 PR
 
@@ -58,7 +58,7 @@ cargo run --quiet -- 检查
   | `杂务:` | 构建、依赖、CI、清理等 | chore |
   | `初始化:` | 仓库 / 模块的初始提交 | init |
 
-- 提交前必须运行 `cargo run --quiet -- 检查`，格式、clippy、测试、校验与离线 JS 测试均应通过。
+- 提交前必须运行 `cargo 检查`，格式、clippy、测试、校验与离线 JS 测试均应通过。
 - 提交标题是变更日志的输入，请写清具体变化；无需编辑 `CHANGELOG.md`。
   主线版本标签划分发布范围，生成文件位于 `builddir/CHANGELOG.md`，不提交到仓库；
   完整 Git 历史与标签是生成所需输入。未分类的旧标题归入“其他”，合并提交不重复列出。

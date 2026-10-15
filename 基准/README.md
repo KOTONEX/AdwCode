@@ -10,21 +10,21 @@
 不把跳过校验记为成功样本：
 
 ```sh
-cargo run --quiet -- 性能基准
+cargo 开发 性能基准
 ```
 
 默认每个命令预热 2 次，采集 20 个新进程样本，保留操作系统文件缓存。
 结果写入 `builddir/performance.json`。也可以增加样本数：
 
 ```sh
-cargo run --quiet -- 性能基准 --次数 50 --输出 builddir/performance.json
+cargo 开发 性能基准 --次数 50 --输出 builddir/performance.json
 ```
 
 `性能基准` 在临时副本中运行主题、校验、检查样式与打包，默认使用阻塞等待测墙钟，
 不读取每个子进程的 `/proc`、CPU 时间或 RSS。需要旧资源测量时显式启用：
 
 ```sh
-cargo run --quiet -- 性能基准 --详细资源 --次数 20 --输出 builddir/详细资源.json
+cargo 开发 性能基准 --详细资源 --次数 20 --输出 builddir/详细资源.json
 ```
 
 报告格式版本2保留样本与摘要字段；未启用或未采集到的资源值为 null，不能当成0。
@@ -47,7 +47,7 @@ Node 仅输出原始样本；Rust 校验场景、毫秒单位、数量与有限�
 
 ```sh
 npm install --prefix /tmp/adwcode-performance-tools playwright-core
-cargo run --quiet -- 工作台基准 \
+cargo 开发 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --输出 builddir/performance-ui.json
 ```
@@ -57,6 +57,11 @@ cargo run --quiet -- 工作台基准 \
 不执行窗口重载或加载器命令，不修改 VS Code 安装文件或操作者配置；结束后关闭
 测试窗口并清理临时目录。独立窗口可能暂时取得焦点，测试期间避免向它输入内容。
 
+测试配置显式启用 Modern UI、自定义标题栏和窗口按钮。浅色、深色分别切换
+`window.density.layout` 的 `default → compact → default`，检查标签四角为 9px、
+标签可见、仅关闭按钮可见且容器没有为隐藏按钮保留宽度，再以默认密度采样。
+报告记录实际 VS Code 版本和逐项几何结果。原生标题栏由窗口管理器绘制，不在此 CSS 几何检查范围。
+
 在同一套 AdwCode 主题和产品图标下，交替比较附加 CSS 的启用与关闭。
 安装目录中已经注入的项目样式先从测试窗口的 DOM 中移除，随后注入当前源码；
 这一步只影响测试窗口。场景包括非活动状态切换、实际编辑器滚动和 1000 个
@@ -64,12 +69,14 @@ cargo run --quiet -- 工作台基准 \
 窗口状态脚本在各组均启用；每次状态切换后等待一个微任务，保证观察器已经同步，
 不会把尚未应用的样式当成优化结果。界面断言检查正文、高对比度保护、新增导航、
 重复注入、启动等待和观察器释放；有参考 CSS 时还对照实际计算样式。
+窗口状态脚本通过 Playwright 调试器求值执行，测试 DOM 使用 `createElement` 构造，
+兼容工作台的 Trusted Types 限制；不关闭 CSP 或 Trusted Types。
 
 修改 CSS 前先保存已提交的原样式，修改后传入参考文件做配对比较：
 
 ```sh
 git show HEAD:附加外观/GNOME外观.css > builddir/修改前外观.css
-cargo run --quiet -- 工作台基准 \
+cargo 开发 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --参考样式 builddir/修改前外观.css \
   --输出 builddir/performance-fixed-ui.json
@@ -80,7 +87,7 @@ cargo run --quiet -- 工作台基准 \
 如需确认非活动样式这一组规则的开销：
 
 ```sh
-cargo run --quiet -- 工作台基准 \
+cargo 开发 工作台基准 \
   --浏览器工具 /tmp/adwcode-performance-tools/node_modules/playwright-core \
   --仅选择器 --输出 builddir/performance-selectors.json
 ```

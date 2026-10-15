@@ -3,12 +3,12 @@
 // Playwright 由调用者提供；此处只描述工作台基准实际使用的外部 API。
 declare module "playwright" {
     interface 求值环境 {
+        evaluate(脚本: string): Promise<unknown>;
         evaluate<返回>(函数: () => 返回 | Promise<返回>): Promise<返回>;
         evaluate<返回, 参数>(
             函数: (参数: 参数) => 返回 | Promise<返回>,
             参数: 参数,
         ): Promise<返回>;
-        addScriptTag(选项: { content: string }): Promise<unknown>;
     }
     interface 定位器 {
         isVisible(): Promise<boolean>;
@@ -43,6 +43,7 @@ declare module "playwright" {
         ): Promise<unknown>;
         waitForTimeout(毫秒: number): Promise<void>;
         waitForFunction(函数: () => boolean): Promise<unknown>;
+        waitForFunction<参数>(函数: (参数: 参数) => boolean, 参数: 参数): Promise<unknown>;
         locator(选择器: string): 定位器;
         addStyleTag(选项: { content: string }): Promise<unknown>;
         frame(选项: { name: string }): 求值环境 | null;

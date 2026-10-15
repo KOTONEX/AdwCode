@@ -63,7 +63,8 @@ const 清单模板: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 "#;
 
-pub(crate) const 包含清单: [&str; 21] = [
+pub(crate) const 包含清单: [&str; 22] = [
+    ".cargo/config.toml",
     "package.json",
     "README.md",
     "LICENSE",

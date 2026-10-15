@@ -83,16 +83,17 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 - 新增颜色键必须存在于 `源码/VSCode默认数据/registry_keys.json`，或在
   `主题生成::补充颜色键` 中，否则 `校验` 会失败。
 - 扩展、附加脚本、测试与基准使用 TypeScript；模块工厂见 `扩展/外观服务.ts`。
-  `cargo run --quiet -- 编译脚本` 严格编译到 `builddir/脚本/`，打包会重新编译并收录
+  `cargo 开发 编译脚本` 严格编译到 `builddir/脚本/`，打包会重新编译并收录
   源码和运行产物。扩展不引入第三方运行时库；`类型声明/` 保持手写最小类型面，不引入 `@types` 依赖。
 - `主题/` 是生成产物，不要手工编辑。
 - `附加外观/*.css` 和编译后的 `builddir/脚本/附加外观/窗口状态.js` 通过「Custom CSS and JS Loader」扩展生效。
   非活动状态由脚本同步到导航容器，不恢复工作台祖先上的 `:has()` 规则；
   安装命令把已知源码与副本引用统一为一份副本，保留其他用户加载项。
-  VS Code 1.140 在约 250 处引用 `--vscode-cornerRadius-*` / `--vscode-spacing-*`
-  却从未定义它们，因此 `GNOME外观.css` 自行定义这些令牌以提供 Adwaita 几何。
+  VS Code 1.141 工作台广泛使用 `--vscode-cornerRadius-*` / `--vscode-spacing-*`；
+  `GNOME外观.css` 显式提供 Adwaita 取值并覆盖原生阴影，不依赖上游默认几何。
+  打包 CSS 中没有定义不等于运行时没有注入，须对照真实 DOM 和计算样式验证。
   VS Code 升级后请
-  运行 `cargo run --quiet -- 检查样式`：它会校验每个类选择器仍存在于已安装的构建中（由
+  运行 `cargo 开发 检查样式`：它会校验每个类选择器仍存在于已安装的构建中（由
   JavaScript 创建的类名会在 bundle 中搜索；项目自有状态类核对脚本的显式创建操作）。
 - VSIX 产物不变的改动只提交与推送，不更新发布版本号、不打版本标签、不创建 Release。
   是否发布以实际打包内容的变化为依据，不因产生新提交而自动发布。
@@ -100,7 +101,7 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 - 版本号唯一事实源是 `package.json` 的 `version`，发布流程见
   `.github/workflows/release.yml`。
 - 不手工维护 `CHANGELOG.md`；提交标题与主线上的版本标签是日志输入。
-  `cargo run --quiet -- 变更日志` 生成 `builddir/CHANGELOG.md`，打包时自动写入
+  `cargo 开发 变更日志` 生成 `builddir/CHANGELOG.md`，打包时自动写入
   VSIX。完整历史和标签不可缺失，CI 必须完整检出；未提交修改不会进入日志。
 - 不以“类名存在”或“磁盘补丁已更新”宣称当前窗口外观已验证。
 
@@ -108,9 +109,9 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 
 命令表和参数入口见 [开发验证](文档/开发/开发验证.md#常用命令)，发布命令见
 [发布](文档/开发/发布.md)。统一 CLI 为 `adwcode`：开发期使用
-`cargo run --quiet -- <子命令>`，release 构建后用 `./target/release/adwcode <子命令>`。
+`cargo 开发 <子命令>`，release 构建后用 `./target/release/adwcode <子命令>`。
 
-任何改动完成前都要跑 `cargo run --quiet -- 检查`。主题、字体等生成器修改后，
+任何改动完成前都要跑 `cargo 检查`。主题、字体等生成器修改后，
 同步生成产物并核对差异；涉及 CSS 时另跑 `检查样式`。真实宿主和工作台采用独立环境，
 不执行用户窗口重载。命令缺少必要环境时报告未完成，不将跳过当成验证成功。
 
@@ -124,8 +125,8 @@ VS Code 的 AdwCode 主题，由 **libadwaita 1.10**（GNOME 51）的取值生�
 
 1. 从该提交创建临时、隔离的源码副本，避免将未提交的用户改动带入 VSIX，
    也不改动工作区文件。
-2. 生成固定蓝色的主题：`cargo run --quiet -- 主题`，
-   再执行 `cargo run --quiet -- 打包`；保留完整 Git 历史与标签供日志生成。
+2. 生成固定蓝色的主题：`cargo 主题`，
+   再执行 `cargo 打包`；保留完整 Git 历史与标签供日志生成。
 3. 读取该提交的 `package.json` 版本，使用本机 VS Code CLI 执行
    `code --install-extension /绝对路径/AdwCode-<版本>.vsix --force`，
    使相同版本号的开发提交也能覆盖安装；不先卸载现有扩展。

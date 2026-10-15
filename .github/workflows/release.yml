@@ -108,7 +108,7 @@ jobs:
 
       - name: 完整检查
         if: steps.reuse.outputs['产物'] == ''
-        run: cargo run --quiet -- 检查
+        run: cargo 检查
 
       - name: 构建备用工具
         if: steps.reuse.outputs['产物'] == ''

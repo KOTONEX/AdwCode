@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-MulanPubL-2.0-or-later
+# SPDX-FileCopyrightText: 2026 AdwCode 贡献者
+
+[alias]
+"开发" = ["run", "--quiet", "--"]
+"检查" = ["开发", "检查"]
+"主题" = ["开发", "主题"]
+"打包" = ["开发", "打包"]

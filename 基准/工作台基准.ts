@@ -9,6 +9,7 @@ const { chromium } = require(
     path.resolve(process.argv[3]),
 ) as typeof import("playwright");
 interface 工作台状态 {
+    vscode: string;
     pid: number;
     profile: string;
     directory: string;
@@ -156,7 +157,8 @@ async function 运行基准() {
             if (!style) throw Error("未找到基准样式");
             style.id = "adwcode-performance-style";
         }, css);
-        await page.addScriptTag({ content: windowState });
+        // 调试器求值不创建脚本元素；兼容工作台的 Trusted Types 与 CSP。
+        await page.evaluate(windowState);
         const session = await page.context().newCDPSession(page);
         await session.send("Performance.enable");
         const layout = await page.evaluate(() => {
@@ -180,6 +182,7 @@ async function 运行基准() {
         const results: object[] = [];
         const metadata = {
             schema: 1,
+            vscode: state.vscode,
             version: (
                 JSON.parse(
                     fs.readFileSync(path.join(root, "package.json"), "utf8"),
@@ -200,9 +203,12 @@ async function 运行基准() {
                 stateSync:
                     "每次切换后等待一个微任务，使标题栏观察器完成状态同步；各样式均运行该脚本",
                 scenario: state.scenario || "all",
+                控件样式: "custom",
+                布局密度: ["default", "compact"],
                 frames: "串行 CDP 输入后的 RAF 采样间隔，不是应用帧率或掉帧数据",
             },
             appearanceChecks: [] as object[],
+            几何检查: [] as object[],
             lifecycleChecks: undefined as
                 { lateStartup: boolean; disposed: boolean } | undefined,
         };
@@ -287,7 +293,7 @@ async function 运行基准() {
                     "导航和标签状态必须与原样式一致",
                 );
             // 重复注入脚本应先释放旧观察器，并保持当前状态。
-            await page.addScriptTag({ content: windowState });
+            await page.evaluate(windowState);
             const checks = await page.evaluate(async (css) => {
                 const style = document.querySelector<HTMLStyleElement>(
                     "#adwcode-performance-style",
@@ -308,8 +314,16 @@ async function 运行基准() {
                 clone.remove();
                 const sidebar = document.createElement("div");
                 sidebar.className = "part sidebar";
-                sidebar.innerHTML =
-                    '<div class="title"><div class="action-item"><span class="action-label">测试</span></div></div>';
+                const title = document.createElement("div");
+                title.className = "title";
+                const item = document.createElement("div");
+                item.className = "action-item";
+                const action = document.createElement("span");
+                action.className = "action-label";
+                action.textContent = "测试";
+                item.append(action);
+                title.append(item);
+                sidebar.append(title);
                 workbench.append(sidebar);
                 await Promise.resolve();
                 await Promise.resolve();
@@ -362,10 +376,19 @@ async function 运行基准() {
         });
         const frame = page.frame({ name: "adwcode-performance-lifecycle" });
         assert.ok(frame);
-        await frame.addScriptTag({ content: windowState });
+        await frame.evaluate(windowState);
         const lifecycle = await frame.evaluate(async () => {
-            document.body.innerHTML =
-                '<div class="monaco-workbench"><div class="part titlebar inactive"></div><div class="part editor"><div class="tabs-container"></div></div></div>';
+            const workbench = document.createElement("div");
+            workbench.className = "monaco-workbench";
+            const titlebar = document.createElement("div");
+            titlebar.className = "part titlebar inactive";
+            const editor = document.createElement("div");
+            editor.className = "part editor";
+            const tabbar = document.createElement("div");
+            tabbar.className = "tabs-container";
+            editor.append(tabbar);
+            workbench.append(titlebar, editor);
+            document.body.append(workbench);
             await Promise.resolve();
             const tabs =
                 document.querySelector<HTMLElement>(".tabs-container")!;
@@ -422,6 +445,53 @@ async function 运行基准() {
                 mode: themes[mode].type,
                 ...(await 验证外观()),
             });
+            // 只更新隔离配置，等待原生布局服务应用密度；最后恢复默认密度再采样。
+            for (const 密度 of ["default", "compact", "default"]) {
+                const 配置路径 = path.join(state.profile, "User/settings.json");
+                const 设置 = JSON.parse(fs.readFileSync(配置路径, "utf8"));
+                设置["window.density.layout"] = 密度;
+                fs.writeFileSync(配置路径, JSON.stringify(设置));
+                await page.waitForFunction(
+                    (紧凑) => document.querySelector(".monaco-workbench")!
+                        .classList.contains("modern-ui-compact") === 紧凑,
+                    密度 === "compact",
+                );
+                const 几何 = await page.evaluate(() => {
+                    const 标签 = document.querySelector<HTMLElement>(
+                        ".part.editor .tabs-container > .tab",
+                    )!;
+                    const 控件 = document.querySelector<HTMLElement>(
+                        ".part.titlebar .window-controls-container",
+                    )!;
+                    const 关闭 = 控件.querySelector<HTMLElement>(".window-close")!;
+                    const 已隐藏 = [".window-minimize", ".window-max-restore"]
+                        .every((选择器) => {
+                            const 按钮 = 控件.querySelector<HTMLElement>(选择器);
+                            return 按钮 && getComputedStyle(按钮).display === "none";
+                        });
+                    const 标签样式 = getComputedStyle(标签);
+                    const 标签边界 = 标签.getBoundingClientRect();
+                    const 关闭边界 = 关闭.getBoundingClientRect();
+                    const 控件边界 = 控件.getBoundingClientRect();
+                    return {
+                        标签圆角: [标签样式.borderTopLeftRadius, 标签样式.borderTopRightRadius,
+                            标签样式.borderBottomLeftRadius, 标签样式.borderBottomRightRadius],
+                        标签可见: 标签边界.width > 0 && 标签边界.height > 0,
+                        最小化及最大化已隐藏: 已隐藏,
+                        关闭可见: getComputedStyle(关闭).display !== "none" &&
+                            关闭边界.width > 0 && 关闭边界.height > 0,
+                        仅关闭宽度: Math.abs(控件边界.width - 关闭边界.width) <= 1,
+                        控件宽度: 控件边界.width,
+                        关闭宽度: 关闭边界.width,
+                    };
+                });
+                assert.ok(几何.标签圆角.every((圆角) => 圆角 === "9px"),
+                    `标签圆角未生效：${JSON.stringify(几何)}`);
+                assert.ok(几何.标签可见 && 几何.最小化及最大化已隐藏 &&
+                    几何.关闭可见 && 几何.仅关闭宽度,
+                    `窗口按钮或标签布局异常：${JSON.stringify(几何)}`);
+                metadata.几何检查.push({ mode: themes[mode].type, 密度, ...几何 });
+            }
             for (const scenario of selectorsOnly
                 ? ["工作台非活动状态切换"]
                 : state.scenario === "scroll"
@@ -443,7 +513,10 @@ async function 运行基准() {
                             const row = document.createElement("div");
                             row.className = "monaco-list-row";
                             row.style.cssText = "position:relative;height:22px";
-                            row.innerHTML = `<span class="monaco-icon-label">文件 ${i}</span>`;
+                            const label = document.createElement("span");
+                            label.className = "monaco-icon-label";
+                            label.textContent = `文件 ${i}`;
+                            row.append(label);
                             list.append(row);
                         }
                         overlay.append(list);

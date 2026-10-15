@@ -92,6 +92,13 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             "需要本机 Linux VS Code、Node.js 与独立安装的 playwright",
         ));
     }
+    let 应用目录 = 编辑器.parent().unwrap().join("resources/app");
+    let 编辑器清单: Value = serde_json::from_slice(&std::fs::read(应用目录.join("package.json"))?)
+        .map_err(|错误| 工具错误::带来源("无法读取编辑器版本", 错误.into()))?;
+    let 编辑器版本 = 编辑器清单["version"]
+        .as_str()
+        .filter(|版本| !版本.is_empty())
+        .ok_or_else(|| 参数错误("编辑器清单缺少版本"))?;
     输出路径 = std::path::absolute(输出路径)?;
     let 参考样式 = 参考样式.map(std::fs::canonicalize).transpose()?;
     if let Some(父目录) = 输出路径.parent() {
@@ -152,6 +159,10 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
         ("editor.smoothScrolling", json!(false)),
         ("workbench.iconTheme", Value::Null),
         ("window.commandCenter", json!(false)),
+        ("window.titleBarStyle", json!("custom")),
+        ("window.controlsStyle", json!("custom")),
+        ("workbench.experimental.modernUI", json!(true)),
+        ("window.density.layout", json!("default")),
     ] {
         设置.insert(键.to_string(), 值);
     }
@@ -217,6 +228,7 @@ pub fn 入口(根目录: &Path, 参数: &[String]) -> 结果<()> {
             .map_err(|错误| 工具错误::带来源("无法启动 VS Code".to_string(), 错误))?,
     );
     let mut session = Map::new();
+    session.insert("vscode".to_string(), json!(编辑器版本));
     session.insert("directory".to_string(), json!(文件夹.to_string_lossy()));
     session.insert("port".to_string(), json!(端口));
     session.insert("pid".to_string(), json!(编辑器进程.0.id()));

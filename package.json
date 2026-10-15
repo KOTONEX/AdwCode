@@ -3,7 +3,7 @@
   "displayName": "AdwCode",
   "icon": "资产/adwcode.png",
   "description": "跟随 GNOME 桌面（libadwaita 1.10）的 VS Code 主题",
-  "version": "4.15.2",
+  "version": "4.16.0",
   "publisher": "KOTONEX",
   "license": "SEE LICENSE IN 许可声明.md",
   "engines": {
@@ -40,19 +40,19 @@
   },
   "main": "./builddir/脚本/扩展/扩展.js",
   "scripts": {
-    "编译脚本": "cargo run --quiet -- 编译脚本",
-    "构建": "cargo run --quiet -- 主题",
-    "校验": "cargo run --quiet -- 校验",
-    "检查样式": "cargo run --quiet -- 检查样式",
-    "检查": "cargo run --quiet -- 检查",
-    "test": "cargo run --quiet -- 检查",
-    "格式化": "cargo run --quiet -- 格式化",
-    "类型检查": "cargo run --quiet -- 类型检查",
-    "打包": "cargo run --quiet -- 打包",
-    "变更日志": "cargo run --quiet -- 变更日志",
-    "发布说明": "cargo run --quiet -- 发布说明",
-    "性能基准": "cargo run --quiet -- 性能基准",
-    "工作台基准": "cargo run --quiet -- 工作台基准"
+    "编译脚本": "cargo 开发 编译脚本",
+    "构建": "cargo 主题",
+    "校验": "cargo 开发 校验",
+    "检查样式": "cargo 开发 检查样式",
+    "检查": "cargo 检查",
+    "test": "cargo 检查",
+    "格式化": "cargo 开发 格式化",
+    "类型检查": "cargo 开发 类型检查",
+    "打包": "cargo 打包",
+    "变更日志": "cargo 开发 变更日志",
+    "发布说明": "cargo 开发 发布说明",
+    "性能基准": "cargo 开发 性能基准",
+    "工作台基准": "cargo 开发 工作台基准"
   },
   "contributes": {
     "configurationDefaults": {
